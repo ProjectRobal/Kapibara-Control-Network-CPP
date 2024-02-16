@@ -68,35 +68,25 @@ int main()
 
     test.setup(gauss);
 
-    std::ofstream file;
-
-    file.open("test.neur",std::ios::out | std::ios::binary );
-
-    std::cout<<test.fire(a)<<std::endl;
-
-    test.save(file);
-
-    file.close();
-
-    snn::FeedForwardNeuron<128,4> test1;
-
-    std::cout<<"Loaded:"<<std::endl;
-
-    std::ifstream _file;
-
-    _file.open("test.neur",std::ios::in | std::ios::binary );
-
-    test1.load(_file);
-
-    std::cout<<test1.fire(a)<<std::endl;
-
-    _file.close();
-
-
-
-    return 0;
-
     snn::Layer<snn::FeedForwardNeuron<4096,1>,1,32> layer(4,norm_gauss,cross,mutation);
+
+    std::ifstream file;
+
+    file.open("../layer.bin",std::ios::in|std::ios::binary);
+
+    if(file.is_open())
+    {
+        std::cout<<"No file layer.bin"<<std::endl;
+
+        if(!layer.load(file))
+        {
+            std::cerr<<"Error loading layer!"<<std::endl;
+            layer.setup(4,norm_gauss,cross,mutation);
+        }
+
+        file.close();
+    }
+
 
     long double best_reward=-100;
 
@@ -121,6 +111,14 @@ int main()
             std::cout<<"Best reward: "<<reward<<std::endl;
             best_reward=reward;
             std::cout<<"Output: "<<output[0]<<std::endl;
+
+            std::ofstream file;
+
+            file.open("layer.bin",std::ios::out|std::ios::binary|std::ios::trunc);
+
+            layer.save(file);
+
+            file.close();
         }
 
         layer.applyReward(reward);

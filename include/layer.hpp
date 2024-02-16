@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <functional>
+#include <fstream>
 
 #include "block.hpp"
 #include "neuron.hpp"
@@ -19,9 +20,18 @@
 
 namespace snn
 {
+    #define STATICLAYERID 1
+
     template<class NeuronT,size_t Working,size_t Populus>
     class Layer
     {
+
+        struct LayerHeader
+        {
+            char header[4]="KAC";
+            size_t id=STATICLAYERID;
+        }; 
+
         std::vector<Block<NeuronT,Working,Populus>> blocks;
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
@@ -30,9 +40,7 @@ namespace snn
 
         Layer()
         {
-
             this->activation_func=std::make_shared<Linear>();
-
         }
 
         Layer(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
@@ -52,6 +60,8 @@ namespace snn
 
         void setup(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
         {
+            blocks.clear();
+
             this->init=init;
 
             for(size_t i=0;i<N;++i)
@@ -106,6 +116,47 @@ namespace snn
             return output;
         }
 
+        void save(std::ofstream& file)
+        {
+            LayerHeader header;
+
+            file.write((char*)&header,sizeof(header));
+
+            for(const auto& block : this->blocks)
+            {
+                block.save(file);
+            }
+        }
+
+        bool load(std::ifstream& file)
+        {
+            LayerHeader header={0};
+
+            file.read((char*)&header,sizeof(header));
+
+            if(strcmp("KAC",header.header)!=0)
+            {
+                std::cerr<<"Invalid header!"<<std::endl;
+                return false;
+            }
+
+            if(header.id != STATICLAYERID)
+            {
+                std::cerr<<"Invalid layer format!"<<std::endl;
+                return false;
+            }
+
+            for(auto& block : this->blocks)
+            {
+                if(!block.load(file))
+                {
+                    std::cerr<<"Block corrupted"<<std::endl;
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
     };  
     

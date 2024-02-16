@@ -471,7 +471,7 @@ namespace snn
     {
         for(size_t i=0;i<std::min(this->vec.size(),v.vec.size());++i)
         {
-            this->vec[i]=v.vec[i];
+            this->vec[i]*=v.vec[i];
         }
     }
 

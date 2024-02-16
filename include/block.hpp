@@ -5,6 +5,7 @@
 #include <array>
 #include <memory>
 #include <random>
+#include <fstream>
 
 
 #include "simd_vector.hpp"
@@ -17,9 +18,18 @@
 
 namespace snn
 {
+
     template<class NeuronT,size_t Working,size_t Populus>
     class Block
-    {        
+    {     
+
+        struct BlockHeader {
+
+            char block_type;
+            size_t populus_size;
+            size_t working_size;
+
+        };   
 
         std::shared_ptr<Crossover> crossing;
         std::shared_ptr<Mutation> mutate;
@@ -151,6 +161,72 @@ namespace snn
         size_t outputSize()
         {
             return this->population[0]->output_size();
+        }
+
+        void save(std::ofstream& file) const
+        {
+            // save block header with information about size etc
+
+            BlockHeader header={
+                .block_type='@',
+                .populus_size=Populus,
+                .working_size=Working
+            };
+
+            // save header
+
+            file.write((char*)&header,sizeof(BlockHeader));
+
+            // save populus
+
+            for(size_t i=0;i<this->population.size();++i)
+            {
+                this->population[i]->save(file);
+            }
+
+        }
+
+        bool load(std::ifstream& file)
+        {
+
+            // load header
+
+            BlockHeader header={0};
+
+            file.read((char*)&header,sizeof(BlockHeader));
+
+            if(header.block_type != '@')
+            {
+                std::cerr<<"Wrong block header!!"<<std::endl;
+                return false;
+            }
+
+            if(header.populus_size != Populus)
+            {
+                std::cerr<<"Wrong population size!"<<std::endl;
+                return false;
+            }
+
+            if(header.working_size != Working)
+            {
+                std::cerr<<"Wrong working population size!"<<std::endl;
+                return false;
+            }
+
+            for(size_t i=0;i<header.populus_size;i++)
+            {
+                std::shared_ptr<NeuronT> neuron=std::make_shared<NeuronT>();
+
+                if(! neuron->load(file) )
+                {
+                    std::cerr<<"Neuron: "<<i<<" corrupted!"<<std::endl;
+                    return false;
+                }
+
+            }
+
+
+            return true;
         }
 
     };

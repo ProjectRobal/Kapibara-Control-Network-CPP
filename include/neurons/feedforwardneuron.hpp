@@ -14,9 +14,14 @@
 
 namespace snn
 {
+
+    #define FeedForwardNeuronID 1
+
     template<size_t Input,size_t Output>
     class FeedForwardNeuron : public Neuron
     {
+        
+
         protected:
 
         SIMDVector input_weights;
@@ -24,6 +29,9 @@ namespace snn
         SIMDVector biases;
 
         public:
+
+        const size_t id=FeedForwardNeuronID;
+
         FeedForwardNeuron()
         : Neuron()
         {
@@ -79,23 +87,13 @@ namespace snn
             return Output;
         }
 
-        void save(std::ofstream& file)
+        void save(std::ofstream& file) const override
         {
             // maybe the layer should specifi the size of Neuron
 
-            /*char* size_buffer=new char[sizeof(size_t)];
+            NeuronHeader header=Neuron::getHeader(Input,Output);
 
-            size_t size=Input;
-
-            memmove(size_buffer,&size,sizeof(size_t));
-
-            file.write(size_buffer,sizeof(size_t));
-
-            size=Output;
-
-            memmove(size_buffer,&size,sizeof(size_t));
-
-            file.write(size_buffer,sizeof(size_t));*/
+            file.write((char*)&header,sizeof(header));
 
             for(size_t i=0;i<this->input_weights.size();++i)
             {
@@ -115,12 +113,33 @@ namespace snn
                 file.write((char*)&num,sizeof(number));
             }
 
-            //delete [] size_buffer;
-
         }
 
-        void load(std::ifstream& file)
+        bool load(std::ifstream& file) override
         {
+
+            NeuronHeader header={0};
+
+            file.read((char*)&header,sizeof(header));
+
+            if(!this->validateHeader(header))
+            {
+                std::cerr<<"Invalid neuron header!"<<std::endl;
+                return false;
+            }
+
+            if(header.input_size != Input)
+            {
+                std::cerr<<"Invalid neuron input size!"<<std::endl;
+                return false;
+            }
+
+            if(header.output_size != Output)
+            {
+                std::cerr<<"Invalid neuron output size!"<<std::endl;
+                return false;
+            }
+
             char* num_buf = new char[sizeof(number)];
             number num;
 
@@ -153,6 +172,8 @@ namespace snn
                 this->biases.append(num);
                 
             }
+
+            return true;
 
         }
 

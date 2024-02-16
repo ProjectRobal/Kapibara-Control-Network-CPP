@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <fstream>
 
 #include "simd_vector.hpp"
 #include "initializer.hpp"
@@ -17,10 +18,36 @@ namespace snn
     {
         protected:
 
+        struct NeuronHeader
+        {
+            char header='$';
+            size_t input_size;
+            size_t output_size;
+            long double score;
+            size_t use_count;
+        };
+
         long double score;
         size_t use_count;
 
+        bool validateHeader(const NeuronHeader& header) const
+        {
+            return header.header == '$';
+        }
+
+        NeuronHeader getHeader(const size_t& input_size,const size_t& output_size) const
+        {
+            return {
+                .input_size=input_size,
+                .output_size=output_size,
+                .score=this->score,
+                .use_count=this->use_count
+                };
+        }
+
         public:
+
+        const size_t id=0;
 
         Neuron()
         : score(0.f),
@@ -101,6 +128,10 @@ namespace snn
         {
             return this->score != neuron.score;
         }
+
+        virtual void save(std::ofstream& file) const =0;
+
+        virtual bool load(std::ifstream& file)=0;
 
         virtual ~Neuron(){}
     };
