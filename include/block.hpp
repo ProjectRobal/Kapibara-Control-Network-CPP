@@ -41,6 +41,8 @@ namespace snn
         std::array<std::shared_ptr<Neuron>,Populus> population;
         std::array<std::shared_ptr<Neuron>,Working> workers;
 
+        std::array<std::shared_ptr<Neuron>,Working> best_workers;
+
         public:
 
         Block(std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
@@ -72,6 +74,31 @@ namespace snn
             for(auto& w : this->workers)
             {
                 w=this->population[this->uniform(gen)];
+            }
+        }
+
+        // store a best partition of workes for later use
+        void keepWorkers()
+        {
+            this->best_workers=this->workers;
+        }
+
+        void giveRewardToSavedWorkers(long double reward)
+        {
+            reward/=this->best_workers.size();
+
+            for(auto& w : this->best_workers)
+            {
+                w->giveReward(reward);
+                
+                if(w->used()<USESES_TO_MAITING)
+                {
+                    w->use();
+                    if(w->used()==USESES_TO_MAITING)
+                    {
+                        ++this->mating_counter;
+                    }
+                }
             }
         }
 
@@ -184,6 +211,11 @@ namespace snn
                 this->population[i]->save(file);
             }
 
+        }
+
+        const std::array<std::shared_ptr<Neuron>,Working>& getWorkers()
+        {
+            return this->workers;
         }
 
         bool load(std::ifstream& file)

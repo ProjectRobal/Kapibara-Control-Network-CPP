@@ -33,6 +33,8 @@
 #include "activation/sigmoid.hpp"
 #include "activation/relu.hpp"
 
+#include "networks/kac_actor_crictic.hpp"
+
 number stddev(const snn::SIMDVector& vec)
 {
     number mean=vec.dot_product();
@@ -45,12 +47,14 @@ number stddev(const snn::SIMDVector& vec)
 
 }
 
+number evaluatePolynomial(const snn::SIMDVector& poly,const number& x)
+{
+    return std::pow(x,3)*poly[0] + std::pow(x,2)*poly[1] + x*poly[2] + poly[3];
+}
+
  
 int main()
 {
-
-    snn::SIMDVector a([](size_t x)-> number{ return x;},128);
-    snn::SIMDVector b([](size_t x)-> number{ return x;},128);
 
     std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
     std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.1f);
@@ -58,77 +62,50 @@ int main()
     std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.1f);
     std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
 
-    //std::cout<<a+b<<std::endl;
-
-    gauss->init(a,4096);
-
-    a.set(a[0]+0,0);
-
-    snn::FeedForwardNeuron<128,4> test;
-
-    test.setup(gauss);
-
-    snn::Layer<snn::FeedForwardNeuron<4096,1>,1,32> layer(4,norm_gauss,cross,mutation);
-
-    std::ifstream file;
-
-    file.open("../layer.bin",std::ios::in|std::ios::binary);
-
-    if(file.is_open())
-    {
-        std::cout<<"No file layer.bin"<<std::endl;
-
-        if(!layer.load(file))
-        {
-            std::cerr<<"Error loading layer!"<<std::endl;
-            layer.setup(4,norm_gauss,cross,mutation);
-        }
-
-        file.close();
-    }
-
 
     long double best_reward=-100;
 
     snn::ReLu activate;
 
-    layer.setActivationFunction(std::make_shared<snn::Sigmoid>());
+    std::shared_ptr<snn::ReLu> relu=std::make_shared<snn::ReLu>();
 
-    while(abs(best_reward)>0.001f)
+    const size_t input_size=4;
+    const size_t output_size=1;
+    
+    snn::ActorCriticNetwork<input_size,output_size,512,1> network;
+
+    network.setup(10,32,norm_gauss,cross,mutation);
+
+    std::shared_ptr<snn::LayerProto> layer=std::make_shared<snn::Layer<snn::FeedForwardNeuron<input_size,64>,1,32>>(16,norm_gauss,cross,mutation);
+    std::shared_ptr<snn::LayerProto> layer1=std::make_shared<snn::Layer<snn::FeedForwardNeuron<64,output_size>,1,32>>(8,norm_gauss,cross,mutation);
+
+    network.addLayer(layer);
+    network.addLayer(layer1);
+
+    // we will try to find poles in this polynomials in form of a[0]*x^3 + a[1]*x^2 + a[2] * x + a[3] = 0; 
+
+    snn::SIMDVector inputs({0.25,0.5,0.6,0.4});  
+
+    size_t step=1;  
+
+    size_t maxSteps=50000;
+    
+    while(maxSteps--)
     {
-        const auto start = std::chrono::steady_clock::now();
 
-        layer.shuttle();
+        number x=network.step(inputs)[0];
 
-        snn::SIMDVector output=layer.fire(a)*50.f;
-
-        //long double reward=-(stddev(output)+abs((1.f-output[0])));
-
-        long double reward=-abs(20.f-output[0]);
+        long double reward=-abs(evaluatePolynomial(inputs,x));
 
         if(reward>best_reward)
         {
-            std::cout<<"Best reward: "<<reward<<std::endl;
+            std::cout<<"Best reward: "<<reward<<" at step: "<<step<<std::endl;
+            std::cout<<"Best x: "<<x<<std::endl;
             best_reward=reward;
-            std::cout<<"Output: "<<output[0]<<std::endl;
-
-            std::ofstream file;
-
-            file.open("layer.bin",std::ios::out|std::ios::binary|std::ios::trunc);
-
-            layer.save(file);
-
-            file.close();
         }
 
-        layer.applyReward(reward);
+        network.applyReward(reward);
 
-        const auto end = std::chrono::steady_clock::now();
-
-        const std::chrono::duration<double> diff = end - start;
-
-       //std::cout << "Time: " << std::setw(9) << diff.count() << std::endl;
-
+        ++step;
     }
-   
 }

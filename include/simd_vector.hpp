@@ -41,6 +41,8 @@ namespace snn
 
         void operator=(SIMDVector&& vec);
 
+        void extend(const SIMDVector& vec);
+
         void set(const number& n, const size_t& i);
 
         number get(const size_t& i) const;

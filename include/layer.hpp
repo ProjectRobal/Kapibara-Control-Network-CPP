@@ -10,6 +10,8 @@
 #include "mutation.hpp"
 #include "crossover.hpp"
 
+#include "layer_proto.hpp"
+
 #include "simd_vector.hpp"
 
 #include "config.hpp"
@@ -17,14 +19,14 @@
 #include "activation.hpp"
 #include "activation/linear.hpp"
 
-#include <layer_utils.hpp>
+#include "layer_utils.hpp"
 
 namespace snn
 {
     #define STATICLAYERID 1
 
     template<class NeuronT,size_t Working,size_t Populus>
-    class Layer
+    class Layer : public LayerProto
     { 
         std::vector<Block<NeuronT,Working,Populus>> blocks;
         std::shared_ptr<Initializer> init;
@@ -54,6 +56,7 @@ namespace snn
 
         void setup(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
         {
+            this->activation_func=std::make_shared<Linear>();
             blocks.clear();
 
             this->init=init;
@@ -75,6 +78,26 @@ namespace snn
             }
         }
 
+        void applyRewardToSavedBlocks(long double reward)
+        {
+            reward/=this->blocks.size();
+
+            for(auto& block : this->blocks)
+            {
+                block.giveRewardToSavedWorkers(reward);
+            }
+        }
+
+        void keepWorkers()
+        {
+            for(auto& block : this->blocks)
+            {
+                
+                block.keepWorkers();
+
+            }   
+        }
+
         void shuttle()
         {
             
@@ -84,6 +107,23 @@ namespace snn
                 block.chooseWorkers();
 
             }   
+        }
+
+        std::vector<std::shared_ptr<snn::Neuron>> getWorkingNeurons()
+        {
+            std::vector<std::shared_ptr<snn::Neuron>> workers;
+
+            for(auto& block : this->blocks)
+            {
+                auto workers_arr=block.getWorkers();
+
+                for(auto& worker : workers_arr)
+                {
+                    workers.push_back(worker);
+                }
+            }
+
+            return workers;
         }
 
         SIMDVector fire(const SIMDVector& input)

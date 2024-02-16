@@ -74,6 +74,14 @@ namespace snn
         this->vec=std::move(vec.vec);
     }
 
+    void SIMDVector::extend(const SIMDVector& vec)
+    {
+        for(size_t i=0;i<vec.size();++i)
+        {
+            this->append(vec[i]);
+        }
+    }
+
     void SIMDVector::set(const number& n, const size_t& i)
     {
         if(i>=this->size())
