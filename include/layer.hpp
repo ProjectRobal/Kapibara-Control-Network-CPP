@@ -17,6 +17,7 @@
 #include "activation.hpp"
 #include "activation/linear.hpp"
 
+#include <layer_utils.hpp>
 
 namespace snn
 {
@@ -24,14 +25,7 @@ namespace snn
 
     template<class NeuronT,size_t Working,size_t Populus>
     class Layer
-    {
-
-        struct LayerHeader
-        {
-            char header[4]="KAC";
-            size_t id=STATICLAYERID;
-        }; 
-
+    { 
         std::vector<Block<NeuronT,Working,Populus>> blocks;
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
@@ -119,6 +113,10 @@ namespace snn
         void save(std::ofstream& file)
         {
             LayerHeader header;
+
+            header.id=STATICLAYERID;
+            header.input_size=blocks[0].inputSize();
+            header.output_size=blocks[0].outputSize();
 
             file.write((char*)&header,sizeof(header));
 
