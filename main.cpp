@@ -69,6 +69,67 @@ struct CartPoleInterface
 };
 
 
+bool sendInterface(const CartPole& interface)
+{
+    int fifo=0;
+
+    std::string buffer;
+
+    if(!interface.SerializeToString(&buffer))
+    {
+        return false;
+    }
+
+    fifo=open("fifo",O_WRONLY);
+
+    write(fifo,"@",1);
+            
+    size_t size=buffer.size();
+
+    write(fifo,(void*)&size,sizeof(size_t));
+    write(fifo,buffer.c_str(),buffer.size());
+
+    close(fifo);
+
+    return true;
+}
+
+CartPole getInterface()
+{
+    CartPole interface;
+    bool ret=true;
+
+    char start_code=0;
+    
+    int fifo=open("fifo",O_RDONLY);
+
+    read(fifo,&start_code,1);
+
+    if( start_code == '@' )
+    {
+
+        size_t size=0;
+
+        read(fifo,(void*)&size,8);
+
+        char _buffer[size];
+
+        read(fifo,_buffer,size);
+
+        std::cout<<"Parsing data: "<<size<<std::endl;
+
+        if(!interface.ParseFromArray(_buffer,size))
+        {
+            return interface;
+        }
+    }
+
+    close(fifo);
+
+    return interface;
+}
+
+
 int main(int argc,char** argv)
 {
 
@@ -86,7 +147,7 @@ int main(int argc,char** argv)
     std::shared_ptr<snn::ReLu> relu=std::make_shared<snn::ReLu>();
 
     const size_t input_size=4;
-    const size_t output_size=1;
+    const size_t output_size=2;
     
     snn::ActorCriticNetwork<input_size,output_size,512,1> network;
 
@@ -105,10 +166,6 @@ int main(int argc,char** argv)
     size_t step=1;  
 
     size_t maxSteps=50000;
-
-    CartPoleInterface interf;
-
-    interf={0};
 
     CartPole interface;
 
@@ -145,68 +202,52 @@ int main(int argc,char** argv)
 
     int fifo=0;
 
+    /*
+    
+    Network:    CartPole
+            <-  Sends inputs
+    Sends outputs ->
+            <-  Sends reward
+    Loop
+
+    */
+
     while(maxSteps--)
     {
 
         char start_code=0;
 
-        fifo=open("fifo",O_RDONLY);
+        // recive inputs
 
-        read(fifo,&start_code,1);
+        interface=getInterface();
 
-        if( start_code == '@' )
-        {
+        std::cout<<interface.reward()<<std::endl;
 
-            size_t size=0;
-
-            read(fifo,(void*)&size,8);
-
-            char _buffer[size];
-
-            read(fifo,_buffer,size);
-
-            if(!interface.ParseFromArray(_buffer,size))
-            {
-                return -11;
-            }
-
-            std::cout<<"Recived: "<<interface.reward()<<std::endl;
-
-            interface.set_reward(10);
-
-            if(!interface.SerializeToString(&buffer))
-            {
-                return -12;
-            }
-
-            close(fifo);
-
-            fifo=open("fifo",O_WRONLY);
-
-            write(fifo,"@",1);
-            
-            size=buffer.size();
-
-            write(fifo,(void*)&size,sizeof(size_t));
-            write(fifo,buffer.c_str(),buffer.size());
-
-            close(fifo);
-
-            std::cout<<"Written data!"<<std::endl;
-        }
-
-        close(fifo);
+        inputs.set(interface.inputs(0),0);
+        inputs.set(interface.inputs(1),1);
+        inputs.set(interface.inputs(2),2);
+        inputs.set(interface.inputs(3),3);
 
         std::chrono::time_point start=std::chrono::steady_clock::now();
 
-        number x=network.step(inputs)[0];
+        snn::SIMDVector outputs=network.step(inputs);
 
-        long double reward=-abs(evaluatePolynomial(inputs,x));
+        interface.set_outputs(0,outputs[0]);
+        interface.set_outputs(1,outputs[1]);
+
+        // send outputs
+
+        sendInterface(interface);
+
+        // get reward
+
+        interface=getInterface();
+
+        long double reward=interface.reward();
 
         if(reward>best_reward)
         {
             std::cout<<"Best reward: "<<reward<<" at step: "<<step<<std::endl;
-            std::cout<<"Best x: "<<x<<std::endl;
             best_reward=reward;
         }
 
@@ -218,18 +259,14 @@ int main(int argc,char** argv)
 
         std::cout<<"Time "<<elapsed_seconds<<" s"<<std::endl;
 
-        interface.set_reward(reward);
-
-        std::cout<<"Reward: "<<reward<<std::endl;
+        //std::cout<<"Reward: "<<reward<<std::endl;
 
         interface.set_wait(1);
 
         if(!interface.SerializeToString(&buffer))
         {
             return -12;
-        }
-
-        
+        }        
 
         ++step;
 
