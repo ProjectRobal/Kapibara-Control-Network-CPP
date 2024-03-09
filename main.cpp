@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <numeric>
 #include <fstream>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "parallel.hpp"
 
@@ -35,6 +37,10 @@
 
 #include "networks/kac_actor_crictic.hpp"
 
+#include "shared_mem.hpp"
+
+#include "proto/cartpole.pb.h"
+
 number stddev(const snn::SIMDVector& vec)
 {
     number mean=vec.dot_product();
@@ -52,8 +58,18 @@ number evaluatePolynomial(const snn::SIMDVector& poly,const number& x)
     return std::pow(x,3)*poly[0] + std::pow(x,2)*poly[1] + x*poly[2] + poly[3];
 }
 
- 
-int main()
+
+struct CartPoleInterface
+{
+    uint8_t wait;
+
+    double inputs[4]; 
+    double outputs[2];
+    double reward;
+};
+
+
+int main(int argc,char** argv)
 {
 
     std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
@@ -89,9 +105,99 @@ int main()
     size_t step=1;  
 
     size_t maxSteps=50000;
-    
+
+    CartPoleInterface interf;
+
+    interf={0};
+
+    CartPole interface;
+
+    interface.set_wait(1);
+    interface.add_inputs(0);
+    interface.add_inputs(0);
+    interface.add_inputs(0);
+    interface.add_inputs(0);
+    interface.add_outputs(0);
+    interface.add_outputs(0);
+    interface.set_reward(0);
+
+
+    if(access("fifo",F_OK) != 0)
+    {
+        if(mkfifo("fifo",0666) == -1)
+        {
+            std::cerr<<"Cannot create fifo"<<std::endl;
+        }
+    }
+
+    if(access("fifo_in",F_OK) != 0)
+    {
+        if(mkfifo("fifo_in",0666) == -1)
+        {
+            std::cerr<<"Cannot create input fifo"<<std::endl;
+        }
+    }
+
+    std::string buffer;
+
+
+    std::cout<<"Starting"<<std::endl;
+
+    int fifo=0;
+
     while(maxSteps--)
     {
+
+        char start_code=0;
+
+        fifo=open("fifo",O_RDONLY);
+
+        read(fifo,&start_code,1);
+
+        if( start_code == '@' )
+        {
+
+            size_t size=0;
+
+            read(fifo,(void*)&size,8);
+
+            char _buffer[size];
+
+            read(fifo,_buffer,size);
+
+            if(!interface.ParseFromArray(_buffer,size))
+            {
+                return -11;
+            }
+
+            std::cout<<"Recived: "<<interface.reward()<<std::endl;
+
+            interface.set_reward(10);
+
+            if(!interface.SerializeToString(&buffer))
+            {
+                return -12;
+            }
+
+            close(fifo);
+
+            fifo=open("fifo",O_WRONLY);
+
+            write(fifo,"@",1);
+            
+            size=buffer.size();
+
+            write(fifo,(void*)&size,sizeof(size_t));
+            write(fifo,buffer.c_str(),buffer.size());
+
+            close(fifo);
+
+            std::cout<<"Written data!"<<std::endl;
+        }
+
+        close(fifo);
+
+        std::chrono::time_point start=std::chrono::steady_clock::now();
 
         number x=network.step(inputs)[0];
 
@@ -106,6 +212,27 @@ int main()
 
         network.applyReward(reward);
 
+        std::chrono::time_point end=std::chrono::steady_clock::now();
+
+        const std::chrono::duration<double> elapsed_seconds(end-start);
+
+        std::cout<<"Time "<<elapsed_seconds<<" s"<<std::endl;
+
+        interface.set_reward(reward);
+
+        std::cout<<"Reward: "<<reward<<std::endl;
+
+        interface.set_wait(1);
+
+        if(!interface.SerializeToString(&buffer))
+        {
+            return -12;
+        }
+
+        
+
         ++step;
+
     }
 }
+

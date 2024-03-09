@@ -2,10 +2,13 @@ cmake_minimum_required(VERSION 3.22)
 
 project(Kolejka)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -g -Wall -std=c++20")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -g -Wall -std=c++20 -O0 ")
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/sources/")
+
+include_directories(${PROTOBUF_INCLUDE_DIR})
+find_package(Protobuf CONFIG REQUIRED)
 
 file(GLOB all_SRCS
         "${PROJECT_SOURCE_DIR}/include/*.h"
@@ -15,3 +18,6 @@ file(GLOB all_SRCS
         )
 
 add_executable(main main.cpp ${all_SRCS})
+protobuf_generate(TARGET main PROTOS proto/cartpole.proto)
+target_include_directories(main PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_link_libraries(main PRIVATE protobuf::libprotobuf)

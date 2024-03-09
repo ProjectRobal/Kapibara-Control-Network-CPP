@@ -1,4 +1,4 @@
 #!/bin/bash
 clear
 
-exec ./build/main
+exec ./build/main "$@"
