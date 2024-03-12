@@ -4,7 +4,7 @@
 #include <functional>
 #include <fstream>
 
-#include "block.hpp"
+#include "block_multi_output.hpp"
 #include "neuron.hpp"
 #include "initializer.hpp"
 #include "mutation.hpp"
@@ -23,23 +23,23 @@
 
 namespace snn
 {
-    #define STATICLAYERID 1
+    #define MOUTLAYERID 1
 
     template<class NeuronT,size_t Working,size_t Populus>
-    class Layer : public LayerProto
+    class LayerMulitOutput : public LayerProto
     { 
-        std::vector<Block<NeuronT,Working,Populus>> blocks;
+        std::vector<BlockMultiOutput<NeuronT,Working,Populus>> blocks;
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
 
         public:
 
-        Layer()
+        LayerMulitOutput()
         {
             this->activation_func=std::make_shared<Linear>();
         }
 
-        Layer(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
+        LayerMulitOutput(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
         {
             this->setup(N,init,_crossing,_mutate);
         }
@@ -63,7 +63,7 @@ namespace snn
 
             for(size_t i=0;i<N;++i)
             {
-                blocks.push_back(Block<NeuronT,Working,Populus>(_crossing,_mutate));
+                blocks.push_back(BlockMultiOutput<NeuronT,Working,Populus>(_crossing,_mutate));
                 blocks.back().setup(init);
             }
         }
@@ -129,12 +129,12 @@ namespace snn
         SIMDVector fire(const SIMDVector& input)
         {
             SIMDVector output;
-            //output.reserve(this->blocks[0].outputSize());
+            output.reserve(this->blocks[0].outputSize());
 
             for(auto& block : this->blocks)
             {
                 
-                output.extend(block.fire(input));
+                output+=block.fire(input);
 
                 if(block.readyToMate())
                 {
@@ -142,6 +142,8 @@ namespace snn
                 }
 
             }
+
+            output/=this->blocks.size();
 
             this->activation_func->activate(output);
 
@@ -152,7 +154,7 @@ namespace snn
         {
             LayerHeader header;
 
-            header.id=STATICLAYERID;
+            header.id=MOUTLAYERID;
             header.input_size=blocks[0].inputSize();
             header.output_size=blocks[0].outputSize();
 

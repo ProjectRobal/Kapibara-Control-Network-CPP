@@ -16,7 +16,7 @@
 
 #include "simd_vector.hpp"
 
-#include "neurons/feedforwardneuron.hpp"
+#include "neurons/forwardneuron.hpp"
 
 #include "crossovers/onepoint.hpp"
 #include "crossovers/fastuniform.hpp"
@@ -149,16 +149,22 @@ int main(int argc,char** argv)
     const size_t input_size=4;
     const size_t output_size=2;
     
-    snn::ActorCriticNetwork<input_size,output_size,512,1> network;
+    snn::ActorCriticNetwork<input_size,output_size,512,64> network;
 
-    network.setup(10,32,norm_gauss,cross,mutation);
+    network.setup(10,norm_gauss,cross,mutation);
 
-    std::shared_ptr<snn::LayerProto> layer=std::make_shared<snn::Layer<snn::FeedForwardNeuron<input_size,64>,1,32>>(16,norm_gauss,cross,mutation);
-    std::shared_ptr<snn::LayerProto> layer1=std::make_shared<snn::Layer<snn::FeedForwardNeuron<64,output_size>,1,32>>(8,norm_gauss,cross,mutation);
+    std::shared_ptr<snn::Layer<snn::ForwardNeuron<4>,1,32>> layer=std::make_shared<snn::Layer<snn::ForwardNeuron<4>,1,32>>(16,norm_gauss,cross,mutation);
+    std::shared_ptr<snn::Layer<snn::ForwardNeuron<16>,1,32>> layer1=std::make_shared<snn::Layer<snn::ForwardNeuron<16>,1,32>>(8,norm_gauss,cross,mutation);
+    std::shared_ptr<snn::Layer<snn::ForwardNeuron<8>,1,32>> layer2=std::make_shared<snn::Layer<snn::ForwardNeuron<8>,1,32>>(2,norm_gauss,cross,mutation);
+
+    layer->setActivationFunction(relu);
+    layer1->setActivationFunction(relu);
+    layer2->setActivationFunction(relu);
 
     network.addLayer(layer);
     network.addLayer(layer1);
-
+    network.addLayer(layer2);
+    
     // we will try to find poles in this polynomials in form of a[0]*x^3 + a[1]*x^2 + a[2] * x + a[3] = 0; 
 
     snn::SIMDVector inputs({0.25,0.5,0.6,0.4});  
@@ -212,6 +218,8 @@ int main(int argc,char** argv)
 
     */
 
+   //std::cout<<network.step(inputs)<<std::endl;
+
     while(maxSteps--)
     {
 
@@ -221,7 +229,10 @@ int main(int argc,char** argv)
 
         interface=getInterface();
 
-        std::cout<<interface.reward()<<std::endl;
+        if(interface.inputs_size()<4)
+        {
+            continue;
+        }
 
         inputs.set(interface.inputs(0),0);
         inputs.set(interface.inputs(1),1);
@@ -250,6 +261,8 @@ int main(int argc,char** argv)
             std::cout<<"Best reward: "<<reward<<" at step: "<<step<<std::endl;
             best_reward=reward;
         }
+
+        std::cout<<"Reward: "<<reward<<std::endl;
 
         network.applyReward(reward);
 

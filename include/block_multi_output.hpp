@@ -20,7 +20,7 @@ namespace snn
 {
 
     template<class NeuronT,size_t Working,size_t Populus>
-    class Block
+    class BlockMultiOutput
     {     
 
         struct BlockHeader {
@@ -45,7 +45,7 @@ namespace snn
 
         public:
 
-        Block(std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
+        BlockMultiOutput(std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
         : crossing(_crossing),
         mutate(_mutate),
         uniform(0,Populus-1),
@@ -170,14 +170,14 @@ namespace snn
 
         SIMDVector fire(SIMDVector input)
         {
-            SIMDVector output;
+            SIMDVector output=this->workers.front()->fire(input);
 
-            for(auto iter=this->workers.begin();iter!=this->workers.end();iter++)
+            for(auto iter=this->workers.begin()+1;iter!=this->workers.end();iter++)
             {
-                output.append((*iter)->fire1(input));
+                output+=(*iter)->fire(input);
             }
 
-            return output;
+            return output/this->workers.size();
         }       
 
         size_t inputSize()
@@ -187,7 +187,7 @@ namespace snn
 
         size_t outputSize()
         {
-            return Working;
+            return this->population[0]->output_size();
         }
 
         void save(std::ofstream& file) const

@@ -12,6 +12,7 @@
 #include "initializer.hpp"
 #include "crossover.hpp"
 #include "mutation.hpp"
+#include "activation.hpp"
 
 namespace snn
 {
@@ -31,6 +32,10 @@ namespace snn
         virtual void keepWorkers()=0;
 
         virtual void applyRewardToSavedBlocks(long double reward)=0;
+
+        virtual void setInitializer(std::shared_ptr<Initializer> init)=0;
+
+        virtual void setActivationFunction(std::shared_ptr<Activation> active)=0;
 
         virtual std::vector<std::shared_ptr<snn::Neuron>> getWorkingNeurons()=0;
 

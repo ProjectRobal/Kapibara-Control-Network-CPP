@@ -27,6 +27,19 @@ namespace snn
 
         }
 
+        void mutate(number& num)
+        {
+            std::random_device rd; 
+
+            // Mersenne twister PRNG, initialized with seed from previous random device instance
+            std::mt19937 gen(rd()); 
+
+            if(uniform(gen)<this->mutation_threshold)
+            {
+                num+=gauss(gen);
+            }
+        }
+
         void mutate(SIMDVector& vec)
         {
             std::random_device rd; 

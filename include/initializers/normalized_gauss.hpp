@@ -42,5 +42,17 @@ namespace snn
 
             vec/=mean;
         }
+
+        void init(number& n)
+        {
+            std::random_device rd; 
+
+            // Mersenne twister PRNG, initialized with seed from previous random device instance
+            std::mt19937 gen(rd()); 
+
+            n=this->gauss(gen);
+
+            n=n/abs(n);
+        }
     };
 }

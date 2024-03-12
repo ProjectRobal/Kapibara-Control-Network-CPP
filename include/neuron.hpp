@@ -60,7 +60,15 @@ namespace snn
 
         virtual void setup(std::shared_ptr<Initializer> init)=0;
 
-        virtual SIMDVector fire(const SIMDVector& input)=0;
+        virtual SIMDVector fire(const SIMDVector& input)
+        {
+            return SIMDVector(0,1);
+        }
+
+        virtual number fire1(const SIMDVector& input)
+        {
+            return 0;
+        }
 
         virtual size_t input_size()=0;
 

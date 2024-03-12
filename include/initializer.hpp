@@ -2,6 +2,8 @@
 
 #include <simd_vector.hpp>
 
+#include <config.hpp>
+
 namespace snn
 {
     
@@ -10,6 +12,8 @@ namespace snn
         public:
 
         virtual void init(SIMDVector& vec,size_t N)=0;
+
+        virtual void init(number& n)=0;
     };
 
 }
