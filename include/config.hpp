@@ -12,10 +12,10 @@ typedef std::experimental::fixed_size_simd<number , MAX_SIMD_VECTOR_SIZE> SIMD;
 
 typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> SIMD_MASK;
 
-#define MAITING_THRESHOLD 0.4f
+#define MAITING_THRESHOLD 0.1f
 
-#define AMOUNT_THAT_PASS 0.4f
+#define AMOUNT_THAT_PASS 0.3f
 
-#define USESES_TO_MAITING 10
+#define USESES_TO_MAITING 4
 
 #define MAX_THREAD_POOL 8

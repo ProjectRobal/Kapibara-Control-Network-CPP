@@ -139,6 +139,7 @@ namespace snn
                 if(block.readyToMate())
                 {
                     block.maiting(this->init);
+                    std::cout<<"Layer maiting!"<<std::endl;
                 }
 
             }

@@ -41,6 +41,8 @@
 
 #include "proto/cartpole.pb.h"
 
+#include "replay/short_term_memory.hpp"
+
 number stddev(const snn::SIMDVector& vec)
 {
     number mean=vec.dot_product();
@@ -140,6 +142,57 @@ int main(int argc,char** argv)
     std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
 
 
+    ShortTermMemory memory(10);
+
+    number reward_to_find=0.f;
+
+    for(size_t i=0;i<15;i++)
+    {
+        snn::SIMDVector input;
+        gauss->init(input,4);
+        snn::SIMDVector output;
+        gauss->init(output,4);
+
+        number reward;
+
+        gauss->init(reward);
+
+        reward_to_find+=reward;
+
+        //std::cout<<reward<<std::endl;
+
+        memory.append(input,output,reward);
+    }
+
+    reward_to_find/=15;
+
+    double estimated=0;
+
+    snn::SIMDVector input;
+    snn::SIMDVector output;
+
+    while(estimated==0)
+    {
+        input.clear();
+        output.clear();
+
+        
+        gauss->init(input,4);
+        gauss->init(output,4);
+
+        memory.EstimateRewardFor(input,output,estimated);
+
+    }
+
+    std::cout<<"Input: "<<input<<std::endl;
+    std::cout<<"Output: "<<output<<std::endl;
+    std::cout<<"Size: "<<memory.getSize()<<std::endl;
+
+    std::cout<<"Estimated: "<<estimated<<std::endl;
+
+
+    return 0;
+
     long double best_reward=-100;
 
     snn::ReLu activate;
@@ -153,9 +206,9 @@ int main(int argc,char** argv)
 
     network.setup(10,norm_gauss,cross,mutation);
 
-    std::shared_ptr<snn::Layer<snn::ForwardNeuron<4>,1,32>> layer=std::make_shared<snn::Layer<snn::ForwardNeuron<4>,1,32>>(16,norm_gauss,cross,mutation);
-    std::shared_ptr<snn::Layer<snn::ForwardNeuron<16>,1,32>> layer1=std::make_shared<snn::Layer<snn::ForwardNeuron<16>,1,32>>(8,norm_gauss,cross,mutation);
-    std::shared_ptr<snn::Layer<snn::ForwardNeuron<8>,1,32>> layer2=std::make_shared<snn::Layer<snn::ForwardNeuron<8>,1,32>>(2,norm_gauss,cross,mutation);
+    std::shared_ptr<snn::Layer<snn::ForwardNeuron<4>,1,256>> layer=std::make_shared<snn::Layer<snn::ForwardNeuron<4>,1,256>>(16,norm_gauss,cross,mutation);
+    std::shared_ptr<snn::Layer<snn::ForwardNeuron<16>,1,256>> layer1=std::make_shared<snn::Layer<snn::ForwardNeuron<16>,1,256>>(8,norm_gauss,cross,mutation);
+    std::shared_ptr<snn::Layer<snn::ForwardNeuron<8>,1,256>> layer2=std::make_shared<snn::Layer<snn::ForwardNeuron<8>,1,256>>(2,norm_gauss,cross,mutation);
 
     layer->setActivationFunction(relu);
     layer1->setActivationFunction(relu);
@@ -220,10 +273,9 @@ int main(int argc,char** argv)
 
    //std::cout<<network.step(inputs)<<std::endl;
 
+    
     while(maxSteps--)
     {
-
-        char start_code=0;
 
         // recive inputs
 
@@ -254,7 +306,8 @@ int main(int argc,char** argv)
 
         interface=getInterface();
 
-        long double reward=interface.reward();
+        long double reward=interface.reward()-1;
+
 
         if(reward>best_reward)
         {
@@ -273,8 +326,6 @@ int main(int argc,char** argv)
         std::cout<<"Time "<<elapsed_seconds<<" s"<<std::endl;
 
         //std::cout<<"Reward: "<<reward<<std::endl;
-
-        interface.set_wait(1);
 
         if(!interface.SerializeToString(&buffer))
         {

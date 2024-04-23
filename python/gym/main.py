@@ -74,8 +74,8 @@ def main():
         interface.inputs[2]=observation[2]
         interface.inputs[3]=observation[3]
         
-        if terminated:
-            observation=env.reset()[0]
+        #if terminated:
+        #    observation=env.reset()[0]
         
         #send observation
         sendInterface(interface)
@@ -86,7 +86,7 @@ def main():
         
         observation, reward, terminated, truncated, info =env.step(interface.outputs[0]>interface.outputs[1])
             
-        interface.reward=(-abs(observation[0])/2.4) - abs(observation[2])/0.2095
+        interface.reward=reward
         
         sendInterface(interface)
 
