@@ -80,12 +80,6 @@ namespace snn
 
         void applyReward(long double reward)
         {
-            /*this->E=std::max((-reward/300.f),(long double)0.f)+0.05;
-
-            if(this->E>1.f)
-            {
-                this->E=1.f;
-            }*/
 
             reward/=this->blocks.size();
 
@@ -136,7 +130,53 @@ namespace snn
             return output;
         }
 
-        
+
+        size_t getTypeID()
+        {
+            return STATICLAYERID;
+        };
+
+        void generate_metadata(nlohmann::json& j) const
+        {
+            j["input_size"]=blocks[0].inputSize();
+            j["output_size"]=blocks.size();
+        }
+
+        int8_t load(std::ifstream& in)
+        {
+
+            for(auto& block : this->blocks)
+            {
+                if(in.good())
+                {
+                    block.load(in);
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+
+            return 0;
+        }
+
+        int8_t save(std::ofstream& out) const
+        {
+            
+            for(const auto& block : this->blocks)
+            {
+                if(out.good())
+                {
+                    block.dump(out);
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+
+            return 0;
+        }        
 
     };  
     

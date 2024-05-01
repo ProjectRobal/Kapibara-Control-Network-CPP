@@ -73,6 +73,54 @@ namespace snn
             this->biases+=b;
         }
 
+        void save(std::ofstream& out) const
+        {
+
+            for(size_t i=0;i<input_weights.size();++i)
+            {
+                char* data=snn::serialize_number<number>(input_weights[i]);
+
+                out.write(data,SERIALIZED_NUMBER_SIZE);
+
+                delete [] data;
+            }
+                
+            // save neuron bias
+
+            char* data=snn::serialize_number<number>(biases);
+
+            out.write(data,SERIALIZED_NUMBER_SIZE);
+
+            delete [] data;
+
+            Neuron::save(out);
+        }
+
+        void load(std::ifstream& in)
+        {
+            this->input_weights.clear();
+
+            char data[SERIALIZED_NUMBER_SIZE];
+
+            // load weights
+            for(size_t i=0;i<InputSize;++i)
+            {
+                in.read(data,SERIALIZED_NUMBER_SIZE);
+
+                number weight = snn::deserialize_number<number>(data);
+
+                this->input_weights.append(weight);
+            }
+
+            // load biases
+            in.read(data,SERIALIZED_NUMBER_SIZE);
+
+            this->biases = snn::deserialize_number<number>(data);
+
+            Neuron::load(in);
+        }
+
+
         void setup(std::shared_ptr<Initializer> init)
         {
             this->input_weights.clear();

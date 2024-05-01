@@ -16,6 +16,8 @@
 
 #include "config.hpp"
 
+#include "misc.hpp"
+
 namespace snn
 {
 
@@ -233,17 +235,49 @@ namespace snn
 
         }       
 
-        size_t inputSize()
+        size_t inputSize() const
         {
             return this->population[0]->input_size();
         }
 
-        size_t outputSize()
+        size_t outputSize() const
         {
             return 1;
         }
 
-        
 
+        void dump(std::ofstream& out) const
+        {
+            for(auto neuron : this->population)
+            {
+                neuron->save(out);
+            }   
+
+            uint64_t maiting = this->mating_counter;
+
+            char maiting_data[sizeof(uint64_t)]={0};
+
+            out.write(maiting_data,sizeof(uint64_t));
+        }
+
+        void load(std::ifstream& in)
+        {
+            for(auto neuron : this->population)
+            {
+                neuron->load(in);
+            }
+
+            uint64_t maiting = 0;
+
+            char maiting_data[sizeof(uint64_t)]={0};
+
+            in.read(maiting_data,sizeof(uint64_t));
+
+            memmove(reinterpret_cast<char*>(&maiting),maiting_data,sizeof(uint64_t));
+
+            this->mating_counter=maiting;
+        }
+
+        
     };
 }

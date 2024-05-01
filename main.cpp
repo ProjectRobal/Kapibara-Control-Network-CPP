@@ -46,6 +46,8 @@
 
 #include "network.hpp"
 
+#include "serializaers/network_serialize.hpp"
+
 number stddev(const snn::SIMDVector& vec)
 {
     number mean=vec.dot_product();
@@ -173,6 +175,8 @@ int main(int argc,char** argv)
     network.addLayer(layer2);
     network.addLayer(layer3);
 
+    snn::NetworkSerializer::load(network,"checkpoint");
+
     snn::SIMDVector input;
 
     gauss->init(input,128);
@@ -213,6 +217,7 @@ int main(int argc,char** argv)
 
     file.close();
 
+    snn::NetworkSerializer::save(network,"checkpoint");
 
     return 0;
 }

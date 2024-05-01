@@ -4,3 +4,4 @@ python/include
 python/lib
 python/lib64
 pyvenv.cfg
+checkpoint/*

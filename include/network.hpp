@@ -21,6 +21,12 @@ namespace snn
         Network()
         {}
 
+        const std::vector<std::shared_ptr<LayerProto>>& getLayers() const
+        {
+            return this->layers;
+        }
+
+
         void addLayer(std::shared_ptr<LayerProto> layer)
         {
             this->layers.push_back(layer);

@@ -94,15 +94,24 @@ namespace snn
             return output;
         }
 
-        void save(std::ofstream& file)
+        size_t getTypeID()
         {
-           
+            return 2;
+        };
+
+        void generate_metadata(nlohmann::json& j) const
+        {
+
         }
 
-        bool load(std::ifstream& file)
+        int8_t load(std::ifstream& in)
         {
-            
-            return true;
+            return -1;
+        }
+
+        int8_t save(std::ofstream& out) const
+        {
+            return -1;
         }
 
     };  
