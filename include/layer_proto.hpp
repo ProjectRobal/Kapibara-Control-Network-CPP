@@ -29,19 +29,9 @@ namespace snn
 
         virtual void applyReward(long double reward)=0;
 
-        virtual void keepWorkers()=0;
-
-        virtual void applyRewardToSavedBlocks(long double reward)=0;
-
         virtual void setInitializer(std::shared_ptr<Initializer> init)=0;
 
         virtual void setActivationFunction(std::shared_ptr<Activation> active)=0;
-
-        virtual std::vector<std::shared_ptr<snn::Neuron>> getWorkingNeurons()=0;
-
-        virtual void save(std::ofstream& file)=0;
-
-        virtual bool load(std::ifstream& file)=0;
 
         virtual ~LayerProto()
         {};

@@ -14,5 +14,13 @@ namespace snn
 
             vec=vec*filtered;
         }
+
+        inline void inverse(SIMDVector& vec)
+        {
+            // clear values that are less than zero
+            SIMDVector filtered=vec>0;
+
+            vec=vec*filtered;
+        }
     };
 }

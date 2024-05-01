@@ -21,21 +21,29 @@
 #include <utility>
 #include <memory>
 
+#include "config.hpp"
+
 #include "simd_vector.hpp"
 
 
-typedef std::pair<double,std::pair<snn::SIMDVector,double>> BufferElement;
+typedef std::pair<number,std::pair<snn::SIMDVector,number>> BufferElement;
+
 
 class ShortTermMemory
 {
     
     std::size_t MaxSize;
 
+    // MSE threshold for chunk selection
+    number Beta;
+    // MSE threshold for selecting nearest neighbour
+    number Alfa;    
+
     // holds (mean square values ( (inputs,outputs) , reward ) ) pairs.
     std::deque<std::shared_ptr<BufferElement>> buffer;
 
     // value - a value we are searching for, f - a index of first element of array, l - a index of last element of array
-    std::shared_ptr<BufferElement> binary_search(const std::deque<std::shared_ptr<BufferElement>>& array,const snn::SIMDVector& vec, double& value,size_t f,size_t l)
+    std::shared_ptr<BufferElement> binary_search(const std::deque<std::shared_ptr<BufferElement>>& array,const snn::SIMDVector& vec, number& value,size_t f,size_t l)
     {
 
         if( f == l)
@@ -44,11 +52,11 @@ class ShortTermMemory
         }
 
 
-        double MSE=((array[f]->first-value)*(array[f]->first-value)+(array[l]->first-value)*(array[l]->first-value))/2;
+        number MSE=((array[f]->first-value)*(array[f]->first-value)+(array[l]->first-value)*(array[l]->first-value))/2;
 
-        if( MSE < 0.25 )
+        if( MSE < this->Alfa )
         {
-            double _mse=1<<32;
+            number _mse=1<<32;
 
             int idx=-1;
 
@@ -57,7 +65,7 @@ class ShortTermMemory
             for(size_t i=f;i<=l;++i)
             {
                 count=0;
-                /*double c_mse=((array[i]->second.first-vec)*(array[i]->second.first-vec)).dot_product()/vec.size();
+                /*number c_mse=((array[i]->second.first-vec)*(array[i]->second.first-vec)).dot_product()/vec.size();
 
                 if( c_mse < _mse )
                 {
@@ -67,7 +75,7 @@ class ShortTermMemory
 
                 for(size_t o=0;o<vec.size();++o)
                 {
-                    if((((vec[o]<0)==(array[i]->second.first[o]<0)) && (abs(vec[o]-array[i]->second.first[o]) <= 0.1)))
+                    if((((vec[o]<0)==(array[i]->second.first[o]<0)) && (abs(vec[o]-array[i]->second.first[o]) <= this->Beta)))
                     {
                         count++;
                     }
@@ -89,7 +97,7 @@ class ShortTermMemory
             }
         }
 
-        double center = array[floor((f+l)/2)]->first;
+        number center = array[floor((f+l)/2)]->first;
 
         if( value < center )
         {
@@ -109,12 +117,14 @@ class ShortTermMemory
 
     public:
 
-    ShortTermMemory(std::size_t MaxSize)
+    ShortTermMemory(std::size_t MaxSize,number Alfa,number Beta)
     {
         this->MaxSize=MaxSize;
+        this->Alfa=Alfa;
+        this->Beta=Beta;
     }
 
-    void append(const snn::SIMDVector& inputs,const snn::SIMDVector& outputs,const double& reward)
+    void append(const snn::SIMDVector& inputs,const snn::SIMDVector& outputs,const number& reward)
     {
         if( this->buffer.size() >= this->MaxSize )
         {
@@ -125,20 +135,20 @@ class ShortTermMemory
 
         input_outputs.extend(outputs);
 
-        std::pair<snn::SIMDVector,double> pairs=std::pair<snn::SIMDVector,double>(input_outputs,reward);
+        std::pair<snn::SIMDVector,number> pairs=std::pair<snn::SIMDVector,number>(input_outputs,reward);
 
-        double mse=(input_outputs*input_outputs).dot_product();
+        number mse=(input_outputs*input_outputs).dot_product();
 
         this->buffer.push_back(std::make_shared<BufferElement>(std::pair(mse,pairs)));
     }
 
-    bool EstimateRewardFor(const snn::SIMDVector& inputs,const snn::SIMDVector& outputs,double& estimated)
+    bool EstimateRewardFor(const snn::SIMDVector& inputs,const snn::SIMDVector& outputs,number& estimated)
     {
         snn::SIMDVector input_outputs=inputs;
 
         input_outputs.extend(outputs);
 
-        double mse=(input_outputs*input_outputs).dot_product()/input_outputs.size();
+        number mse=(input_outputs*input_outputs).dot_product()/input_outputs.size();
 
         auto sorted=this->buffer;
 

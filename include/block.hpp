@@ -19,7 +19,7 @@
 namespace snn
 {
 
-    template<class NeuronT,size_t Working,size_t Populus>
+    template<class NeuronT,size_t Populus>
     class Block
     {     
 
@@ -39,9 +39,7 @@ namespace snn
         std::uniform_int_distribution<size_t> uniform;
 
         std::array<std::shared_ptr<Neuron>,Populus> population;
-        std::array<std::shared_ptr<Neuron>,Working> workers;
-
-        std::array<std::shared_ptr<Neuron>,Working> best_workers;
+        std::shared_ptr<Neuron> worker;
 
         public:
 
@@ -50,7 +48,8 @@ namespace snn
         mutate(_mutate),
         uniform(0,Populus-1),
         population({NULL}),
-        workers({NULL})
+        worker(NULL),
+        mating_counter(0)
         {
 
         }
@@ -71,54 +70,23 @@ namespace snn
             // Mersenne twister PRNG, initialized with seed from previous random device instance
             std::mt19937 gen(rd()); 
 
-            for(auto& w : this->workers)
-            {
-                w=this->population[this->uniform(gen)];
-            }
+            this->worker=this->population[this->uniform(gen)];
         }
 
-        // store a best partition of workes for later use
-        void keepWorkers()
-        {
-            this->best_workers=this->workers;
-        }
-
-        void giveRewardToSavedWorkers(long double reward)
-        {
-            reward/=this->best_workers.size();
-
-            for(auto& w : this->best_workers)
-            {
-                w->giveReward(reward);
-                
-                if(w->used()<USESES_TO_MAITING)
-                {
-                    w->use();
-                    if(w->used()==USESES_TO_MAITING)
-                    {
-                        ++this->mating_counter;
-                    }
-                }
-            }
-        }
 
         void giveReward(long double reward)
-        {
-            reward/=this->workers.size();
-
-            for(auto& w : this->workers)
+        {          
+            this->worker->giveReward(reward);
+            
+            if(this->worker->used()<USESES_TO_MAITING)
             {
-                w->giveReward(reward);
-                
-                if(w->used()<USESES_TO_MAITING)
+                this->worker->use();
+                if(this->worker->used()==USESES_TO_MAITING)
                 {
-                    w->use();
-                    if(w->used()==USESES_TO_MAITING)
-                    {
-                        ++this->mating_counter;
-                    }
+                    ++this->mating_counter;
                 }
             }
+            
         }
 
         bool readyToMate()
@@ -166,18 +134,14 @@ namespace snn
 
                 pivot++;
             }
+
         }
 
-        SIMDVector fire(SIMDVector input)
+        number fire(SIMDVector input)
         {
-            SIMDVector output;
 
-            for(auto iter=this->workers.begin();iter!=this->workers.end();iter++)
-            {
-                output.append((*iter)->fire1(input));
-            }
+            return this->worker->fire1(input);
 
-            return output;
         }       
 
         size_t inputSize()
@@ -187,79 +151,10 @@ namespace snn
 
         size_t outputSize()
         {
-            return Working;
+            return 1;
         }
 
-        void save(std::ofstream& file) const
-        {
-            // save block header with information about size etc
-
-            BlockHeader header={
-                .block_type='@',
-                .populus_size=Populus,
-                .working_size=Working
-            };
-
-            // save header
-
-            file.write((char*)&header,sizeof(BlockHeader));
-
-            // save populus
-
-            for(size_t i=0;i<this->population.size();++i)
-            {
-                this->population[i]->save(file);
-            }
-
-        }
-
-        const std::array<std::shared_ptr<Neuron>,Working>& getWorkers()
-        {
-            return this->workers;
-        }
-
-        bool load(std::ifstream& file)
-        {
-
-            // load header
-
-            BlockHeader header={0};
-
-            file.read((char*)&header,sizeof(BlockHeader));
-
-            if(header.block_type != '@')
-            {
-                std::cerr<<"Wrong block header!!"<<std::endl;
-                return false;
-            }
-
-            if(header.populus_size != Populus)
-            {
-                std::cerr<<"Wrong population size!"<<std::endl;
-                return false;
-            }
-
-            if(header.working_size != Working)
-            {
-                std::cerr<<"Wrong working population size!"<<std::endl;
-                return false;
-            }
-
-            for(size_t i=0;i<header.populus_size;i++)
-            {
-                std::shared_ptr<NeuronT> neuron=std::make_shared<NeuronT>();
-
-                if(! neuron->load(file) )
-                {
-                    std::cerr<<"Neuron: "<<i<<" corrupted!"<<std::endl;
-                    return false;
-                }
-
-            }
-
-
-            return true;
-        }
+        
 
     };
 }

@@ -60,6 +60,8 @@ namespace snn
 
         virtual void setup(std::shared_ptr<Initializer> init)=0;
 
+        virtual void update(const SIMDVector& weight,const number& bias)=0;
+
         virtual SIMDVector fire(const SIMDVector& input)
         {
             return SIMDVector(0,1);
@@ -136,10 +138,6 @@ namespace snn
         {
             return this->score != neuron.score;
         }
-
-        virtual void save(std::ofstream& file) const =0;
-
-        virtual bool load(std::ifstream& file)=0;
 
         virtual ~Neuron(){}
     };

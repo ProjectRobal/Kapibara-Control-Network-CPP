@@ -25,10 +25,10 @@ namespace snn
 {
     #define STATICLAYERID 1
 
-    template<class NeuronT,size_t Working,size_t Populus>
+    template<class NeuronT,size_t Populus>
     class Layer : public LayerProto
     { 
-        std::vector<Block<NeuronT,Working,Populus>> blocks;
+        std::vector<Block<NeuronT,Populus>> blocks;
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
 
@@ -63,7 +63,7 @@ namespace snn
 
             for(size_t i=0;i<N;++i)
             {
-                blocks.push_back(Block<NeuronT,Working,Populus>(_crossing,_mutate));
+                blocks.push_back(Block<NeuronT,Populus>(_crossing,_mutate));
                 blocks.back().setup(init);
             }
         }
@@ -78,26 +78,6 @@ namespace snn
             }
         }
 
-        void applyRewardToSavedBlocks(long double reward)
-        {
-            reward/=this->blocks.size();
-
-            for(auto& block : this->blocks)
-            {
-                block.giveRewardToSavedWorkers(reward);
-            }
-        }
-
-        void keepWorkers()
-        {
-            for(auto& block : this->blocks)
-            {
-                
-                block.keepWorkers();
-
-            }   
-        }
-
         void shuttle()
         {
             
@@ -109,23 +89,6 @@ namespace snn
             }   
         }
 
-        std::vector<std::shared_ptr<snn::Neuron>> getWorkingNeurons()
-        {
-            std::vector<std::shared_ptr<snn::Neuron>> workers;
-
-            for(auto& block : this->blocks)
-            {
-                auto workers_arr=block.getWorkers();
-
-                for(auto& worker : workers_arr)
-                {
-                    workers.push_back(worker);
-                }
-            }
-
-            return workers;
-        }
-
         SIMDVector fire(const SIMDVector& input)
         {
             SIMDVector output;
@@ -134,7 +97,7 @@ namespace snn
             for(auto& block : this->blocks)
             {
                 
-                output.extend(block.fire(input));
+                output.append(block.fire(input));
 
                 if(block.readyToMate())
                 {
@@ -149,51 +112,7 @@ namespace snn
             return output;
         }
 
-        void save(std::ofstream& file)
-        {
-            LayerHeader header;
-
-            header.id=STATICLAYERID;
-            header.input_size=blocks[0].inputSize();
-            header.output_size=blocks[0].outputSize();
-
-            file.write((char*)&header,sizeof(header));
-
-            for(const auto& block : this->blocks)
-            {
-                block.save(file);
-            }
-        }
-
-        bool load(std::ifstream& file)
-        {
-            LayerHeader header={0};
-
-            file.read((char*)&header,sizeof(header));
-
-            if(strcmp("KAC",header.header)!=0)
-            {
-                std::cerr<<"Invalid header!"<<std::endl;
-                return false;
-            }
-
-            if(header.id != STATICLAYERID)
-            {
-                std::cerr<<"Invalid layer format!"<<std::endl;
-                return false;
-            }
-
-            for(auto& block : this->blocks)
-            {
-                if(!block.load(file))
-                {
-                    std::cerr<<"Block corrupted"<<std::endl;
-                    return false;
-                }
-            }
-
-            return true;
-        }
+        
 
     };  
     

@@ -6,22 +6,23 @@
 
 namespace snn
 {
-    class Sigmoid : public Activation
+    class FastSigmoid : public Activation
     {
         
         public:
 
         inline void activate(SIMDVector& vec)
         {
-            SIMDVector v=exp(vec);
 
-            vec=v/(v+1);
+            vec=vec/(abs(vec)+1);
+            
         }
 
+        // add boundary check
         inline void inverse(SIMDVector& vec)
         {
             
-            
+            vec=(vec/(vec+1))+(vec/(-vec+1));
             
         }
     };
