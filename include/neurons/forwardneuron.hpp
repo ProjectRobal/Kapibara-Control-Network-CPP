@@ -63,6 +63,16 @@ namespace snn
             this->input_weights+=dweight;
         }
 
+        const number& get_bias()
+        {
+            return this->biases;
+        }
+
+        void update_bias(const number& b)
+        {
+            this->biases+=b;
+        }
+
         void setup(std::shared_ptr<Initializer> init)
         {
             this->input_weights.clear();

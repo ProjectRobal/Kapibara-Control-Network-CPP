@@ -135,6 +135,13 @@ CartPole getInterface()
 }
 
 
+// evalute a minimum of parabola
+number evaluate(const snn::SIMDVector& input)
+{
+    return -abs((input[0]*input[0] + 10*input[1] + 2));
+}
+
+
 int main(int argc,char** argv)
 {
 
@@ -147,8 +154,9 @@ int main(int argc,char** argv)
     auto relu=std::make_shared<snn::ReLu>();
 
     auto first= std::make_shared<snn::Layer<snn::ForwardNeuron<128>,32>>(256,gauss,cross,mutation);
-    auto layer1=std::make_shared<snn::Layer<snn::ForwardNeuron<128>,32>>(64,gauss,cross,mutation);
-    auto layer2=std::make_shared<snn::Layer<snn::ForwardNeuron<128>,32>>(2,gauss,cross,mutation);
+    auto layer1=std::make_shared<snn::Layer<snn::ForwardNeuron<256>,32>>(256,gauss,cross,mutation);
+    auto layer2=std::make_shared<snn::Layer<snn::ForwardNeuron<256>,32>>(64,gauss,cross,mutation);
+    auto layer3=std::make_shared<snn::Layer<snn::ForwardNeuron<64>,32>>(2,gauss,cross,mutation);
 
     first->setActivationFunction(relu);
 
@@ -156,19 +164,28 @@ int main(int argc,char** argv)
 
     layer2->setActivationFunction(relu);
 
+    //layer3->setActivationFunction(relu);
+
     snn::Network network;
 
     network.addLayer(first);
     network.addLayer(layer1);
     network.addLayer(layer2);
+    network.addLayer(layer3);
 
     snn::SIMDVector input;
 
     gauss->init(input,128);
 
-    for(size_t i=0;i<10;i++)
+    std::fstream file;
+
+    file.open("log.csv",std::ios::out);
+
+    file<<"N"<<";"<<"reward"<<std::endl;
+
+    for(size_t i=0;i<1000;i++)
     {
-        gauss->init(input,128);
+        //gauss->init(input,128);
 
         clock_t start=clock();
 
@@ -177,11 +194,25 @@ int main(int argc,char** argv)
         std::cout<<"Time: "<<(double)(clock()-start)/(double)CLOCKS_PER_SEC<<" s"<<std::endl;
 
         std::cout<<"Output: "<<output<<std::endl;
-        
-        network.applyReward(10.f*(i==0));        
 
-        input.clear();
+        number reward=evaluate(output);
+        
+        network.applyReward(reward);  
+
+        std::cout<<"Reward: "<<reward<<std::endl;
+
+        file<<i<<";"<<reward<<std::endl;
+
+        if(reward>-0.01)
+        {
+            break;
+        }     
+
+        //input.clear();
     }
+
+    file.close();
+
 
     return 0;
 }

@@ -44,6 +44,7 @@ namespace snn
         std::shared_ptr<Neuron> best_worker;
 
         number swarming_speed;
+        
 
         public:
 
@@ -100,14 +101,12 @@ namespace snn
                 return;
             }
 
-            number best_reward=this->best_worker->reward();
-
             std::random_device rd; 
 
             // Mersenne twister PRNG, initialized with seed from previous random device instance
             std::mt19937 gen(rd()); 
 
-            std::uniform_int_distribution<size_t> unifrom_chooser(0,9);
+            std::uniform_int_distribution<size_t> swarm_chooser(0,9);
 
             for(auto neuron : this->population)
             {
@@ -116,15 +115,15 @@ namespace snn
                     continue;
                 }
 
-                snn::SIMDVector dweights = (this->best_worker->get_weights() - neuron->get_weights())/this->swarming_speed;
+                if(swarm_chooser(gen)==4)
+                {
 
-                if(unifrom_chooser(gen)<5)
-                {
-                    neuron->update_weights(-dweights);
-                }
-                else
-                {
+                    snn::SIMDVector dweights = (this->best_worker->get_weights() - neuron->get_weights())/this->swarming_speed;
+
+                    number dbias = ( this->best_worker->get_bias() - neuron->get_bias() )/this->swarming_speed;
+
                     neuron->update_weights(dweights);
+                    neuron->update_bias(dbias);
                 }
                 
             }
@@ -137,7 +136,16 @@ namespace snn
             // Mersenne twister PRNG, initialized with seed from previous random device instance
             std::mt19937 gen(rd()); 
 
-            this->worker=this->population[this->uniform(gen)];
+            size_t id=this->uniform(gen);
+
+            // to make sure that we won't pick the same neuron as before
+            if(this->worker == this->population[id])
+            {
+                id=(id+1+this->uniform(gen))%(Populus-1);
+            }
+
+            this->worker=this->population[id];
+
         }
 
 

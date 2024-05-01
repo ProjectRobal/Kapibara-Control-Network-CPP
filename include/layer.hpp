@@ -3,6 +3,7 @@
 #include <vector>
 #include <functional>
 #include <fstream>
+#include <algorithm>
 
 #include "block.hpp"
 #include "neuron.hpp"
@@ -32,6 +33,11 @@ namespace snn
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
 
+        // a probability of neuron repleacment
+        double E;
+
+        std::uniform_real_distribution<double> uniform;
+
         public:
 
         Layer()
@@ -56,20 +62,31 @@ namespace snn
 
         void setup(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
         {
+            // a low probability at start
+            this->E=1.f;
+            this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
             this->activation_func=std::make_shared<Linear>();
-            blocks.clear();
+            this->blocks.clear();
 
             this->init=init;
 
             for(size_t i=0;i<N;++i)
             {
-                blocks.push_back(Block<NeuronT,Populus>(_crossing,_mutate));
-                blocks.back().setup(init);
+                this->blocks.push_back(Block<NeuronT,Populus>(_crossing,_mutate));
+                this->blocks.back().setup(init);
+                this->blocks.back().chooseWorkers();
             }
         }
 
         void applyReward(long double reward)
         {
+            /*this->E=std::max((-reward/300.f),(long double)0.f)+0.05;
+
+            if(this->E>1.f)
+            {
+                this->E=1.f;
+            }*/
+
             reward/=this->blocks.size();
 
             for(auto& block : this->blocks)
@@ -80,12 +97,19 @@ namespace snn
 
         void shuttle()
         {
+
+            std::random_device rd; 
+
+            // Mersenne twister PRNG, initialized with seed from previous random device instance
+            std::mt19937 gen(rd()); 
+
             
             for(auto& block : this->blocks)
             {
-                
-                block.chooseWorkers();
-
+                if(this->uniform(gen)<=this->E)
+                {
+                    block.chooseWorkers();
+                }
             }   
         }
 
@@ -102,7 +126,7 @@ namespace snn
                 if(block.readyToMate())
                 {
                     block.maiting(this->init);
-                    std::cout<<"Layer maiting!"<<std::endl;
+                    //std::cout<<"Layer maiting!"<<std::endl;
                 }
 
             }
