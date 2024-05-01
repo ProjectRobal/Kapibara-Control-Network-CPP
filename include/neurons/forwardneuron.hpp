@@ -53,6 +53,16 @@ namespace snn
 
         }
 
+        const snn::SIMDVector& get_weights()
+        {
+            return this->input_weights;
+        }
+
+        void update_weights(const snn::SIMDVector& dweight)
+        {
+            this->input_weights+=dweight;
+        }
+
         void setup(std::shared_ptr<Initializer> init)
         {
             this->input_weights.clear();

@@ -18,32 +18,8 @@ namespace snn
     {
         protected:
 
-        struct NeuronHeader
-        {
-            char header='$';
-            size_t input_size;
-            size_t output_size;
-            long double score;
-            size_t use_count;
-        };
-
         long double score;
         size_t use_count;
-
-        bool validateHeader(const NeuronHeader& header) const
-        {
-            return header.header == '$';
-        }
-
-        NeuronHeader getHeader(const size_t& input_size,const size_t& output_size) const
-        {
-            return {
-                .input_size=input_size,
-                .output_size=output_size,
-                .score=this->score,
-                .use_count=this->use_count
-                };
-        }
 
         public:
 
@@ -71,6 +47,10 @@ namespace snn
         {
             return 0;
         }
+
+        virtual const snn::SIMDVector& get_weights()=0;
+
+        virtual void update_weights(const snn::SIMDVector& dweight)=0;
 
         virtual size_t input_size()=0;
 

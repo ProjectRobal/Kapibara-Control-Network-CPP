@@ -41,6 +41,10 @@ namespace snn
         std::array<std::shared_ptr<Neuron>,Populus> population;
         std::shared_ptr<Neuron> worker;
 
+        std::shared_ptr<Neuron> best_worker;
+
+        number swarming_speed;
+
         public:
 
         Block(std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
@@ -49,7 +53,9 @@ namespace snn
         uniform(0,Populus-1),
         population({NULL}),
         worker(NULL),
-        mating_counter(0)
+        best_worker(NULL),
+        mating_counter(0),
+        swarming_speed(SWARMING_SPEED_DEFAULT)
         {
 
         }
@@ -60,6 +66,67 @@ namespace snn
             {
                 p=std::make_shared<NeuronT>();
                 p->setup(init);
+            }
+        }
+
+        void setSwarmingSpeed(const number& swarming_speed)
+        {
+            this->swarming_speed=swarming_speed;
+        }
+
+        const number& getSwarmingSpeed()
+        {
+            return this->swarming_speed;
+        }
+
+        std::shared_ptr<NeuronT> getBestNeuron()
+        {
+            // sort array to get the neuron with bigger reward
+            std::array<std::shared_ptr<Neuron>,Populus> to_sort=this->population;
+
+            std::sort(to_sort.begin(),to_sort.end(),
+            [](const std::shared_ptr<Neuron>& a,const std::shared_ptr<Neuron>& b)->bool
+            {
+                return a->reward()>b->reward();
+            });
+
+            return to_sort.front();
+        }
+
+        void neuronSwarming()
+        {
+            if(this->best_worker==NULL)
+            {
+                return;
+            }
+
+            number best_reward=this->best_worker->reward();
+
+            std::random_device rd; 
+
+            // Mersenne twister PRNG, initialized with seed from previous random device instance
+            std::mt19937 gen(rd()); 
+
+            std::uniform_int_distribution<size_t> unifrom_chooser(0,9);
+
+            for(auto neuron : this->population)
+            {
+                if(this->best_worker == neuron)
+                {
+                    continue;
+                }
+
+                snn::SIMDVector dweights = (this->best_worker->get_weights() - neuron->get_weights())/this->swarming_speed;
+
+                if(unifrom_chooser(gen)<5)
+                {
+                    neuron->update_weights(-dweights);
+                }
+                else
+                {
+                    neuron->update_weights(dweights);
+                }
+                
             }
         }
 
@@ -86,6 +153,17 @@ namespace snn
                     ++this->mating_counter;
                 }
             }
+
+            if(this->best_worker==NULL)
+            {
+                this->best_worker=this->worker;
+            }
+
+            // pass the torch
+            if(this->worker->reward()>this->best_worker->reward())
+            {
+                this->best_worker=this->worker;
+            }
             
         }
 
@@ -96,6 +174,7 @@ namespace snn
 
         void maiting(std::shared_ptr<Initializer> init)
         {
+            this->best_worker=NULL;
             this->mating_counter=0;
 
             std::sort(this->population.begin(),this->population.end(),
@@ -139,6 +218,8 @@ namespace snn
 
         number fire(SIMDVector input)
         {
+            // move population slowly towards best performing neuron
+            this->neuronSwarming();
 
             return this->worker->fire1(input);
 

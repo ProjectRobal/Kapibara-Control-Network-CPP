@@ -44,6 +44,8 @@
 
 #include "replay/short_term_memory.hpp"
 
+#include "network.hpp"
+
 number stddev(const snn::SIMDVector& vec)
 {
     number mean=vec.dot_product();
@@ -142,33 +144,44 @@ int main(int argc,char** argv)
     std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.1f);
     std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
 
-    auto relu=std::make_shared<snn::Linear>();
+    auto relu=std::make_shared<snn::ReLu>();
 
-    snn::Layer<snn::ForwardNeuron<128>,32> first= snn::Layer<snn::ForwardNeuron<128>,32>(256,gauss,cross,mutation);
-    snn::Layer<snn::ForwardNeuron<256>,32> layer1= snn::Layer<snn::ForwardNeuron<256>,32>(64,gauss,cross,mutation);
-    snn::Layer<snn::ForwardNeuron<64>,32> layer2= snn::Layer<snn::ForwardNeuron<64>,32>(2,gauss,cross,mutation);
+    auto first= std::make_shared<snn::Layer<snn::ForwardNeuron<128>,32>>(256,gauss,cross,mutation);
+    auto layer1=std::make_shared<snn::Layer<snn::ForwardNeuron<128>,32>>(64,gauss,cross,mutation);
+    auto layer2=std::make_shared<snn::Layer<snn::ForwardNeuron<128>,32>>(2,gauss,cross,mutation);
 
-    first.setActivationFunction(relu);
+    first->setActivationFunction(relu);
 
-    layer1.setActivationFunction(relu);
+    layer1->setActivationFunction(relu);
 
-    layer2.setActivationFunction(relu);
+    layer2->setActivationFunction(relu);
 
-    first.shuttle();
-    layer1.shuttle();
-    layer2.shuttle();
+    snn::Network network;
+
+    network.addLayer(first);
+    network.addLayer(layer1);
+    network.addLayer(layer2);
 
     snn::SIMDVector input;
 
     gauss->init(input,128);
 
-    clock_t start=clock();
+    for(size_t i=0;i<10;i++)
+    {
+        gauss->init(input,128);
 
-    snn::SIMDVector output=layer2.fire(layer1.fire(first.fire(input)));
+        clock_t start=clock();
 
-    std::cout<<"Time: "<<(double)(clock()-start)/(double)CLOCKS_PER_SEC<<" s"<<std::endl;
+        snn::SIMDVector output=network.fire(input);
 
-    std::cout<<"Output: "<<output<<std::endl;
+        std::cout<<"Time: "<<(double)(clock()-start)/(double)CLOCKS_PER_SEC<<" s"<<std::endl;
+
+        std::cout<<"Output: "<<output<<std::endl;
+        
+        network.applyReward(10.f*(i==0));        
+
+        input.clear();
+    }
 
     return 0;
 }

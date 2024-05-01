@@ -19,3 +19,5 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 #define USESES_TO_MAITING 4
 
 #define MAX_THREAD_POOL 8
+
+#define SWARMING_SPEED_DEFAULT 10.f
