@@ -44,6 +44,19 @@ namespace snn
 
         size_t highest_output_id;
 
+        number clip_to_one(number v)
+        {
+            // if( v > 1.f )
+            // {
+            //     return 1.f;
+            // }
+            // if( v < -1.f )
+            // {
+            //     return -1.f;
+            // }
+            return v;
+        }
+
         public:
 
         FastKAC()
@@ -119,21 +132,9 @@ namespace snn
 
                 size_t node_id_to_connect = uniform(gen);
 
-                SIMDVector weights(0.0,this->inputSize+this->hidden.size());
+                number weight = output_neuron->get_weights()[node_id_to_connect]*(1.f+(reward));
 
-                number weight;
-
-                this->init->init(weight);
-
-                weight*=reward;
-
-                weight = fabs(weight);
-
-                number sign = this->hidden_states[node_id_to_connect]/abs(this->hidden_states[node_id_to_connect]);
-
-                weights.set(weight*sign,node_id_to_connect);
-
-                output_neuron->update_weights(weights);
+                output_neuron->set_weight(clip_to_one(weight),node_id_to_connect);
 
                 if( node_id_to_connect >= this->inputSize )
                 {
@@ -141,75 +142,27 @@ namespace snn
 
                     size_t other_node_id_to_connect = uniform(gen);
 
-                    SIMDVector weights(0.0,this->inputSize+this->hidden.size());
+                    number weight = hidden_neuron->get_weights()[other_node_id_to_connect]*(1.f+(reward));
 
-                    number weight;
-
-                    this->init->init(weight);
-
-                    number sign = -this->hidden_states[other_node_id_to_connect]/abs(this->hidden_states[other_node_id_to_connect]);
-
-                    weights.set(weight*sign,node_id_to_connect);
-
-                    hidden_neuron->update_weights(weights);
+                    hidden_neuron->set_weight(clip_to_one(weight),other_node_id_to_connect);
                 }
             }
             else if(reward<0)
             {
                 auto& output_neuron = this->outputs[this->highest_output_id];
 
-                size_t node_id_to_prune = uniform(gen);
+                size_t neuron_to_prune = uniform(gen);
 
-                SIMDVector weights(0.0,this->inputSize+this->hidden.size());
+                number weight = output_neuron->get_weights()[neuron_to_prune];
 
-                std::uniform_int_distribution<uint8_t> mutation_chooser(0,10); 
-
-                uint8_t choose = mutation_chooser(gen);
-
-                number weight;
-
-                this->init->init(weight);
-
-                weight = abs(weight);
-
-                if( choose < 5 )
+                while(weight == 0)
                 {
-
-                    // prune connection
-
-                    for(size_t i=0;i<this->inputSize+this->hidden.size();++i)
-                    {
-                        number state = output_neuron->get_weights()[i];
-
-                        if( state != 0 )
-                        {
-                            number sign = this->hidden_states[node_id_to_prune]/abs(this->hidden_states[node_id_to_prune]);
-
-                            weights.set(-state - weight*reward*sign,i);
-                        }
-                    }
-
-                    output_neuron->update_weights(weights);
-
-                }
-                else
-                {
-                    for(size_t i=0;i<this->inputSize+this->hidden.size();++i)
-                    {
-                        number state = output_neuron->get_weights()[i];
-
-                        if( state != 0 )
-                        {
-                            number sign = this->hidden_states[node_id_to_prune]/abs(this->hidden_states[node_id_to_prune]);
-
-                            weights.set(-state*2 - weight*reward*sign,i);
-                        }
-                    }
-
-                    output_neuron->update_weights(weights);
+                    neuron_to_prune = uniform(gen);
+                    weight = output_neuron->get_weights()[neuron_to_prune];
                 }
 
-                
+                output_neuron->set_weight(clip_to_one(weight*(1.f+(reward))),neuron_to_prune);
+
             }
         }
 

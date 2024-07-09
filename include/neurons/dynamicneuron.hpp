@@ -190,6 +190,16 @@ namespace snn
             this->biases+=bias;
         }
 
+        void set_weight(number v,size_t i)
+        {
+            this->input_weights.set(v,i);
+        }
+
+        number get_weight(size_t i)
+        {
+            return this->input_weights[i];
+        }
+
         number fire1(const SIMDVector& input)
         {
             number store=(input_weights*input).reduce();

@@ -24,6 +24,7 @@
  
 #include "initializers/gauss.hpp"
 #include "initializers/normalized_gauss.hpp"
+#include "initializers/constant.hpp"
 
 #include "mutatiom/gauss_mutation.hpp"
 
@@ -151,6 +152,9 @@ number evaluate(const snn::SIMDVector& input)
 
  but it has some potential in discreate problems.
 
+ when reward is positive the last action is fortified.
+ when reward is negative that last action is dumped.
+
 */
 
 
@@ -159,13 +163,14 @@ int main(int argc,char** argv)
 
     std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
     std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.25f);
+    std::shared_ptr<snn::ConstantInit> constant=std::make_shared<snn::ConstantInit>(0.5f);
 
     std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.1f);
     std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
 
     auto relu=std::make_shared<snn::ReLu>();
 
-    auto first= std::make_shared<snn::FastKAC>(1,2,gauss,mutation,32);
+    auto first= std::make_shared<snn::FastKAC>(2,2,constant,mutation,32);
 
     first->setActivationFunction(std::make_shared<snn::SoftMax>());
 
@@ -198,7 +203,7 @@ int main(int argc,char** argv)
 
     snn::SIMDVector input;
 
-    gauss->init(input,1);
+    gauss->init(input,2);
 
     std::fstream file;
 
@@ -219,18 +224,25 @@ int main(int argc,char** argv)
 
     std::uniform_int_distribution<int> uniform(0,1);
 
-    for(size_t i=0;i<10000;i++)
+    for(size_t i=0;i<100000;i++)
     {
         //gauss->init(input,128);
 
-        if(uniform(gen))
+        if(i==200)
         {
-            target_position = -target_position;
+            initial_position = 20;
+            target_position = 0;
+        }
+
+        if(i==1000)
+        {
+            initial_position = 0.01;
         }
 
         clock_t start=clock();
 
-        input.set(static_cast<number>(initial_position)/100.f,0);
+        input.set(static_cast<number>(initial_position),0);
+        input.set(static_cast<number>(target_position),1);
 
         snn::SIMDVector output=network.fire(input);
 
@@ -240,42 +252,22 @@ int main(int argc,char** argv)
 
         number reward = 0;
 
-        if( output[0] > output[1] )
-        {
-            // move left
+        // if( fabs(initial_position - target_position) >= fabs(last_position - target_position) )
+        // {
+        //     reward = -1;
+        // }
+        // else if( fabs(initial_position - target_position) < fabs(last_position - target_position) )
+        // {
+        //     reward = 1;
+        // }
 
-            initial_position--;
-        }
-        else
-        {
-            // move right
-
-            initial_position++;
-        }
-
-        if( fabs(initial_position - target_position) >= fabs(last_position - target_position) )
-        {
-            reward = -1;
-        }
-        else if( fabs(initial_position - target_position) < fabs(last_position - target_position) )
-        {
-            reward = 1;
-        }
-
-        last_position = initial_position;
+        reward = output[0];
         
         network.applyReward(reward);  
 
         std::cout<<"Reward: "<<reward<<std::endl;
-        std::cout<<"Agent pos: "<<initial_position<<" Target pos: "<<target_position<<std::endl;
 
-        file<<i<<";"<<reward<<std::endl;
-
-        if( initial_position == target_position )
-        {
-            std::cout<<"Position reached"<<std::endl;
-            break;
-        }     
+        file<<i<<";"<<reward<<std::endl;   
 
         //input.clear();
     }
