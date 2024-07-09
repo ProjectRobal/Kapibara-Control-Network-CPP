@@ -117,7 +117,7 @@ namespace snn
                     continue;
                 }
 
-                if(swarm_chooser(gen)==4)
+                if(swarm_chooser(gen)==5)
                 {
 
                     snn::SIMDVector dweights = (this->best_worker->get_weights() - neuron->get_weights())/this->swarming_speed;

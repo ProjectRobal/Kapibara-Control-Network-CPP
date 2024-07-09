@@ -63,6 +63,11 @@
         "unordered_set": "cpp",
         "fstream": "cpp",
         "optional": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "any": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "valarray": "cpp",
+        "filesystem": "cpp"
     }
 }

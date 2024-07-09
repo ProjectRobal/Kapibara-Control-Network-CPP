@@ -137,7 +137,7 @@ namespace snn
 
         number fire1(const SIMDVector& input)
         {
-            number store=(input_weights*input).dot_product();
+            number store=(input_weights*input).reduce();
 
             return store + this->biases;
         }

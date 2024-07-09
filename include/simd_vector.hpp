@@ -21,6 +21,8 @@ namespace snn
         size_t ptr;
         std::vector<SIMD> vec;
 
+        SIMD get_partially_filled_simd(size_t N,number value,number else_number=0.f) const;
+
         public:
 
         SIMDVector();
@@ -34,6 +36,41 @@ namespace snn
         SIMDVector(const SIMDVector& vec);
 
         SIMDVector(SIMDVector&& vec);
+
+        template<typename T>
+        static snn::SIMDVector from_array(T *v,size_t N)
+        {
+            snn::SIMDVector output;
+            for(size_t i=0;i<N;++i)
+            {
+                output.append(v[i]);
+            }
+
+            return output;
+        }
+
+        template<typename T>
+        void to_array(T *v) const
+        {
+            for(size_t i=0;i<this->size();++i)
+            {
+                v[i] = this->get(i);
+            }
+        }
+
+        template<typename T>
+        static snn::SIMDVector from_vector(const std::vector<T>& v)
+        {
+            snn::SIMDVector output;
+            for(const T samp : v)
+            {
+                output.append(samp);
+            }
+
+            return output;
+        }
+
+        
 
         void reserve(size_t N);
 
@@ -65,13 +102,13 @@ namespace snn
 
         SIMDVector operator/(const SIMDVector& v) const;
 
-        SIMDVector operator*(const number& v) const;
+        SIMDVector operator*(number v) const;
 
-        SIMDVector operator/(const number& v) const;
+        SIMDVector operator/(number v) const;
 
-        SIMDVector operator-(const number& v) const;
+        SIMDVector operator-(number v) const;
 
-        SIMDVector operator+(const number& v) const;
+        SIMDVector operator+(number v) const;
 
         SIMDVector operator==(const SIMDVector& v) const;
 
@@ -85,17 +122,17 @@ namespace snn
 
         SIMDVector operator<(const SIMDVector& v) const;
 
-        SIMDVector operator==(const number& v) const;
+        SIMDVector operator==(number v) const;
 
-        SIMDVector operator!=(const number& v) const;
+        SIMDVector operator!=(number v) const;
 
-        SIMDVector operator>=(const number& v) const;
+        SIMDVector operator>=(number v) const;
 
-        SIMDVector operator<=(const number& v) const;
+        SIMDVector operator<=(number v) const;
 
-        SIMDVector operator>(const number& v) const;
+        SIMDVector operator>(number v) const;
 
-        SIMDVector operator<(const number& v) const;
+        SIMDVector operator<(number v) const;
 
         void operator+=(const SIMDVector& v);
 
@@ -105,13 +142,13 @@ namespace snn
 
         void operator/=(const SIMDVector& v);
 
-        void operator*=(const number& v);
+        void operator*=(number v);
 
-        void operator/=(const number& v);
+        void operator/=(number v);
 
-        void operator-=(const number& v);
+        void operator-=(number v);
 
-        void operator+=(const number& v);
+        void operator+=(number v);
 
         SIMDVector operator-() const
         {
@@ -128,7 +165,9 @@ namespace snn
             return this->vec.size();
         }
 
-        number dot_product() const;
+        number reduce() const;
+
+        number length() const;
 
         number operator[](const size_t& i) const;
 

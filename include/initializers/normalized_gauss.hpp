@@ -33,7 +33,7 @@ namespace snn
                 vec.append(this->gauss(gen));
             }
 
-            number mean=vec.dot_product();
+            number mean=vec.reduce();
 
             if(mean==0)
             {

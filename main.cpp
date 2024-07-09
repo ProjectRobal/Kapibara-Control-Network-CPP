@@ -35,14 +35,15 @@
 #include "layer_st.hpp"
 #include "layer.hpp"
 
+#include "fastkac.hpp"
+
 #include "activation/sigmoid.hpp"
 #include "activation/relu.hpp"
+#include "activation/softmax.hpp"
 
 #include "shared_mem.hpp"
 
 #include "proto/cartpole.pb.h"
-
-#include "replay/short_term_memory.hpp"
 
 #include "network.hpp"
 
@@ -50,13 +51,13 @@
 
 number stddev(const snn::SIMDVector& vec)
 {
-    number mean=vec.dot_product();
+    number mean=vec.reduce();
 
     snn::SIMDVector omg=vec-mean;
 
     omg=omg*omg;
 
-    return std::sqrt(omg.dot_product()/vec.size());
+    return std::sqrt(omg.reduce()/vec.size());
 
 }
 
@@ -143,6 +144,15 @@ number evaluate(const snn::SIMDVector& input)
     return -abs((input[0]*input[0] + 10*input[1] + 2));
 }
 
+/*
+
+ Our theory is right but only when input values are positive,
+ the other problem is exploding gradient
+
+ but it has some potential in discreate problems.
+
+*/
+
 
 int main(int argc,char** argv)
 {
@@ -155,31 +165,40 @@ int main(int argc,char** argv)
 
     auto relu=std::make_shared<snn::ReLu>();
 
-    auto first= std::make_shared<snn::Layer<snn::ForwardNeuron<128>,32>>(256,gauss,cross,mutation);
-    auto layer1=std::make_shared<snn::Layer<snn::ForwardNeuron<256>,32>>(256,gauss,cross,mutation);
-    auto layer2=std::make_shared<snn::Layer<snn::ForwardNeuron<256>,32>>(64,gauss,cross,mutation);
-    auto layer3=std::make_shared<snn::Layer<snn::ForwardNeuron<64>,32>>(2,gauss,cross,mutation);
+    auto first= std::make_shared<snn::FastKAC>(1,2,gauss,mutation,32);
 
-    first->setActivationFunction(relu);
-
-    layer1->setActivationFunction(relu);
-
-    layer2->setActivationFunction(relu);
+    first->setActivationFunction(std::make_shared<snn::SoftMax>());
 
     //layer3->setActivationFunction(relu);
 
     snn::Network network;
 
     network.addLayer(first);
-    network.addLayer(layer1);
-    network.addLayer(layer2);
-    network.addLayer(layer3);
 
-    snn::NetworkSerializer::load(network,"checkpoint");
+    //snn::SIMDVector input;
+
+    //gauss->init(input,16);
+
+    //input = snn::exp(input);
+
+    //snn::SIMDVector output = network.fire(input);
+
+    /*std::cout<<"Input: "<<input<<std::endl;
+    std::cout<<"Output: "<<output<<std::endl;
+
+    network.applyReward(-10.f);
+
+    output = network.fire(input);
+
+    std::cout<<"Input: "<<input<<std::endl;
+    std::cout<<"Output: "<<output<<std::endl;
+    */
+
+    //snn::NetworkSerializer::load(network,"checkpoint");
 
     snn::SIMDVector input;
 
-    gauss->init(input,128);
+    gauss->init(input,1);
 
     std::fstream file;
 
@@ -187,11 +206,31 @@ int main(int argc,char** argv)
 
     file<<"N"<<";"<<"reward"<<std::endl;
 
-    for(size_t i=0;i<1000;i++)
+    int target_position=40;
+
+    int initial_position=0;
+
+    int last_position=0;
+
+    std::random_device rd; 
+
+    // Mersenne twister PRNG, initialized with seed from previous random device instance
+    std::mt19937 gen(rd()); 
+
+    std::uniform_int_distribution<int> uniform(0,1);
+
+    for(size_t i=0;i<10000;i++)
     {
         //gauss->init(input,128);
 
+        if(uniform(gen))
+        {
+            target_position = -target_position;
+        }
+
         clock_t start=clock();
+
+        input.set(static_cast<number>(initial_position)/100.f,0);
 
         snn::SIMDVector output=network.fire(input);
 
@@ -199,16 +238,42 @@ int main(int argc,char** argv)
 
         std::cout<<"Output: "<<output<<std::endl;
 
-        number reward=evaluate(output);
+        number reward = 0;
+
+        if( output[0] > output[1] )
+        {
+            // move left
+
+            initial_position--;
+        }
+        else
+        {
+            // move right
+
+            initial_position++;
+        }
+
+        if( fabs(initial_position - target_position) >= fabs(last_position - target_position) )
+        {
+            reward = -1;
+        }
+        else if( fabs(initial_position - target_position) < fabs(last_position - target_position) )
+        {
+            reward = 1;
+        }
+
+        last_position = initial_position;
         
         network.applyReward(reward);  
 
         std::cout<<"Reward: "<<reward<<std::endl;
+        std::cout<<"Agent pos: "<<initial_position<<" Target pos: "<<target_position<<std::endl;
 
         file<<i<<";"<<reward<<std::endl;
 
-        if(reward>-0.01)
+        if( initial_position == target_position )
         {
+            std::cout<<"Position reached"<<std::endl;
             break;
         }     
 
@@ -217,8 +282,9 @@ int main(int argc,char** argv)
 
     file.close();
 
-    snn::NetworkSerializer::save(network,"checkpoint");
+    //snn::NetworkSerializer::save(network,"checkpoint");
 
     return 0;
+    
 }
 
