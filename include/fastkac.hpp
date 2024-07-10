@@ -32,6 +32,7 @@ namespace snn
     { 
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
+        std::shared_ptr<Mutation> mutate;
 
         std::vector<std::shared_ptr<DynamicNeuron<>>> hidden;
 
@@ -46,14 +47,14 @@ namespace snn
 
         number clip_to_one(number v)
         {
-            // if( v > 1.f )
-            // {
-            //     return 1.f;
-            // }
-            // if( v < -1.f )
-            // {
-            //     return -1.f;
-            // }
+            if( v > 1.f )
+            {
+                return 1.f;
+            }
+            if( v < -1.f )
+            {
+                return -1.f;
+            }
             return v;
         }
 
@@ -84,6 +85,7 @@ namespace snn
         void setup(size_t inputSize,size_t outputSize,std::shared_ptr<Initializer> init,std::shared_ptr<Mutation> _mutate,size_t initialHiddenSize=0)
         {
             this->inputSize = inputSize;
+            this->mutate = _mutate;
 
             this->outputs.clear();
             this->hidden.clear();
@@ -125,43 +127,90 @@ namespace snn
 
             std::uniform_int_distribution<size_t> uniform(0,this->inputSize+this->hidden.size()-1); 
 
+            /*for(auto& neuron : this->outputs)
+            {
+                neuron->mutate(this->mutate);
+            }
+
+            for(auto& neuron : this->hidden)
+            {
+                neuron->mutate(this->mutate);
+            }*/
+
             if(reward>0)
             {
 
                 auto& output_neuron = this->outputs[this->highest_output_id];
 
-                size_t node_id_to_connect = uniform(gen);
+                size_t node_id_to_connect = 0;
 
-                number weight = output_neuron->get_weights()[node_id_to_connect]*(1.f+(reward));
-
-                output_neuron->set_weight(clip_to_one(weight),node_id_to_connect);
-
-                if( node_id_to_connect >= this->inputSize )
-                {
-                    auto& hidden_neuron = this->hidden[node_id_to_connect - this->inputSize];
-
-                    size_t other_node_id_to_connect = uniform(gen);
-
-                    number weight = hidden_neuron->get_weights()[other_node_id_to_connect]*(1.f+(reward));
-
-                    hidden_neuron->set_weight(clip_to_one(weight),other_node_id_to_connect);
-                }
+                
             }
             else if(reward<0)
             {
                 auto& output_neuron = this->outputs[this->highest_output_id];
 
-                size_t neuron_to_prune = uniform(gen);
+                number weight = this->hidden_states[0];
+                size_t neuron_to_prune = 0;
 
-                number weight = output_neuron->get_weights()[neuron_to_prune];
+                // nudge weights of hidden neuron
+                // find the biggest hidden state
 
-                while(weight == 0)
+                for(size_t i=0;i<this->hidden_states.size();++i)
                 {
-                    neuron_to_prune = uniform(gen);
-                    weight = output_neuron->get_weights()[neuron_to_prune];
+                    if(this->hidden_states[i] > weight)
+                    {
+                        neuron_to_prune = i;
+                        weight = this->hidden_states[i];
+                    }
                 }
 
-                output_neuron->set_weight(clip_to_one(weight*(1.f+(reward))),neuron_to_prune);
+                // ignore inputs
+                if( neuron_to_prune >= this->inputSize )
+                {
+                    neuron_to_prune-=this->inputSize;
+
+                    auto& hidden_neuron = this->hidden[neuron_to_prune];
+
+                    snn::SIMDVector mix = hidden_neuron->get_weights()*this->hidden_states;
+
+                    neuron_to_prune = 0;
+                    weight = mix[0];
+
+                    for(size_t i=0;i<mix.size();++i)
+                    {
+                        if(mix[i] > weight)
+                        {
+                            neuron_to_prune = i;  
+                            weight = mix[i]; 
+                        }
+                    }
+
+                    weight = hidden_neuron->get_weights()[neuron_to_prune];
+
+                    hidden_neuron->set_weight(clip_to_one(weight*(1+reward)),neuron_to_prune);
+
+                    hidden_states.set(hidden_neuron->fire1(hidden_states),neuron_to_prune+this->inputSize);
+                }
+                
+                snn::SIMDVector mix = output_neuron->get_weights()*this->hidden_states;
+
+                weight = mix[0];
+                neuron_to_prune = 0;
+
+                for(size_t i=0;i<mix.size();++i)
+                {
+                    if(mix[i] > weight)
+                    {
+                        neuron_to_prune = i;  
+                        weight = mix[i]; 
+                    }
+                }
+
+                weight = output_neuron->get_weights()[neuron_to_prune];
+
+                output_neuron->set_weight(clip_to_one(weight*(1+reward)),neuron_to_prune);
+
 
             }
         }

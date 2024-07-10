@@ -25,6 +25,7 @@
 #include "initializers/gauss.hpp"
 #include "initializers/normalized_gauss.hpp"
 #include "initializers/constant.hpp"
+#include "initializers/uniform.hpp"
 
 #include "mutatiom/gauss_mutation.hpp"
 
@@ -157,20 +158,50 @@ number evaluate(const snn::SIMDVector& input)
 
 */
 
+size_t get_action_id(const snn::SIMDVector& actions)
+{
+    std::random_device rd; 
+
+    // Mersenne twister PRNG, initialized with seed from previous random device instance
+    std::mt19937 gen(rd()); 
+
+    std::uniform_real_distribution<number> uniform_chooser(0.f,1.f);
+
+    number shift = 0;
+
+    number choose = uniform_chooser(gen);
+
+    size_t action_id = 0;
+
+    for(size_t i=0;i<actions.size();++i)
+    {
+        if( choose <= actions[i] + shift )
+        {
+            action_id = i;
+            break;
+        }
+
+        shift += actions[i];
+    }
+
+    return action_id;
+}
+
 
 int main(int argc,char** argv)
 {
 
     std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
     std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.25f);
-    std::shared_ptr<snn::ConstantInit> constant=std::make_shared<snn::ConstantInit>(0.5f);
+    std::shared_ptr<snn::ConstantInit> constant=std::make_shared<snn::ConstantInit>(0.1f);
+    std::shared_ptr<snn::UniformInit> uniform=std::make_shared<snn::UniformInit>(0.f,1.f);
 
-    std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.1f);
+    std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.5f);
     std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
 
     auto relu=std::make_shared<snn::ReLu>();
 
-    auto first= std::make_shared<snn::FastKAC>(2,2,constant,mutation,32);
+    auto first= std::make_shared<snn::FastKAC>(10,2,uniform,mutation,512);
 
     first->setActivationFunction(std::make_shared<snn::SoftMax>());
 
@@ -203,7 +234,37 @@ int main(int argc,char** argv)
 
     snn::SIMDVector input;
 
-    gauss->init(input,2);
+    gauss->init(input,10);
+
+    snn::SIMDVector input1;
+
+    gauss->init(input1,10);
+
+
+    snn::SIMDVector output = network.fire(input);
+
+    std::cout<<"Output 1: "<<output<<std::endl;
+
+    output = network.fire(input1);
+
+    std::cout<<"Output 2: "<<output<<std::endl;
+
+
+    output = network.fire(input);
+
+    network.applyReward(-0.5);
+
+    output = network.fire(input);
+
+    std::cout<<"Output 1: "<<output<<std::endl;
+
+    output = network.fire(input1);
+
+    std::cout<<"Output 2: "<<output<<std::endl;
+
+    std::cout<<"Action choosen: "<<get_action_id(output)<<std::endl;
+
+    return 0;
 
     std::fstream file;
 
@@ -217,27 +278,9 @@ int main(int argc,char** argv)
 
     int last_position=0;
 
-    std::random_device rd; 
-
-    // Mersenne twister PRNG, initialized with seed from previous random device instance
-    std::mt19937 gen(rd()); 
-
-    std::uniform_int_distribution<int> uniform(0,1);
-
     for(size_t i=0;i<100000;i++)
     {
         //gauss->init(input,128);
-
-        if(i==200)
-        {
-            initial_position = 20;
-            target_position = 0;
-        }
-
-        if(i==1000)
-        {
-            initial_position = 0.01;
-        }
 
         clock_t start=clock();
 
@@ -261,8 +304,11 @@ int main(int argc,char** argv)
         //     reward = 1;
         // }
 
-        reward = output[0];
-        
+        //if(i<1000)
+        {
+            reward = output[0];
+        }
+
         network.applyReward(reward);  
 
         std::cout<<"Reward: "<<reward<<std::endl;
