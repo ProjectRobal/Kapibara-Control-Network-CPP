@@ -252,7 +252,7 @@ int main(int argc,char** argv)
 
     output = network.fire(input);
 
-    network.applyReward(-0.5);
+    network.applyReward(0.5);
 
     output = network.fire(input);
 

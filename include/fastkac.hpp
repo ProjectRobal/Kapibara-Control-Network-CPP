@@ -144,6 +144,90 @@ namespace snn
 
                 size_t node_id_to_connect = 0;
 
+                number weight = this->hidden_states[0];
+                size_t neuron_to_prune = 0;
+
+                // nudge weights of output neuron
+                // find the smallest hidden state
+                snn::SIMDVector mix = output_neuron->get_weights()*this->hidden_states;
+
+                weight = mix[0];
+                neuron_to_prune = 0;
+
+                for(size_t i=0;i<mix.size();++i)
+                {
+                    if(mix[i] < weight)
+                    {
+                        neuron_to_prune = i;  
+                        weight = mix[i]; 
+                    }
+                }
+
+                if( weight < 0.000001 )
+                {
+                    weight = output_neuron->get_weights()[neuron_to_prune];
+
+                    output_neuron->set_weight(clip_to_one(weight*(reward)),neuron_to_prune);
+                }
+                else
+                {
+                    output_neuron->set_weight(clip_to_one(reward),neuron_to_prune);
+                }
+
+                // nudge hidden neurons
+                weight = this->hidden_states[0];
+                neuron_to_prune = 0;
+
+                for(size_t i=0;i<this->hidden_states.size();++i)
+                {
+                    if(this->hidden_states[i] < weight)
+                    {
+                        neuron_to_prune = i;
+                        weight = this->hidden_states[i];
+                    }
+                }
+
+                // ignore inputs
+                if( neuron_to_prune >= this->inputSize )
+                {
+                    neuron_to_prune-=this->inputSize;
+
+                    auto& hidden_neuron = this->hidden[neuron_to_prune];
+
+                    snn::SIMDVector mix = hidden_neuron->get_weights()*this->hidden_states;
+
+                    neuron_to_prune = 0;
+                    weight = mix[0];
+
+                    for(size_t i=0;i<mix.size();++i)
+                    {
+                        if(mix[i] < weight)
+                        {
+                            neuron_to_prune = i;  
+                            weight = mix[i]; 
+                        }
+                    }
+
+                    weight = hidden_neuron->get_weights()[neuron_to_prune];
+
+                    if(reward>0.000001)
+                    {
+
+                        hidden_neuron->set_weight(clip_to_one(weight*(reward)),neuron_to_prune);
+
+                        hidden_states.set(hidden_neuron->fire1(hidden_states),neuron_to_prune+this->inputSize);
+
+                    }
+                    else
+                    {
+
+                        hidden_neuron->set_weight(clip_to_one(reward),neuron_to_prune);
+
+                        hidden_states.set(hidden_neuron->fire1(hidden_states),neuron_to_prune+this->inputSize);
+
+                    }
+                }
+
                 
             }
             else if(reward<0)
@@ -188,7 +272,7 @@ namespace snn
 
                     weight = hidden_neuron->get_weights()[neuron_to_prune];
 
-                    hidden_neuron->set_weight(clip_to_one(weight*(1+reward)),neuron_to_prune);
+                    hidden_neuron->set_weight(clip_to_one(weight*((1+reward)/2.f)),neuron_to_prune);
 
                     hidden_states.set(hidden_neuron->fire1(hidden_states),neuron_to_prune+this->inputSize);
                 }
