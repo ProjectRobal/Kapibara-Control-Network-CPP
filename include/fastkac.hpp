@@ -47,14 +47,14 @@ namespace snn
 
         number clip_to_one(number v)
         {
-            if( v > 1.f )
-            {
-                return 1.f;
-            }
-            if( v < -1.f )
-            {
-                return -1.f;
-            }
+            // if( v > 1.f )
+            // {
+            //     return 1.f;
+            // }
+            // if( v < -1.f )
+            // {
+            //     return -1.f;
+            // }
             return v;
         }
 
@@ -125,7 +125,7 @@ namespace snn
             // Mersenne twister PRNG, initialized with seed from previous random device instance
             std::mt19937 gen(rd()); 
 
-            std::uniform_int_distribution<size_t> uniform(0,this->inputSize+this->hidden.size()-1); 
+            std::uniform_int_distribution<size_t> uniform(0,this->inputSize+this->hidden.size()-2); 
 
             /*for(auto& neuron : this->outputs)
             {
@@ -163,22 +163,24 @@ namespace snn
                     }
                 }
 
-                if( weight < 0.000001 )
+
+                if( weight > 0.000001 )
                 {
                     weight = output_neuron->get_weights()[neuron_to_prune];
 
-                    output_neuron->set_weight(clip_to_one(weight*(reward)),neuron_to_prune);
+                    output_neuron->set_weight(clip_to_one((weight*(reward)+weight)/2.f),neuron_to_prune);
                 }
                 else
                 {
                     output_neuron->set_weight(clip_to_one(reward),neuron_to_prune);
                 }
 
+
                 // nudge hidden neurons
                 weight = this->hidden_states[0];
                 neuron_to_prune = 0;
 
-                for(size_t i=0;i<this->hidden_states.size();++i)
+                for(size_t i=0;i<this->hidden.size();++i)
                 {
                     if(this->hidden_states[i] < weight)
                     {
@@ -199,7 +201,7 @@ namespace snn
                     neuron_to_prune = 0;
                     weight = mix[0];
 
-                    for(size_t i=0;i<mix.size();++i)
+                    for(size_t i=0;i<mix.size()-this->outputs.size();++i)
                     {
                         if(mix[i] < weight)
                         {
@@ -210,10 +212,10 @@ namespace snn
 
                     weight = hidden_neuron->get_weights()[neuron_to_prune];
 
-                    if(reward>0.000001)
+                    if(weight>0.000001)
                     {
 
-                        hidden_neuron->set_weight(clip_to_one(weight*(reward)),neuron_to_prune);
+                        hidden_neuron->set_weight(clip_to_one((weight*(1.f+reward)+ weight)/2.f),neuron_to_prune);
 
                         hidden_states.set(hidden_neuron->fire1(hidden_states),neuron_to_prune+this->inputSize);
 
@@ -221,7 +223,7 @@ namespace snn
                     else
                     {
 
-                        hidden_neuron->set_weight(clip_to_one(reward),neuron_to_prune);
+                        hidden_neuron->set_weight(clip_to_one(1.f+reward),neuron_to_prune);
 
                         hidden_states.set(hidden_neuron->fire1(hidden_states),neuron_to_prune+this->inputSize);
 
@@ -261,7 +263,7 @@ namespace snn
                     neuron_to_prune = 0;
                     weight = mix[0];
 
-                    for(size_t i=0;i<mix.size();++i)
+                    for(size_t i=0;i<mix.size()-this->outputs.size();++i)
                     {
                         if(mix[i] > weight)
                         {

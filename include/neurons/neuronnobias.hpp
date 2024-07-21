@@ -15,18 +15,17 @@
 namespace snn
 {
 
-    #define ForwardNeuronID 2
+    #define NeuronNoBiasID 2
     template<size_t InputSize>
-    class ForwardNeuron : public Neuron
+    class NeuronNoBias : public Neuron
     {
         protected:
 
         SIMDVector input_weights;
-        number biases;
 
         public:
 
-        const size_t id=ForwardNeuronID;
+        const size_t id=NeuronNoBiasID;
 
         ForwardNeuron()
         : Neuron()
@@ -41,7 +40,6 @@ namespace snn
             std::shared_ptr<ForwardNeuron<InputSize>> output=std::make_shared<ForwardNeuron<InputSize>>();
 
             output->input_weights=cross->cross(this->input_weights,forward.input_weights);
-            output->biases=(this->biases+forward.biases)/2;
 
             return output;
         }
@@ -49,7 +47,6 @@ namespace snn
         void mutate(std::shared_ptr<Mutation> mutate)
         {
             mutate->mutate(this->input_weights);
-            mutate->mutate(this->biases);
 
         }
 
@@ -65,12 +62,12 @@ namespace snn
 
         number get_bias()
         {
-            return this->biases;
+            return 0;
         }
 
         void update_bias(number b)
         {
-            this->biases+=b;
+
         }
 
         void save(std::ofstream& out) const
@@ -84,14 +81,6 @@ namespace snn
 
                 delete [] data;
             }
-                
-            // save neuron bias
-
-            char* data=snn::serialize_number<number>(biases);
-
-            out.write(data,SERIALIZED_NUMBER_SIZE);
-
-            delete [] data;
 
             Neuron::save(out);
         }
@@ -112,11 +101,6 @@ namespace snn
                 this->input_weights.append(weight);
             }
 
-            // load biases
-            in.read(data,SERIALIZED_NUMBER_SIZE);
-
-            this->biases = snn::deserialize_number<number>(data);
-
             Neuron::load(in);
         }
 
@@ -126,20 +110,18 @@ namespace snn
             this->input_weights.clear();
             init->init(this->input_weights,InputSize);
 
-            init->init(this->biases);
         }
 
         void update(const SIMDVector& weight,number bias)
         {
             this->input_weights+=weight;
-            this->biases+=bias;
         }
 
         number fire1(const SIMDVector& input)
         {
             number store=(input_weights*input).reduce();
 
-            return store + this->biases;
+            return store;
         }
 
         size_t input_size()

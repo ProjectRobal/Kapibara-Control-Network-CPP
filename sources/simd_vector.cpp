@@ -120,6 +120,40 @@ namespace snn
         return this->vec[i/MAX_SIMD_VECTOR_SIZE][i%MAX_SIMD_VECTOR_SIZE];
     }
 
+    SIMDVector SIMDVector::extract(size_t a,size_t b) const
+    {
+        if(( b<a )||( a+b > this->size() ))
+        {
+            return *this;
+        }
+
+        SIMDVector output;
+
+        // we can speed a process by copying whole blocks
+        size_t blocks_to_copy = ( b - a ) / MAX_SIMD_VECTOR_SIZE;
+
+        while( a % MAX_SIMD_VECTOR_SIZE != 0 )
+        {
+            output.append(this->get(a++));
+        }
+
+        size_t block_i = a/MAX_SIMD_VECTOR_SIZE;
+
+        while( blocks_to_copy > 0 )
+        {
+            output.append(this->get_block(block_i));
+
+            a += MAX_SIMD_VECTOR_SIZE;
+        }
+
+        for(size_t i=a;i<b;++i)
+        {
+            output.append(this->get(i));
+        }
+
+        return output;
+    }
+
     const SIMD& SIMDVector::get_block(const size_t& i) const
     {
         if(i>=this->vec.size())

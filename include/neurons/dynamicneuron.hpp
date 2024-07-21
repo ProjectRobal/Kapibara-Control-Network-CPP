@@ -76,12 +76,12 @@ namespace snn
             this->input_weights+=dweight;
         }
 
-        const number& get_bias()
+        number get_bias()
         {
             return this->biases;
         }
 
-        void update_bias(const number& b)
+        void update_bias(number b)
         {
             this->biases+=b;
         }
@@ -184,7 +184,7 @@ namespace snn
             this->current_input_size--;
         }
 
-        void update(const SIMDVector& weight,const number& bias)
+        void update(const SIMDVector& weight,number bias)
         {
             this->input_weights+=weight;
             this->biases+=bias;

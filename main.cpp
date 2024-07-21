@@ -36,6 +36,7 @@
 
 #include "layer_st.hpp"
 #include "layer.hpp"
+#include "layer_sssm.hpp"
 
 #include "fastkac.hpp"
 
@@ -50,6 +51,7 @@
 #include "network.hpp"
 
 #include "serializaers/network_serialize.hpp"
+
 
 number stddev(const snn::SIMDVector& vec)
 {
@@ -156,6 +158,8 @@ number evaluate(const snn::SIMDVector& input)
  when reward is positive the last action is fortified.
  when reward is negative that last action is dumped.
 
+ decreasing values works fine but increasing don't work quite well.
+
 */
 
 size_t get_action_id(const snn::SIMDVector& actions)
@@ -230,6 +234,7 @@ int main(int argc,char** argv)
     std::cout<<"Output: "<<output<<std::endl;
     */
 
+
     //snn::NetworkSerializer::load(network,"checkpoint");
 
     snn::SIMDVector input;
@@ -239,6 +244,11 @@ int main(int argc,char** argv)
     snn::SIMDVector input1;
 
     gauss->init(input1,10);
+
+    input = snn::simd_abs(input);
+    input1 = snn::simd_abs(input1);
+
+    std::cout<<"Input: "<<input<<std::endl;
 
 
     snn::SIMDVector output = network.fire(input);
@@ -252,7 +262,11 @@ int main(int argc,char** argv)
 
     output = network.fire(input);
 
-    network.applyReward(0.5);
+    network.applyReward(0.1f);
+
+    output = network.fire(input);
+
+    network.applyReward(0.1f);
 
     output = network.fire(input);
 

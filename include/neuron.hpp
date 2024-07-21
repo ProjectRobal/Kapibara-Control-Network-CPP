@@ -36,7 +36,7 @@ namespace snn
 
         virtual void setup(std::shared_ptr<Initializer> init)=0;
 
-        virtual void update(const SIMDVector& weight,const number& bias)=0;
+        virtual void update(const SIMDVector& weight,number bias)=0;
 
         virtual SIMDVector fire(const SIMDVector& input)
         {
@@ -52,9 +52,9 @@ namespace snn
 
         virtual void update_weights(const snn::SIMDVector& dweight)=0;
 
-        virtual const number& get_bias()=0;
+        virtual number get_bias()=0;
 
-        virtual void update_bias(const number& b)=0;
+        virtual void update_bias(number b)=0;
 
         virtual size_t input_size()=0;
 

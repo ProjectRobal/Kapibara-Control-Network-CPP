@@ -94,6 +94,8 @@ namespace snn
 
         const SIMD& get_block(const size_t& i) const;
 
+        SIMDVector extract(size_t a,size_t b) const;
+
         SIMDVector operator+(const SIMDVector& v) const;
 
         SIMDVector operator-(const SIMDVector& v) const;
