@@ -52,9 +52,13 @@ namespace snn
 
         virtual void update_weights(const snn::SIMDVector& dweight)=0;
 
+        virtual void set_weights(const snn::SIMDVector& dweight)=0;
+
         virtual number get_bias() const =0;
 
         virtual void update_bias(number b)=0;
+
+        virtual void set_bias(number b)=0;
 
         virtual size_t input_size()=0;
 

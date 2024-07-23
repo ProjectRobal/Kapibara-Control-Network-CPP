@@ -31,6 +31,8 @@
 #include "neurons/forwardneuron.hpp"
 #include "neurons/neuronnobias.hpp"
 
+#include "initializers/uniform.hpp"
+
 namespace snn
 {
     #define LAYERSSSM 2
@@ -83,7 +85,7 @@ namespace snn
             this->activation_func=active;
         }
 
-        void setup(size_t N,std::shared_ptr<Initializer> init)
+        void setup(size_t N,std::shared_ptr<Initializer> init,number dt_min = 0.001,number dt_max = 0.1)
         {
             this->activation_func=std::make_shared<Linear>();
 
@@ -104,17 +106,59 @@ namespace snn
 
             this->x_proj.setup(deltaRank+N*2,this->init);
 
+            number dt_init_std = std::pow(deltaRank,-0.5);
+            std::shared_ptr<UniformInit> d_uniform = std::make_shared<UniformInit>(-dt_init_std,dt_init_std);
+
             // there should be diffrent initializer I think, it will use silu activation
-            this->d_proj.setup(InputSize,this->init);
+            this->d_proj.setup(InputSize,d_uniform);
 
             this->d_proj.setActivationFunction(std::make_shared<SiLu>());
+
+            std::uniform_real_distribution<number> uniform(0.f,1.f);
+
+            std::random_device rd; 
+
+            // Mersenne twister PRNG, initialized with seed from previous random device instance
+            std::mt19937 gen(rd()); 
+
+            for(size_t i=0;i<InputSize;++i)
+            {
+                number d_bias = uniform(gen)*(std::log(dt_max)-std::log(dt_min)) + std::log(dt_min);
+
+                this->d_proj.set_bias(d_bias,i);
+            }
 
             this->hiddenStateSize=N;
         }
 
-        void updateWeights(const std::vector<SIMDVector>& weights,const std::vector<number>& biases)
+        void set_bias(number b,size_t id)
         {
-            
+            // x_proj biases
+
+            if( id<this->hiddenStateSize )
+            {
+                this->x_proj.set_bias( b , id );
+                return;
+            }
+
+            // d_proj biases
+
+            this->d_proj.set_bias( b , id % this->hiddenStateSize );
+        }
+
+        void set_weights(const SIMDVector& vec,size_t id)
+        {
+            // x_proj weights
+
+            if( id<this->hiddenStateSize )
+            {
+                this->x_proj.set_weights( vec , id );
+                return;
+            }
+
+            // d_proj weights
+
+            this->d_proj.set_weights( vec , id % this->hiddenStateSize );
         }
 
         SIMDVector fire(const SIMDVector& input)
@@ -143,13 +187,17 @@ namespace snn
 
                 a_line.set(1.f + a_line[x_i],x_i);
 
-                a_line*=this->hidden_state[x_i++];
+                a_line*=this->hidden_state[x_i];
+
+                x_i++;
             }
 
             x_i=0;    
             for( SIMDVector& b_line: this->dB )
             {
-                b_line = B*input[x_i]*e_d[x_i++];
+                b_line = B*input[x_i]*e_d[x_i];
+
+                x_i++;
             }
 
             SIMDVector output;
@@ -160,6 +208,8 @@ namespace snn
                 h_line = dA[x_i] + this->dB[x_i];
 
                 output.append( (h_line*C).reduce() );
+
+                x_i++;
             }
 
             this->activation_func->activate(output);

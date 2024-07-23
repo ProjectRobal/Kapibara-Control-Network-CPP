@@ -54,6 +54,16 @@ namespace snn
             this->activation_func=active;
         }
 
+        void set_bias(number b,size_t id)
+        {
+            this->neurons[id].set_bias(b);
+        }
+
+        virtual void set_weights(const SIMDVector& vec,size_t id)
+        {
+            this->neurons[id].set_weights(vec);
+        }
+
         void setup(size_t N,std::shared_ptr<Initializer> init)
         {
             this->activation_func=std::make_shared<Linear>();

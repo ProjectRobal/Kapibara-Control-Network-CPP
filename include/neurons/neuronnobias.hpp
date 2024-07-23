@@ -58,9 +58,19 @@ namespace snn
             this->input_weights+=dweight;
         }
 
+        void set_weights(const snn::SIMDVector& dweight)
+        {
+            this->input_weights=dweight;
+        }
+
         number get_bias() const
         {
             return 0;
+        }
+
+        void set_bias(number b)
+        {
+
         }
 
         void update_bias(number b)

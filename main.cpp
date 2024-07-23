@@ -196,7 +196,7 @@ int main(int argc,char** argv)
 {
 
     std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
-    std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.01f);
+    std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.25f);
     std::shared_ptr<snn::ConstantInit> constant=std::make_shared<snn::ConstantInit>(0.1f);
     std::shared_ptr<snn::UniformInit> uniform=std::make_shared<snn::UniformInit>(0.f,1.f);
 
@@ -209,7 +209,7 @@ int main(int argc,char** argv)
 
     first->setActivationFunction(std::make_shared<snn::SoftMax>());
 
-    auto ssm = std::make_shared<snn::LayerSSSM<16>>(10,gauss);
+    auto ssm = std::make_shared<snn::LayerSSSM<16>>(16,gauss);
 
     ssm->setActivationFunction(std::make_shared<snn::ReLu>());
 

@@ -60,6 +60,7 @@ namespace snn
             this->activation_func=active;
         }
 
+
         void setup(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
         {
             // a low probability at start

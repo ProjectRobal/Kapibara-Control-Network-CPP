@@ -39,6 +39,10 @@ namespace snn
 
         virtual void setActivationFunction(std::shared_ptr<Activation> active)=0;
 
+        virtual void set_bias(number b,size_t id){}
+
+        virtual void set_weights(const SIMDVector& vec,size_t id){}
+
 
         virtual size_t getTypeID()
         {
