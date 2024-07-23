@@ -27,7 +27,7 @@ namespace snn
 
         const size_t id=NeuronNoBiasID;
 
-        ForwardNeuron()
+        NeuronNoBias()
         : Neuron()
         {
 
@@ -35,11 +35,9 @@ namespace snn
 
         std::shared_ptr<Neuron> crossover(std::shared_ptr<Crossover> cross,const Neuron& neuron)
         {
-            const ForwardNeuron<InputSize>& forward=dynamic_cast<const ForwardNeuron<InputSize>&>(neuron);
+            std::shared_ptr<NeuronNoBias<InputSize>> output=std::make_shared<NeuronNoBias<InputSize>>();
 
-            std::shared_ptr<ForwardNeuron<InputSize>> output=std::make_shared<ForwardNeuron<InputSize>>();
-
-            output->input_weights=cross->cross(this->input_weights,forward.input_weights);
+            output->input_weights=cross->cross(this->input_weights,neuron.get_weights());
 
             return output;
         }
@@ -50,7 +48,7 @@ namespace snn
 
         }
 
-        const snn::SIMDVector& get_weights()
+        const snn::SIMDVector& get_weights() const
         {
             return this->input_weights;
         }
@@ -60,7 +58,7 @@ namespace snn
             this->input_weights+=dweight;
         }
 
-        number get_bias()
+        number get_bias() const
         {
             return 0;
         }

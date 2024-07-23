@@ -196,7 +196,7 @@ int main(int argc,char** argv)
 {
 
     std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
-    std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.25f);
+    std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.01f);
     std::shared_ptr<snn::ConstantInit> constant=std::make_shared<snn::ConstantInit>(0.1f);
     std::shared_ptr<snn::UniformInit> uniform=std::make_shared<snn::UniformInit>(0.f,1.f);
 
@@ -209,11 +209,29 @@ int main(int argc,char** argv)
 
     first->setActivationFunction(std::make_shared<snn::SoftMax>());
 
+    auto ssm = std::make_shared<snn::LayerSSSM<16>>(10,gauss);
+
+    ssm->setActivationFunction(std::make_shared<snn::ReLu>());
+
     //layer3->setActivationFunction(relu);
 
     snn::Network network;
 
-    network.addLayer(first);
+    network.addLayer(ssm);
+
+
+    for(size_t i=0;i<10;++i)
+    {
+        snn::SIMDVector input;
+
+        gauss->init(input,16);
+
+        std::cout<<"Input: "<<input<<std::endl;
+        std::cout<<"Output: "<<network.fire(input)<<std::endl;
+
+    }
+
+    return 0;
 
     //snn::SIMDVector input;
 
@@ -237,106 +255,104 @@ int main(int argc,char** argv)
 
     //snn::NetworkSerializer::load(network,"checkpoint");
 
-    snn::SIMDVector input;
+    
 
-    gauss->init(input,10);
+//     snn::SIMDVector input1;
 
-    snn::SIMDVector input1;
+//     gauss->init(input1,10);
 
-    gauss->init(input1,10);
+//     input = snn::simd_abs(input);
+//     input1 = snn::simd_abs(input1);
 
-    input = snn::simd_abs(input);
-    input1 = snn::simd_abs(input1);
-
-    std::cout<<"Input: "<<input<<std::endl;
+//     std::cout<<"Input: "<<input<<std::endl;
 
 
-    snn::SIMDVector output = network.fire(input);
+//     snn::SIMDVector output = network.fire(input);
 
-    std::cout<<"Output 1: "<<output<<std::endl;
+//     std::cout<<"Output 1: "<<output<<std::endl;
 
-    output = network.fire(input1);
+//     output = network.fire(input1);
 
-    std::cout<<"Output 2: "<<output<<std::endl;
+//     std::cout<<"Output 2: "<<output<<std::endl;
 
 
-    output = network.fire(input);
+//     output = network.fire(input);
 
-    network.applyReward(0.1f);
+//     network.applyReward(0.1f);
 
-    output = network.fire(input);
+//     output = network.fire(input);
 
-    network.applyReward(0.1f);
+//     network.applyReward(0.1f);
 
-    output = network.fire(input);
+//     output = network.fire(input);
 
-    std::cout<<"Output 1: "<<output<<std::endl;
+//     std::cout<<"Output 1: "<<output<<std::endl;
 
-    output = network.fire(input1);
+//     output = network.fire(input1);
 
-    std::cout<<"Output 2: "<<output<<std::endl;
+//     std::cout<<"Output 2: "<<output<<std::endl;
 
-    std::cout<<"Action choosen: "<<get_action_id(output)<<std::endl;
+//     std::cout<<"Action choosen: "<<get_action_id(output)<<std::endl;
 
-    return 0;
+//     return 0;
 
-    std::fstream file;
+//     std::fstream file;
 
-    file.open("log.csv",std::ios::out);
+//     file.open("log.csv",std::ios::out);
 
-    file<<"N"<<";"<<"reward"<<std::endl;
+//     file<<"N"<<";"<<"reward"<<std::endl;
 
-    int target_position=40;
+//     int target_position=40;
 
-    int initial_position=0;
+//     int initial_position=0;
 
-    int last_position=0;
+//     int last_position=0;
 
-    for(size_t i=0;i<100000;i++)
-    {
-        //gauss->init(input,128);
+//     for(size_t i=0;i<100000;i++)
+//     {
+//         //gauss->init(input,128);
 
-        clock_t start=clock();
+//         clock_t start=clock();
 
-        input.set(static_cast<number>(initial_position),0);
-        input.set(static_cast<number>(target_position),1);
+//         input.set(static_cast<number>(initial_position),0);
+//         input.set(static_cast<number>(target_position),1);
 
-        snn::SIMDVector output=network.fire(input);
+//         snn::SIMDVector output=network.fire(input);
 
-        std::cout<<"Time: "<<(double)(clock()-start)/(double)CLOCKS_PER_SEC<<" s"<<std::endl;
+//         std::cout<<"Time: "<<(double)(clock()-start)/(double)CLOCKS_PER_SEC<<" s"<<std::endl;
 
-        std::cout<<"Output: "<<output<<std::endl;
+//         std::cout<<"Output: "<<output<<std::endl;
 
-        number reward = 0;
+//         number reward = 0;
 
-        // if( fabs(initial_position - target_position) >= fabs(last_position - target_position) )
-        // {
-        //     reward = -1;
-        // }
-        // else if( fabs(initial_position - target_position) < fabs(last_position - target_position) )
-        // {
-        //     reward = 1;
-        // }
+//         // if( fabs(initial_position - target_position) >= fabs(last_position - target_position) )
+//         // {
+//         //     reward = -1;
+//         // }
+//         // else if( fabs(initial_position - target_position) < fabs(last_position - target_position) )
+//         // {
+//         //     reward = 1;
+//         // }
 
-        //if(i<1000)
-        {
-            reward = output[0];
-        }
+//         //if(i<1000)
+//         {
+//             reward = output[0];
+//         }
 
-        network.applyReward(reward);  
+//         network.applyReward(reward);  
 
-        std::cout<<"Reward: "<<reward<<std::endl;
+//         std::cout<<"Reward: "<<reward<<std::endl;
 
-        file<<i<<";"<<reward<<std::endl;   
+//         file<<i<<";"<<reward<<std::endl;   
 
-        //input.clear();
-    }
+//         //input.clear();
+//     }
 
-    file.close();
+//     file.close();
 
-    //snn::NetworkSerializer::save(network,"checkpoint");
+//     //snn::NetworkSerializer::save(network,"checkpoint");
 
-    return 0;
+//     return 0;
     
 }
 

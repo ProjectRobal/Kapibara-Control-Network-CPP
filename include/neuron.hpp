@@ -48,11 +48,11 @@ namespace snn
             return 0;
         }
 
-        virtual const snn::SIMDVector& get_weights()=0;
+        virtual const snn::SIMDVector& get_weights() const =0;
 
         virtual void update_weights(const snn::SIMDVector& dweight)=0;
 
-        virtual number get_bias()=0;
+        virtual number get_bias() const =0;
 
         virtual void update_bias(number b)=0;
 

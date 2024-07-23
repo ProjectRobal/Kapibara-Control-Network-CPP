@@ -35,10 +35,9 @@ namespace snn
 {
     #define LAYERSSSM 2
 
-    template<size_t InputSize,size_t HiddenStateSize>
-    class LayerSSSM
+    template<size_t InputSize,size_t deltaRank = static_cast<size_t>(ceil(InputSize/16.f))>
+    class LayerSSSM : public LayerProto
     {
-        const size_t deltaRank = ceil(InputSize/16);
 
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
@@ -48,10 +47,14 @@ namespace snn
 
         // it projects delta from dt_rank ( size of delta vector ) to the input size 
         LayerST<ForwardNeuron<deltaRank>> d_proj;
-
-        SIMDVector hidden_state;
         
         std::array<snn::SIMDVector,InputSize> hidden_state;
+
+        std::array<snn::SIMDVector,InputSize> A;
+
+        std::array<SIMDVector,InputSize> dB;
+
+        size_t hiddenStateSize;
 
         public:
 
@@ -61,9 +64,14 @@ namespace snn
         }
 
         LayerSSSM(size_t N,std::shared_ptr<Initializer> init)
+        : LayerSSSM()
         {
             this->setup(N,init);
         }
+
+        void shuttle(){}
+
+        void applyReward(long double reward){}
 
         void setInitializer(std::shared_ptr<Initializer> init)
         {
@@ -81,13 +89,27 @@ namespace snn
 
             this->init=init;
 
+            this->hidden_state.fill(SIMDVector(0.f,N));
 
-            this->x_proj->setup(deltaRank+HiddenStateSize*2,this->init);
+            this->dB.fill(SIMDVector(0.f,N));
+
+            SIMDVector a_vec([](size_t i)->number{
+
+                return -static_cast<number>( i+1 );
+
+            },N);
+
+            this->A.fill(a_vec);
+
+
+            this->x_proj.setup(deltaRank+N*2,this->init);
 
             // there should be diffrent initializer I think, it will use silu activation
-            this->d_proj->setup(InputSize,this->init);
+            this->d_proj.setup(InputSize,this->init);
 
-            this->d_proj->setActivationFunction(std::make_shared<SiLu>());
+            this->d_proj.setActivationFunction(std::make_shared<SiLu>());
+
+            this->hiddenStateSize=N;
         }
 
         void updateWeights(const std::vector<SIMDVector>& weights,const std::vector<number>& biases)
@@ -97,20 +119,48 @@ namespace snn
 
         SIMDVector fire(const SIMDVector& input)
         {
-            SIMDVector dBC = this->x_proj->fire(input);
+            SIMDVector dBC = this->x_proj.fire(input);
 
             // split it into delta, B and C
 
-            SIMDVector d = dBC.extract(0,this->deltaRank);
+            SIMDVector d = dBC.extract(0,deltaRank);
 
-            SIMDVector B = dBC.extract(this->deltaRank,this->deltaRank+HiddenStateSize);
+            SIMDVector B = dBC.extract(deltaRank,deltaRank+this->hiddenStateSize);
 
-            SIMDVector C = dBC.extract(this->deltaRank+HiddenStateSize,this->deltaRank+HiddenStateSize*2);
+            SIMDVector C = dBC.extract(deltaRank+this->hiddenStateSize,deltaRank+this->hiddenStateSize*2);
 
+            SIMDVector e_d = this->d_proj.fire(d);
 
-            SIMDVector e_d = this->d_proj->fire(d);
+            std::array<SIMDVector,InputSize> dA = this->A;
+
+            // it should be exp(dA)
+            size_t x_i=0;
+            for( SIMDVector& a_line : dA )
+            {
+                //a_line*= this->hidden_state[x_i]*e_d[x_i++];
+
+                a_line*=e_d[x_i];
+
+                a_line.set(1.f + a_line[x_i],x_i);
+
+                a_line*=this->hidden_state[x_i++];
+            }
+
+            x_i=0;    
+            for( SIMDVector& b_line: this->dB )
+            {
+                b_line = B*input[x_i]*e_d[x_i++];
+            }
 
             SIMDVector output;
+
+            x_i=0;
+            for( SIMDVector& h_line : this->hidden_state )
+            {
+                h_line = dA[x_i] + this->dB[x_i];
+
+                output.append( (h_line*C).reduce() );
+            }
 
             this->activation_func->activate(output);
 
