@@ -26,6 +26,7 @@
 #include "initializers/normalized_gauss.hpp"
 #include "initializers/constant.hpp"
 #include "initializers/uniform.hpp"
+#include "initializers/hu.hpp"
 
 #include "mutatiom/gauss_mutation.hpp"
 
@@ -52,101 +53,8 @@
 
 #include "serializaers/network_serialize.hpp"
 
+#include "save_mutation_trainer.hpp"
 
-number stddev(const snn::SIMDVector& vec)
-{
-    number mean=vec.reduce();
-
-    snn::SIMDVector omg=vec-mean;
-
-    omg=omg*omg;
-
-    return std::sqrt(omg.reduce()/vec.size());
-
-}
-
-number evaluatePolynomial(const snn::SIMDVector& poly,const number& x)
-{
-    return std::pow(x,3)*poly[0] + std::pow(x,2)*poly[1] + x*poly[2] + poly[3];
-}
-
-
-struct CartPoleInterface
-{
-    uint8_t wait;
-
-    double inputs[4]; 
-    double outputs[2];
-    double reward;
-};
-
-
-bool sendInterface(const CartPole& interface)
-{
-    int fifo=0;
-
-    std::string buffer;
-
-    if(!interface.SerializeToString(&buffer))
-    {
-        return false;
-    }
-
-    fifo=open("fifo",O_WRONLY);
-
-    write(fifo,"@",1);
-            
-    size_t size=buffer.size();
-
-    write(fifo,(void*)&size,sizeof(size_t));
-    write(fifo,buffer.c_str(),buffer.size());
-
-    close(fifo);
-
-    return true;
-}
-
-CartPole getInterface()
-{
-    CartPole interface;
-    bool ret=true;
-
-    char start_code=0;
-    
-    int fifo=open("fifo",O_RDONLY);
-
-    read(fifo,&start_code,1);
-
-    if( start_code == '@' )
-    {
-
-        size_t size=0;
-
-        read(fifo,(void*)&size,8);
-
-        char _buffer[size];
-
-        read(fifo,_buffer,size);
-
-        std::cout<<"Parsing data: "<<size<<std::endl;
-
-        if(!interface.ParseFromArray(_buffer,size))
-        {
-            return interface;
-        }
-    }
-
-    close(fifo);
-
-    return interface;
-}
-
-
-// evalute a minimum of parabola
-number evaluate(const snn::SIMDVector& input)
-{
-    return -abs((input[0]*input[0] + 10*input[1] + 2));
-}
 
 /*
 
@@ -199,160 +107,53 @@ int main(int argc,char** argv)
     std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.25f);
     std::shared_ptr<snn::ConstantInit> constant=std::make_shared<snn::ConstantInit>(0.1f);
     std::shared_ptr<snn::UniformInit> uniform=std::make_shared<snn::UniformInit>(0.f,1.f);
+    std::shared_ptr<snn::HuInit> hu=std::make_shared<snn::HuInit>();
 
     std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.5f);
     std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
 
-    auto relu=std::make_shared<snn::ReLu>();
+    auto first= std::make_shared<snn::LayerST<snn::ForwardNeuron<16>>>(512,hu);
+    auto second= std::make_shared<snn::LayerST<snn::ForwardNeuron<512>>>(8,hu);
 
-    auto first= std::make_shared<snn::FastKAC>(10,2,uniform,mutation,512);
+    first->setActivationFunction(std::make_shared<snn::SiLu>());
+    second->setActivationFunction(std::make_shared<snn::SoftMax>());
 
-    first->setActivationFunction(std::make_shared<snn::SoftMax>());
+    auto ssm = std::make_shared<snn::LayerSSSM<16>>(64,hu);
 
-    auto ssm = std::make_shared<snn::LayerSSSM<16>>(16,gauss);
-
-    ssm->setActivationFunction(std::make_shared<snn::ReLu>());
+    ssm->setActivationFunction(std::make_shared<snn::Linear>());
+    
 
     //layer3->setActivationFunction(relu);
 
-    snn::Network network;
+    std::shared_ptr<snn::Network> network = std::make_shared<snn::Network>();
 
-    network.addLayer(ssm);
+    network->addLayer(ssm);
+    network->addLayer(first);
+    network->addLayer(second);
 
+    snn::SIMDVector input;
+
+    gauss->init(input,16);
+
+    snn::SaveMutationTrainer trainer(network,gauss);
+    
+    snn::SIMDVector output(0.f,8);
+
+    output.set(1.f,2);
 
     for(size_t i=0;i<10;++i)
     {
-        snn::SIMDVector input;
-
-        gauss->init(input,16);
 
         std::cout<<"Input: "<<input<<std::endl;
-        std::cout<<"Output: "<<network.fire(input)<<std::endl;
+        std::cout<<"Output: "<<network->fire(input)<<std::endl;
+
+        trainer.fit(input,output,1);
+
+        std::cout<<"Output*: "<<network->fire(input)<<std::endl;
 
     }
 
     return 0;
 
-    //snn::SIMDVector input;
-
-    //gauss->init(input,16);
-
-    //input = snn::exp(input);
-
-    //snn::SIMDVector output = network.fire(input);
-
-    /*std::cout<<"Input: "<<input<<std::endl;
-    std::cout<<"Output: "<<output<<std::endl;
-
-    network.applyReward(-10.f);
-
-    output = network.fire(input);
-
-    std::cout<<"Input: "<<input<<std::endl;
-    std::cout<<"Output: "<<output<<std::endl;
-    */
-
-
-    //snn::NetworkSerializer::load(network,"checkpoint");
-
-    
-
-//     snn::SIMDVector input1;
-
-//     gauss->init(input1,10);
-
-//     input = snn::simd_abs(input);
-//     input1 = snn::simd_abs(input1);
-
-//     std::cout<<"Input: "<<input<<std::endl;
-
-
-//     snn::SIMDVector output = network.fire(input);
-
-//     std::cout<<"Output 1: "<<output<<std::endl;
-
-//     output = network.fire(input1);
-
-//     std::cout<<"Output 2: "<<output<<std::endl;
-
-
-//     output = network.fire(input);
-
-//     network.applyReward(0.1f);
-
-//     output = network.fire(input);
-
-//     network.applyReward(0.1f);
-
-//     output = network.fire(input);
-
-//     std::cout<<"Output 1: "<<output<<std::endl;
-
-//     output = network.fire(input1);
-
-//     std::cout<<"Output 2: "<<output<<std::endl;
-
-//     std::cout<<"Action choosen: "<<get_action_id(output)<<std::endl;
-
-//     return 0;
-
-//     std::fstream file;
-
-//     file.open("log.csv",std::ios::out);
-
-//     file<<"N"<<";"<<"reward"<<std::endl;
-
-//     int target_position=40;
-
-//     int initial_position=0;
-
-//     int last_position=0;
-
-//     for(size_t i=0;i<100000;i++)
-//     {
-//         //gauss->init(input,128);
-
-//         clock_t start=clock();
-
-//         input.set(static_cast<number>(initial_position),0);
-//         input.set(static_cast<number>(target_position),1);
-
-//         snn::SIMDVector output=network.fire(input);
-
-//         std::cout<<"Time: "<<(double)(clock()-start)/(double)CLOCKS_PER_SEC<<" s"<<std::endl;
-
-//         std::cout<<"Output: "<<output<<std::endl;
-
-//         number reward = 0;
-
-//         // if( fabs(initial_position - target_position) >= fabs(last_position - target_position) )
-//         // {
-//         //     reward = -1;
-//         // }
-//         // else if( fabs(initial_position - target_position) < fabs(last_position - target_position) )
-//         // {
-//         //     reward = 1;
-//         // }
-
-//         //if(i<1000)
-//         {
-//             reward = output[0];
-//         }
-
-//         network.applyReward(reward);  
-
-//         std::cout<<"Reward: "<<reward<<std::endl;
-
-//         file<<i<<";"<<reward<<std::endl;   
-
-//         //input.clear();
-//     }
-
-//     file.close();
-
-//     //snn::NetworkSerializer::save(network,"checkpoint");
-
-//     return 0;
-    
 }
 

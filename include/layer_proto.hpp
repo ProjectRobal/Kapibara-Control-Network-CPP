@@ -31,9 +31,9 @@ namespace snn
 
         virtual SIMDVector fire(const SIMDVector& input)=0;
 
-        virtual void shuttle()=0;
+        virtual void shuttle(){};
 
-        virtual void applyReward(long double reward)=0;
+        virtual void applyReward(long double reward){};
 
         virtual void setInitializer(std::shared_ptr<Initializer> init)=0;
 

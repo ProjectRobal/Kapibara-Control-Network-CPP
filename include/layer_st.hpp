@@ -21,12 +21,14 @@
 
 #include "layer_utils.hpp"
 
+#include "layer_proto.hpp"
+
 namespace snn
 {
     #define LAYERST 2
 
     template<class NeuronT>
-    class LayerST
+    class LayerST : public LayerProto
     { 
         std::vector<NeuronT> neurons;
         std::shared_ptr<Initializer> init;
