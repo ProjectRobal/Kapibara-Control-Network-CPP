@@ -161,6 +161,37 @@ namespace snn
             this->d_proj.set_weights( vec , id % this->hiddenStateSize );
         }
 
+        number get_bias(size_t id) const
+        {
+            // x_proj biases
+
+            if( id<this->hiddenStateSize )
+            {
+                return this->x_proj.get_bias(id);
+            }
+
+            // d_proj biases
+            return this->d_proj.get_bias(id % this->hiddenStateSize);
+        }
+
+        const snn::SIMDVector& get_weights(size_t id) const
+        {
+            // x_proj biases
+
+            if( id<this->hiddenStateSize )
+            {
+                return this->x_proj.get_weights(id);
+            }
+
+            // d_proj biases
+            return this->d_proj.get_weights(id % this->hiddenStateSize);
+        }
+
+        size_t neuron_count() const
+        {
+            return 0;
+        }
+
         SIMDVector fire(const SIMDVector& input)
         {
             SIMDVector dBC = this->x_proj.fire(input);

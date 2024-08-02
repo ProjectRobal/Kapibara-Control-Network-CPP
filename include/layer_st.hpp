@@ -66,6 +66,21 @@ namespace snn
             this->neurons[id].set_weights(vec);
         }
 
+        number get_bias(size_t id) const
+        {
+            return this->neurons[id].get_bias();
+        }
+
+        const snn::SIMDVector& get_weights(size_t id) const
+        {
+            return this->neurons[id].get_weights();
+        }
+
+        size_t neuron_count() const
+        {
+            return this->neurons.size();
+        }
+
         void setup(size_t N,std::shared_ptr<Initializer> init)
         {
             this->activation_func=std::make_shared<Linear>();

@@ -43,6 +43,14 @@ namespace snn
 
         virtual void set_weights(const SIMDVector& vec,size_t id){}
 
+        virtual number get_bias(size_t id) const =0;
+
+        virtual const snn::SIMDVector& get_weights(size_t id) const =0;
+
+        virtual size_t neuron_count() const
+        {
+            return 0;
+        }
 
         virtual size_t getTypeID()
         {

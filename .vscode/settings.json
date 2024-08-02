@@ -68,6 +68,7 @@
         "ranges": "cpp",
         "span": "cpp",
         "valarray": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "typeindex": "cpp"
     }
 }

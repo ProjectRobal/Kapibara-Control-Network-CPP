@@ -5,7 +5,7 @@
 #include <fstream>
 #include <algorithm>
 
-#include "block.hpp"
+#include "block_kac.hpp"
 #include "neuron.hpp"
 #include "initializer.hpp"
 #include "mutation.hpp"
@@ -26,26 +26,23 @@ namespace snn
 {
     #define STATICLAYERID 1
 
-    template<class NeuronT,size_t Populus>
-    class Layer : public LayerProto
+    template<size_t inputSize,size_t Populus>
+    class LayerKAC : public LayerProto
     { 
-        std::vector<Block<NeuronT,Populus>> blocks;
+        std::vector<BlockKAC<inputSize,Populus>> blocks;
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
-
-        // a probability of neuron repleacment
-        double E;
 
         std::uniform_real_distribution<double> uniform;
 
         public:
 
-        Layer()
+        LayerKAC()
         {
             this->activation_func=std::make_shared<Linear>();
         }
 
-        Layer(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
+        LayerKAC(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
         {
             this->setup(N,init,_crossing,_mutate);
         }
@@ -64,7 +61,6 @@ namespace snn
         void setup(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
         {
             // a low probability at start
-            this->E=1.f;
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
             this->activation_func=std::make_shared<Linear>();
             this->blocks.clear();
@@ -73,7 +69,7 @@ namespace snn
 
             for(size_t i=0;i<N;++i)
             {
-                this->blocks.push_back(Block<NeuronT,Populus>(_crossing,_mutate));
+                this->blocks.push_back(BlockKAC<inputSize,Populus>(_mutate));
                 this->blocks.back().setup(init);
                 this->blocks.back().chooseWorkers();
             }
@@ -115,10 +111,7 @@ namespace snn
             
             for(auto& block : this->blocks)
             {
-                if(this->uniform(gen)<=this->E)
-                {
-                    block.chooseWorkers();
-                }
+                block.chooseWorkers();
             }   
         }
 
@@ -131,12 +124,6 @@ namespace snn
             {
                 
                 output.append(block.fire(input));
-
-                if(block.readyToMate())
-                {
-                    block.maiting(this->init);
-                    //std::cout<<"Layer maiting!"<<std::endl;
-                }
 
             }
 
@@ -153,7 +140,7 @@ namespace snn
 
         void generate_metadata(nlohmann::json& j) const
         {
-            j["input_size"]=blocks[0].inputSize();
+            j["input_size"]=inputSize;
             j["output_size"]=blocks.size();
         }
 

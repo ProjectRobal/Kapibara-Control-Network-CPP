@@ -35,6 +35,8 @@
 #include "block.hpp"
 #include "layer.hpp"
 
+#include "layer_kac.hpp"
+
 #include "layer_st.hpp"
 #include "layer.hpp"
 #include "layer_sssm.hpp"
@@ -54,6 +56,7 @@
 #include "serializaers/network_serialize.hpp"
 
 #include "save_mutation_trainer.hpp"
+
 
 
 /*
@@ -112,13 +115,20 @@ int main(int argc,char** argv)
     std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.5f);
     std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
 
-    auto first= std::make_shared<snn::LayerST<snn::ForwardNeuron<16>>>(512,hu);
-    auto second= std::make_shared<snn::LayerST<snn::ForwardNeuron<512>>>(8,hu);
+    // we can compress FFT data from 512 to 24 therotically
+    const size_t inputSize = 38;
 
-    first->setActivationFunction(std::make_shared<snn::SiLu>());
-    second->setActivationFunction(std::make_shared<snn::SoftMax>());
+    auto first= std::make_shared<snn::LayerKAC<inputSize,5>>(1024,hu,cross,mutation);
+    auto second= std::make_shared<snn::LayerKAC<1024,5>>(512,hu,cross,mutation);
+    auto third= std::make_shared<snn::LayerKAC<512,5>>(256,hu,cross,mutation);
+    auto forth= std::make_shared<snn::LayerKAC<256,5>>(16,hu,cross,mutation);
 
-    auto ssm = std::make_shared<snn::LayerSSSM<16>>(64,hu);
+    first->setActivationFunction(std::make_shared<snn::ReLu>());
+    second->setActivationFunction(std::make_shared<snn::ReLu>());
+    third->setActivationFunction(std::make_shared<snn::ReLu>());
+    forth->setActivationFunction(std::make_shared<snn::SoftMax>());
+
+    auto ssm = std::make_shared<snn::LayerSSSM<inputSize>>(256,hu);
 
     ssm->setActivationFunction(std::make_shared<snn::Linear>());
     
@@ -127,13 +137,15 @@ int main(int argc,char** argv)
 
     std::shared_ptr<snn::Network> network = std::make_shared<snn::Network>();
 
-    network->addLayer(ssm);
+    // network->addLayer(ssm);
     network->addLayer(first);
     network->addLayer(second);
+    network->addLayer(third);
+    network->addLayer(forth);
 
     snn::SIMDVector input;
 
-    gauss->init(input,16);
+    gauss->init(input,inputSize);
 
     snn::SaveMutationTrainer trainer(network,gauss);
     
@@ -141,17 +153,27 @@ int main(int argc,char** argv)
 
     output.set(1.f,2);
 
-    for(size_t i=0;i<10;++i)
-    {
+    std::chrono::time_point<std::chrono::system_clock> start, end;
 
-        std::cout<<"Input: "<<input<<std::endl;
-        std::cout<<"Output: "<<network->fire(input)<<std::endl;
+    start = std::chrono::system_clock::now();
 
-        trainer.fit(input,output,1);
+    //std::cout<<"Input: "<<input<<std::endl;
+    //std::cout<<"Output: "<<network->fire(input)<<std::endl;
 
-        std::cout<<"Output*: "<<network->fire(input)<<std::endl;
+    output = network->fire(input);
 
-    }
+    //network->applyReward(2.f);
+
+    end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+    std::cout << "finished computation at " << elapsed_seconds.count() << std::endl;
+
+//    trainer.fit(input,output,1);
+
+    // std::cout<<"Output*: "<<network->fire(input)<<std::endl;
 
     return 0;
 
