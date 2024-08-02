@@ -24,45 +24,29 @@ namespace snn
     template<size_t Populus>
     class SubBlock
     {   
-        /*
-            It will store each genome with a counter which indicate how many times entity was tested.
-        */
-        struct NumberEntity
-        {
-            number value;
-            uint8_t counter;
-            long double reward;
-
-            NumberEntity()
-            {
-                this->value = 0;
-                this->counter = 0;
-                this->reward = 0;
-            }
-        };
 
         std::shared_ptr<Mutation> mutate;
 
         size_t mating_counter;
 
-        std::uniform_int_distribution<size_t> uniform;
-
-        std::array<NumberEntity,Populus> population;
-
-        NumberEntity* choosen;
-
         std::mt19937 gen; 
+
+        std::normal_distribution<number> distribution;
+
+        number weight;
+        long double reward;
+
+        SIMDVector past_weights;
+        SIMDVector past_rewards;
 
         public:
 
         SubBlock()
-        :uniform(0,Populus-1),
-        population({NumberEntity()}),
-        choosen(NULL)
         {
             std::random_device rd;
 
             this->gen = std::mt19937(rd());
+            
         }
 
         SubBlock(std::shared_ptr<Mutation> _mutate)
@@ -78,44 +62,43 @@ namespace snn
 
         void setup(std::shared_ptr<Initializer> init)
         {
-            for(auto& entity : population)
-            {
-                init->init(entity.value);
-            }
+            number mean;
+            number std;
 
+            init->init(mean);
+            init->init(std);
+
+            this->distribution = std::normal_distribution<number>(mean,std);   
         }
 
         void chooseWorkers()
         {
+            this->past_weights.append(this->weight);
+            this->past_rewards.append(this->reward);
+            this->reward = 0.f;
 
-            size_t id=this->uniform(gen);
+            this->weight = this->distribution(this->gen);
 
-            this->choosen = &this->population[id];
         }
-
 
         void giveReward(long double reward)
         {          
-            if( this->choosen != NULL )
-            {
-                return;
-            }
+            this->reward += reward;
 
-            this->choosen->reward += reward;
-
-            // perform maititng here
+            // this takes some time ...
+            // long double _reward = this->reward*0.8;
+            // for( size_t i=this->past_weights.size()-1;i>=0;--i )
+            // {
+            //     this->past_rewards.set(this->past_rewards[i]+_reward,i);
+            //     _reward = _reward*0.8;
+            // }
 
             this->maiting();
         }
 
         number get()
         {
-            if( this->choosen == NULL )
-            {
-                return 0;
-            }
-
-            return this->choosen->value;
+            return this->weight;
         }
 
         number operator()()

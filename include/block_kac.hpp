@@ -80,7 +80,7 @@ namespace snn
 
             for(auto& subpopulation : this->population)
             {
-                subpopulation.giveReward(reward);    
+                subpopulation.giveReward(reward);
             }
 
         }

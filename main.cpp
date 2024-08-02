@@ -173,7 +173,7 @@ int main(int argc,char** argv)
 
     output = network->fire(input);
 
-    //network->applyReward(2.f);
+    network->applyReward(2.f);
 
     end = std::chrono::system_clock::now();
 
