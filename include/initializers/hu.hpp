@@ -12,19 +12,20 @@ namespace snn
     class HuInit : public Initializer
     {
 
+        std::mt19937 gen; 
+
         public:
 
         HuInit()
         {
+            std::random_device rd; 
+
+            this->gen = std::mt19937(rd());
 
         }
 
         void init(SIMDVector& vec,size_t N)
         {
-            std::random_device rd; 
-
-            // Mersenne twister PRNG, initialized with seed from previous random device instance
-            std::mt19937 gen(rd()); 
             
             std::normal_distribution<number> gauss(0.f,std::sqrt(2.f/static_cast<number>(N)));
 
@@ -36,11 +37,6 @@ namespace snn
 
         void init(number& n)
         {
-            std::random_device rd; 
-
-            // Mersenne twister PRNG, initialized with seed from previous random device instance
-            std::mt19937 gen(rd()); 
-
             std::normal_distribution<number> gauss(0.f,std::sqrt(2.f));
 
             n=gauss(gen);

@@ -105,6 +105,7 @@ size_t get_action_id(const snn::SIMDVector& actions)
 
 int main(int argc,char** argv)
 {
+    std::cout<<"Starting..."<<std::endl;
 
     std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
     std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.25f);
@@ -115,8 +116,12 @@ int main(int argc,char** argv)
     std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.5f);
     std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
 
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+
     // we can compress FFT data from 512 to 24 therotically
     const size_t inputSize = 38;
+
+    start = std::chrono::system_clock::now();
 
     auto first= std::make_shared<snn::LayerKAC<inputSize,5>>(1024,hu,cross,mutation);
     auto second= std::make_shared<snn::LayerKAC<1024,5>>(512,hu,cross,mutation);
@@ -153,7 +158,13 @@ int main(int argc,char** argv)
 
     output.set(1.f,2);
 
-    std::chrono::time_point<std::chrono::system_clock> start, end;
+    end = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> elapsed_initialization_seconds = end - start;
+
+    std::cout << "Finished initialization at " << elapsed_initialization_seconds.count() << std::endl;
+
+    std::cout<<"Starting network"<<std::endl;
 
     start = std::chrono::system_clock::now();
 
@@ -167,7 +178,6 @@ int main(int argc,char** argv)
     end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed_seconds = end - start;
-    std::time_t end_time = std::chrono::system_clock::to_time_t(end);
 
     std::cout << "finished computation at " << elapsed_seconds.count() << std::endl;
 

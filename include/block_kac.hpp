@@ -70,9 +70,7 @@ namespace snn
                 subpopulation.chooseWorkers();    
                 this->worker.set(subpopulation.get(),i);
                 ++i;
-            }
-
-            
+            }   
         }
 
 

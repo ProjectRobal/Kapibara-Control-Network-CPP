@@ -12,22 +12,20 @@ namespace snn
     {
 
         std::uniform_real_distribution<number> uniform;
+        std::mt19937 gen; 
 
         public:
 
         UniformInit(number a,number b)
         : uniform(a,b)
         {
+            std::random_device rd; 
 
+            this->gen = std::mt19937(rd());
         }
 
         void init(SIMDVector& vec,size_t N)
         {
-            std::random_device rd; 
-
-            // Mersenne twister PRNG, initialized with seed from previous random device instance
-            std::mt19937 gen(rd()); 
-
             for(size_t i=0;i<N;++i)
             {
                 vec.append(this->uniform(gen));
@@ -36,11 +34,6 @@ namespace snn
 
         void init(number& n)
         {
-            std::random_device rd; 
-
-            // Mersenne twister PRNG, initialized with seed from previous random device instance
-            std::mt19937 gen(rd()); 
-
             n=this->uniform(gen);
         }
     };

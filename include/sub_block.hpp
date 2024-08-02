@@ -51,6 +51,8 @@ namespace snn
 
         NumberEntity* choosen;
 
+        std::mt19937 gen; 
+
         public:
 
         SubBlock()
@@ -58,7 +60,9 @@ namespace snn
         population({NumberEntity()}),
         choosen(NULL)
         {
+            std::random_device rd;
 
+            this->gen = std::mt19937(rd());
         }
 
         SubBlock(std::shared_ptr<Mutation> _mutate)
@@ -83,10 +87,6 @@ namespace snn
 
         void chooseWorkers()
         {
-            std::random_device rd; 
-
-            // Mersenne twister PRNG, initialized with seed from previous random device instance
-            std::mt19937 gen(rd()); 
 
             size_t id=this->uniform(gen);
 
