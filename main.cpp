@@ -123,10 +123,11 @@ int main(int argc,char** argv)
 
     start = std::chrono::system_clock::now();
 
-    auto first= std::make_shared<snn::LayerKAC<inputSize,5>>(1024,hu,cross,mutation);
-    auto second= std::make_shared<snn::LayerKAC<1024,5>>(512,hu,cross,mutation);
-    auto third= std::make_shared<snn::LayerKAC<512,5>>(256,hu,cross,mutation);
-    auto forth= std::make_shared<snn::LayerKAC<256,5>>(16,hu,cross,mutation);
+    // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
+    auto first= std::make_shared<snn::LayerKAC<inputSize,5>>(128,hu,cross,mutation);
+    auto second= std::make_shared<snn::LayerKAC<128,5>>(128,hu,cross,mutation);
+    auto third= std::make_shared<snn::LayerKAC<128,5>>(128,hu,cross,mutation);
+    auto forth= std::make_shared<snn::LayerKAC<128,5>>(64,hu,cross,mutation);
 
     first->setActivationFunction(std::make_shared<snn::ReLu>());
     second->setActivationFunction(std::make_shared<snn::ReLu>());
@@ -166,20 +167,26 @@ int main(int argc,char** argv)
 
     std::cout<<"Starting network"<<std::endl;
 
-    start = std::chrono::system_clock::now();
+    
 
     //std::cout<<"Input: "<<input<<std::endl;
     //std::cout<<"Output: "<<network->fire(input)<<std::endl;
 
-    output = network->fire(input);
+    for(size_t i=0;i<12;++i)
+    {
+        start = std::chrono::system_clock::now();
 
-    network->applyReward(2.f);
+        output = network->fire(input);
 
-    end = std::chrono::system_clock::now();
+        network->applyReward(2.f);
 
-    std::chrono::duration<double> elapsed_seconds = end - start;
+        end = std::chrono::system_clock::now();
 
-    std::cout << "finished computation at " << elapsed_seconds.count() << std::endl;
+        std::chrono::duration<double> elapsed_seconds = end - start;
+
+        std::cout << "finished computation at " << elapsed_seconds.count() << std::endl;
+
+    }
 
 //    trainer.fit(input,output,1);
 

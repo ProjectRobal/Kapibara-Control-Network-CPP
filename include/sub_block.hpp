@@ -57,7 +57,27 @@ namespace snn
 
         void maiting()
         {
+            // if lenght is sufficient
+            if( this->past_weights.size() >= Populus )
+            {
 
+                number weighted_weights = (this->past_weights*this->past_rewards).reduce();
+                number reduced_rewards = this->past_rewards.reduce();
+
+                number mean = weighted_weights / reduced_rewards;
+                number std=0.f;
+
+                this->past_weights-=mean;
+
+                this->past_weights*=this->past_weights;
+
+                std = std::sqrt( ((this->past_weights*this->past_rewards).reduce()/reduced_rewards) - mean*mean );
+
+                this->distribution = std::normal_distribution<number>(mean,std);
+
+                this->past_weights.clear();
+                this->past_rewards.clear();
+            }
         }
 
         void setup(std::shared_ptr<Initializer> init)
@@ -82,14 +102,14 @@ namespace snn
         }
 
         void giveReward(long double reward)
-        {          
-            this->reward += reward;
+        {   
+            reward += 0.0000001;
+            this->reward += std::exp(reward);
 
-            // this takes some time ...
             // long double _reward = this->reward*0.8;
-            // for( size_t i=this->past_weights.size()-1;i>=0;--i )
+            // for( size_t i=0;i>std::min((size_t)5,this->past_weights.size());++i )
             // {
-            //     this->past_rewards.set(this->past_rewards[i]+_reward,i);
+            //     this->past_rewards.set(this->past_rewards[this->past_weights.size()-1 - i]+_reward,i);
             //     _reward = _reward*0.8;
             // }
 
