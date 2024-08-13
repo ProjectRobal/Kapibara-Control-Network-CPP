@@ -67,11 +67,20 @@ namespace snn
                 number mean = weighted_weights / reduced_rewards;
                 number std=0.f;
 
-                this->past_weights-=mean;
+                // this->past_weights-=mean;
 
                 this->past_weights*=this->past_weights;
 
-                std = std::sqrt( ((this->past_weights*this->past_rewards).reduce()/reduced_rewards) - mean*mean );
+                // variance is negative!!!
+
+                number var = ((this->past_weights*this->past_rewards).reduce()/reduced_rewards) - mean*mean;
+
+                if(var<0)
+                {
+                    std::cout<<"Coś się zjebało"<<std::endl;
+                }
+
+                std = std::sqrt(var);
 
                 this->distribution = std::normal_distribution<number>(mean,std);
 
@@ -88,7 +97,7 @@ namespace snn
             init->init(mean);
             init->init(std);
 
-            this->distribution = std::normal_distribution<number>(mean,std);   
+            this->distribution = std::normal_distribution<number>(mean,abs(std));   
         }
 
         void chooseWorkers()
