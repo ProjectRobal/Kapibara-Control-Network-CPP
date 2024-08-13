@@ -22,6 +22,11 @@
 
 #include "layer_utils.hpp"
 
+/*
+
+ A layer that use evolutionary algorithm for learing called CoSyne.
+
+*/
 namespace snn
 {
     #define STATICLAYERID 1
@@ -83,16 +88,6 @@ namespace snn
             {
                 block.giveReward(reward);
             }
-        }
-
-        number get_bias(size_t id) const
-        {
-            return 0;
-        }
-
-        const snn::SIMDVector& get_weights(size_t id) const
-        {
-            return SIMDVector();
         }
 
         size_t neuron_count(){

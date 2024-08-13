@@ -17,6 +17,7 @@
 #include "layer_proto.hpp"
 
 #include "layer_st.hpp"
+#include "layer_kac.hpp"
 
 #include "simd_vector.hpp"
 
@@ -35,22 +36,27 @@
 
 #include "layer_proto_with_weights.hpp"
 
+/*
+
+ A Selective State Space Model but with evolutionary algorithm using CoSyne.
+
+*/
 namespace snn
 {
     #define LAYERSSSM 2
 
-    template<size_t InputSize,size_t deltaRank = static_cast<size_t>(ceil(InputSize/16.f))>
-    class LayerSSSM : public LayerProto,public LayerProtoWithWeights
+    template<size_t InputSize,size_t Populus,size_t deltaRank = static_cast<size_t>(ceil(InputSize/16.f))>
+    class LayerSSSMEVO : public LayerProto
     {
 
         std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
 
         // it will generate delta , B and C, it is not using biases
-        LayerST<NeuronNoBias<InputSize>> x_proj;
+        LayerKAC<InputSize,Populus> x_proj;
 
         // it projects delta from dt_rank ( size of delta vector ) to the input size 
-        LayerST<ForwardNeuron<deltaRank>> d_proj;
+        LayerKAC<deltaRank,Populus> d_proj;
         
         std::array<snn::SIMDVector,InputSize> hidden_state;
 
@@ -60,22 +66,44 @@ namespace snn
 
         size_t hiddenStateSize;
 
+        size_t TicksToShuttle;
+
+        size_t Ticks;
+
         public:
 
-        LayerSSSM()
+        LayerSSSMEVO()
         {
             this->activation_func=std::make_shared<Linear>();
         }
 
-        LayerSSSM(size_t N,std::shared_ptr<Initializer> init)
-        : LayerSSSM()
+        LayerSSSMEVO(size_t N,std::shared_ptr<Initializer> init,size_t TicksToShuttle=200,number dt_min = 0.001,number dt_max = 0.1)
+        : LayerSSSMEVO()
         {
-            this->setup(N,init);
+            this->setup(N,init,TicksToShuttle);
         }
 
-        void shuttle(){}
+        void shuttle()
+        {
+            this->Ticks++;
+            
+            // after some time planer weights should be shuttled
+            if( this->Ticks >= this->TicksToReplacment)
+            {
 
-        void applyReward(long double reward){}
+                this->hidden_planer.shuttle();
+                this->planer.shuttle();
+
+                this->Ticks = 0;
+            }
+        }
+
+        void applyReward(long double reward)
+        {
+            this->x_proj.applyReward(reward);
+            
+            this->d_proj.applyReward(reward);
+        }
 
         void setInitializer(std::shared_ptr<Initializer> init)
         {
@@ -87,8 +115,10 @@ namespace snn
             this->activation_func=active;
         }
 
-        void setup(size_t N,std::shared_ptr<Initializer> init,number dt_min = 0.001,number dt_max = 0.1)
+        void setup(size_t N,std::shared_ptr<Initializer> init,size_t TicksToShuttle=200,number dt_min = 0.001,number dt_max = 0.1)
         {
+            this->TicksToShuttle = TicksToShuttle;
+
             this->activation_func=std::make_shared<Linear>();
 
             this->init=init;
@@ -131,62 +161,6 @@ namespace snn
             }
 
             this->hiddenStateSize=N;
-        }
-
-        void set_bias(number b,size_t id)
-        {
-            // x_proj biases
-
-            if( id<this->hiddenStateSize )
-            {
-                this->x_proj.set_bias( b , id );
-                return;
-            }
-
-            // d_proj biases
-
-            this->d_proj.set_bias( b , id % this->hiddenStateSize );
-        }
-
-        void set_weights(const SIMDVector& vec,size_t id)
-        {
-            // x_proj weights
-
-            if( id<this->hiddenStateSize )
-            {
-                this->x_proj.set_weights( vec , id );
-                return;
-            }
-
-            // d_proj weights
-
-            this->d_proj.set_weights( vec , id % this->hiddenStateSize );
-        }
-
-        number get_bias(size_t id) const
-        {
-            // x_proj biases
-
-            if( id<this->hiddenStateSize )
-            {
-                return this->x_proj.get_bias(id);
-            }
-
-            // d_proj biases
-            return this->d_proj.get_bias(id % this->hiddenStateSize);
-        }
-
-        const snn::SIMDVector& get_weights(size_t id) const
-        {
-            // x_proj biases
-
-            if( id<this->hiddenStateSize )
-            {
-                return this->x_proj.get_weights(id);
-            }
-
-            // d_proj biases
-            return this->d_proj.get_weights(id % this->hiddenStateSize);
         }
 
         size_t neuron_count() const

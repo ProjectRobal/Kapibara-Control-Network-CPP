@@ -41,6 +41,7 @@
 #include "layer.hpp"
 #include "layer_sssm.hpp"
 #include "layer_segmented.hpp"
+#include "layer_sssm_evo.hpp"
 
 #include "fastkac.hpp"
 
@@ -55,9 +56,6 @@
 #include "network.hpp"
 
 #include "serializaers/network_serialize.hpp"
-
-#include "save_mutation_trainer.hpp"
-
 
 
 /*
@@ -153,8 +151,6 @@ int main(int argc,char** argv)
     snn::SIMDVector input;
 
     gauss->init(input,inputSize);
-
-    snn::SaveMutationTrainer trainer(network,gauss);
     
     snn::SIMDVector output(0.f,8);
 
@@ -173,7 +169,7 @@ int main(int argc,char** argv)
     //std::cout<<"Input: "<<input<<std::endl;
     //std::cout<<"Output: "<<network->fire(input)<<std::endl;
 
-    for(size_t i=0;i<12;++i)
+    for(size_t i=0;i<20;++i)
     {
         start = std::chrono::system_clock::now();
 
@@ -186,12 +182,13 @@ int main(int argc,char** argv)
         std::chrono::duration<double> elapsed_seconds = end - start;
 
         std::cout << "finished computation at " << elapsed_seconds.count() << std::endl;
+        std::cout<<"Output: "<<output<<std::endl;
 
     }
 
 //    trainer.fit(input,output,1);
 
-    // std::cout<<"Output*: "<<network->fire(input)<<std::endl;
+    
 
     return 0;
 

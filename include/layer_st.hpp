@@ -23,12 +23,14 @@
 
 #include "layer_proto.hpp"
 
+#include "layer_proto_with_weights.hpp"
+
 namespace snn
 {
     #define LAYERST 2
 
     template<class NeuronT>
-    class LayerST : public LayerProto
+    class LayerST : public LayerProto,public LayerProtoWithWeights
     { 
         std::vector<NeuronT> neurons;
         std::shared_ptr<Initializer> init;

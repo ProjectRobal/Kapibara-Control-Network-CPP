@@ -19,6 +19,8 @@
 
 #include "config.hpp"
 
+#include "initializers/hu.hpp"
+
 #include "activation.hpp"
 #include "activation/linear.hpp"
 #include "activation/silu.hpp"
@@ -26,6 +28,11 @@
 
 #include "layer_utils.hpp"
 
+/*
+
+ A layer that is split into a sub KAC Layers and additional layer is presents and it chooses what sub layer should be active at that moment.
+
+*/
 namespace snn
 {
     #define STATICLAYERID 1
@@ -82,6 +89,8 @@ namespace snn
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
             this->activation_func=std::make_shared<Linear>();
 
+            std::shared_ptr<HuInit> planer_init = std::make_shared<HuInit>();
+
             this->init=init;
 
             for(size_t i=0;i<blocksCount;++i)
@@ -89,8 +98,8 @@ namespace snn
                 this->blocks[i].setup(N,init,_crossing,_mutate);
             }
 
-            this->hidden_planer.setup(HiddenSize,init,_crossing,_mutate);
-            this->planer.setup(blocksCount,init,_crossing,_mutate);
+            this->hidden_planer.setup(HiddenSize,planer_init,_crossing,_mutate);
+            this->planer.setup(blocksCount,planer_init,_crossing,_mutate);
         }
 
         void applyReward(long double reward)
@@ -168,6 +177,8 @@ namespace snn
 
         int8_t load(std::ifstream& in)
         {
+            hidden_planer.load(in);
+            planer.load(in);
 
             for(auto& block : this->blocks)
             {
@@ -186,6 +197,8 @@ namespace snn
 
         int8_t save(std::ofstream& out) const
         {
+            hidden_planer.save(out);
+            planer.save(out);
             
             for(const auto& block : this->blocks)
             {
