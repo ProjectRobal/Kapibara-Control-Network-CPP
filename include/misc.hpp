@@ -1,5 +1,6 @@
 #pragma once
 
+#include <random>
 #include <cstdint>
 #include <cmath>
 #include <climits>
@@ -41,6 +42,36 @@ namespace snn
 
         return static_cast<T>(std::ldexp(static_cast<T>(mant) / std::numeric_limits<std::int64_t>::max() ,exp));
     }
+
+    size_t get_action_id(const snn::SIMDVector& actions)
+    {
+        std::random_device rd; 
+
+        // Mersenne twister PRNG, initialized with seed from previous random device instance
+        std::mt19937 gen(rd()); 
+
+        std::uniform_real_distribution<number> uniform_chooser(0.f,1.f);
+
+        number shift = 0;
+
+        number choose = uniform_chooser(gen);
+
+        size_t action_id = 0;
+
+        for(size_t i=0;i<actions.size();++i)
+        {
+            if( choose <= actions[i] + shift )
+            {
+                action_id = i;
+                break;
+            }
+
+            shift += actions[i];
+        }
+
+        return action_id;
+    }
+
 
 
     SIMDVector power(const SIMDVector& vec, size_t N)

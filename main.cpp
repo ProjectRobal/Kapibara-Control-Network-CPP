@@ -40,6 +40,7 @@
 #include "layer_st.hpp"
 #include "layer.hpp"
 #include "layer_sssm.hpp"
+#include "layer_segmented.hpp"
 
 #include "fastkac.hpp"
 
