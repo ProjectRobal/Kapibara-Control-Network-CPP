@@ -44,8 +44,6 @@ namespace snn
         LayerKAC<inputSize,Populus> hidden_planer;
         LayerKAC<HiddenSize,Populus> planer;
 
-        std::shared_ptr<Activation> activation_func;
-
         SiLu hidden_activation;
         SoftMax planer_activation;
 
@@ -138,8 +136,11 @@ namespace snn
         SIMDVector fire(const SIMDVector& input)
         {
             // choose most promenant
-            SIMDVector probs = this->hidden_activation.activate(this->hidden_planer.fire(input));
-            probs = this->planer_activation.activate(this->planer.fire(probs));
+            SIMDVector probs = this->hidden_planer.fire(input);
+            this->hidden_activation.activate(probs);
+
+            probs = this->planer.fire(probs);
+            this->planer_activation.activate(probs);
 
             this->current_block = snn::get_action_id(probs);
 
@@ -190,7 +191,7 @@ namespace snn
             {
                 if(out.good())
                 {
-                    block.dump(out);
+                    block.save(out);
                 }
                 else
                 {
