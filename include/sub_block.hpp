@@ -21,7 +21,7 @@
 namespace snn
 {
 
-    template<size_t Populus>
+    template<size_t Populus,size_t LongPopulus=4*Populus>
     class SubBlock
     {   
 
@@ -38,6 +38,10 @@ namespace snn
 
         SIMDVector past_weights;
         SIMDVector past_rewards;
+
+        SIMDVector long_past_mean;
+        SIMDVector long_past_var;
+        SIMDVector long_past_rewards;
 
         public:
 
@@ -75,10 +79,10 @@ namespace snn
 
                 number var = ((this->past_weights*this->past_rewards).reduce()/reduced_rewards) - mean*mean;
 
-                if(var<0)
-                {
-                    std::cout<<"Coś się zjebało"<<std::endl;
-                }
+                // if(var<0)
+                // {
+                //     std::cout<<"Coś się zjebało"<<std::endl;
+                // }
 
                 std = std::sqrt(var);
 
@@ -86,6 +90,25 @@ namespace snn
 
                 this->past_weights.clear();
                 this->past_rewards.clear();
+
+                this->long_past_rewards.append(reduced_rewards);
+                this->long_past_mean.append(mean);
+                this->long_past_var.append(var);
+            }
+
+            if( this->long_past_rewards.size() >= LongPopulus )
+            {
+                number reduced_rewards = this->long_past_rewards.reduce();
+
+                number mean = (this->long_past_mean*this->long_past_rewards).reduce() / reduced_rewards;
+
+                number var = (this->long_past_var*this->long_past_rewards).reduce() / reduced_rewards;
+
+                this->distribution = std::normal_distribution<number>(mean,var);
+
+                this->long_past_rewards.clear();
+                this->long_past_mean.clear();
+                this->long_past_var.clear();
             }
         }
 
@@ -95,9 +118,9 @@ namespace snn
             number std;
 
             init->init(mean);
-            init->init(std);
+            std = INITIAL_STD;
 
-            this->distribution = std::normal_distribution<number>(mean,abs(std));   
+            this->distribution = std::normal_distribution<number>(mean,std);   
         }
 
         void chooseWorkers()
