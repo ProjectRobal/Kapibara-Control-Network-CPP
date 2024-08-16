@@ -64,6 +64,9 @@ namespace snn
             // if lenght is sufficient
             if( this->past_weights.size() >= Populus )
             {
+                // std::cout<<"Maiting! "<<this->past_weights.size()<<std::endl;
+                this->past_weights.append(this->weight);
+                this->past_rewards.append(this->reward);
 
                 number weighted_weights = (this->past_weights*this->past_rewards).reduce();
                 number reduced_rewards = this->past_rewards.reduce();
@@ -75,14 +78,7 @@ namespace snn
 
                 this->past_weights*=this->past_weights;
 
-                // variance is negative!!!
-
                 number var = ((this->past_weights*this->past_rewards).reduce()/reduced_rewards) - mean*mean;
-
-                // if(var<0)
-                // {
-                //     std::cout<<"Coś się zjebało"<<std::endl;
-                // }
 
                 std = std::sqrt(var);
 
@@ -98,6 +94,7 @@ namespace snn
 
             if( this->long_past_rewards.size() >= LongPopulus )
             {
+                // std::cout<<"Merging! "<<this->long_past_rewards.size()<<std::endl;
                 number reduced_rewards = this->long_past_rewards.reduce();
 
                 number mean = (this->long_past_mean*this->long_past_rewards).reduce() / reduced_rewards;

@@ -159,6 +159,11 @@ namespace snn
 
         size_t size() const
         {
+            if( this->vec.size() == 0 )
+            {
+                return 0;
+            }
+
             return (this->vec.size()-1)*MAX_SIMD_VECTOR_SIZE + ( this->ptr );
         }
 

@@ -108,6 +108,7 @@ int main(int argc,char** argv)
 
     std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
     std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.25f);
+    std::shared_ptr<snn::GaussInit> gauss1=std::make_shared<snn::GaussInit>(0.f,0.01f);
     std::shared_ptr<snn::ConstantInit> constant=std::make_shared<snn::ConstantInit>(0.1f);
     std::shared_ptr<snn::UniformInit> uniform=std::make_shared<snn::UniformInit>(0.f,1.f);
     std::shared_ptr<snn::HuInit> hu=std::make_shared<snn::HuInit>();
@@ -123,15 +124,15 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first= std::make_shared<snn::LayerSegmented<inputSize,5,10>>(128,hu,cross,mutation);
-    auto second= std::make_shared<snn::LayerSegmented<128,5,10>>(128,hu,cross,mutation);
-    auto third= std::make_shared<snn::LayerSegmented<128,5,10>>(128,hu,cross,mutation);
-    auto forth= std::make_shared<snn::LayerSegmented<128,5,10>>(64,hu,cross,mutation);
+    auto first= std::make_shared<snn::LayerSegmented<inputSize,5,10>>(128,gauss1,cross,mutation);
+    auto second= std::make_shared<snn::LayerSegmented<128,5,10>>(128,gauss1,cross,mutation);
+    auto third= std::make_shared<snn::LayerSegmented<128,5,10>>(128,gauss1,cross,mutation);
+    auto forth= std::make_shared<snn::LayerSegmented<128,5,10>>(64,gauss1,cross,mutation);
 
     first->setActivationFunction(std::make_shared<snn::ReLu>());
     second->setActivationFunction(std::make_shared<snn::ReLu>());
     third->setActivationFunction(std::make_shared<snn::ReLu>());
-    forth->setActivationFunction(std::make_shared<snn::SoftMax>());
+    forth->setActivationFunction(std::make_shared<snn::ReLu>());
 
     auto ssm = std::make_shared<snn::LayerSSSM<inputSize>>(256,hu);
 

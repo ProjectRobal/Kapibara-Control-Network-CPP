@@ -35,8 +35,8 @@ namespace snn
         SIMDVector worker;
         number bias;
 
-        std::array<SubBlock<Populus>,inputSize> population;
-        SubBlock<Populus> biases;
+        std::array<SubBlock<Populus,4*Populus>,inputSize> population;
+        SubBlock<Populus,4*Populus> biases;
 
 
         public:
