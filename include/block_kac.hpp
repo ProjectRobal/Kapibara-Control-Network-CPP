@@ -71,6 +71,7 @@ namespace snn
                 this->worker.set(subpopulation.get(),i);
                 ++i;
             }   
+
         }
 
 
@@ -81,8 +82,9 @@ namespace snn
             for(auto& subpopulation : this->population)
             {
                 subpopulation.giveReward(reward);
+                std::cout.setstate(std::ios_base::failbit);
             }
-
+            std::cout.clear();
         }
 
         number fire(SIMDVector input)

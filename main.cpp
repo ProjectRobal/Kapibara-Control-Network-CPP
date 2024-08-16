@@ -51,8 +51,6 @@
 
 #include "shared_mem.hpp"
 
-#include "proto/cartpole.pb.h"
-
 #include "network.hpp"
 
 #include "serializaers/network_serialize.hpp"

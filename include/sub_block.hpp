@@ -50,6 +50,9 @@ namespace snn
             std::random_device rd;
 
             this->gen = std::mt19937(rd());
+
+            this->weight = 0;
+            this->reward = 0;
             
         }
 
@@ -82,6 +85,8 @@ namespace snn
 
                 std = std::sqrt(var);
 
+                // something wrong here:
+
                 this->distribution = std::normal_distribution<number>(mean,std);
 
                 this->past_weights.clear();
@@ -100,6 +105,8 @@ namespace snn
                 number mean = (this->long_past_mean*this->long_past_rewards).reduce() / reduced_rewards;
 
                 number var = (this->long_past_var*this->long_past_rewards).reduce() / reduced_rewards;
+
+                // something wrong here:
 
                 this->distribution = std::normal_distribution<number>(mean,var);
 
