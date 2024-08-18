@@ -128,35 +128,35 @@ namespace snn
 
         void shuttle()
         {
-            this->Ticks++;
+            // this->Ticks++;
             
-            // after some time planer weights should be shuttled
-            if( this->Ticks >= this->TicksToReplacment)
-            {
+            // // after some time planer weights should be shuttled
+            // if( this->Ticks >= this->TicksToReplacment)
+            // {
 
-                this->hidden_planer.shuttle();
-                this->planer.shuttle();
+            this->hidden_planer.shuttle();
+            this->planer.shuttle();
 
-                this->Ticks = 0;
-            }
+            this->Ticks = 0;
+            // }
             
         }
 
         SIMDVector fire(const SIMDVector& input)
         {
             // choose most promenant
-            SIMDVector probs = this->hidden_planer.fire(input);
-            this->hidden_activation.activate(probs);
+            // SIMDVector probs = this->hidden_planer.fire(input);
+            // this->hidden_activation.activate(probs);
 
-            probs = this->planer.fire(probs);
-            this->planer_activation.activate(probs);
+            // probs = this->planer.fire(probs);
+            // this->planer_activation.activate(probs);
 
-            this->current_block = snn::get_action_id(probs);
+            // this->current_block = snn::get_action_id(probs);
 
             SIMDVector output;
             //output.reserve(this->blocks[0].outputSize())
 
-            output = this->blocks[this->current_block].fire(input);
+            output = this->blocks[0].fire(input);
 
             this->activation_func->activate(output);
 

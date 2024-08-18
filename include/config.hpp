@@ -22,4 +22,4 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 
 #define SWARMING_SPEED_DEFAULT 10.f
 
-#define INITIAL_STD 0.01f
+#define INITIAL_STD 1.f

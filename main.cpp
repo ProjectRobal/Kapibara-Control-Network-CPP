@@ -99,6 +99,54 @@ size_t get_action_id(const snn::SIMDVector& actions)
     return action_id;
 }
 
+void send_fifo(const snn::SIMDVector& to_send)
+{
+    std::fstream fifo;
+
+    fifo.open("fifo",std::ios::out);
+
+    if(!fifo.good())
+    {
+        std::cerr<<"Cannot open fifo for writing"<<std::endl;
+        return;
+    }
+
+    fifo<<to_send[0]<<";"<<to_send[1]<<std::endl;
+
+    fifo.close();
+}
+
+snn::SIMDVector read_fifo()
+{
+    std::fstream fifo;
+
+    fifo.open("fifo_in",std::ios::in);
+
+    if(!fifo.good())
+    {
+        std::cerr<<"Cannot open fifo for reading"<<std::endl;
+        return snn::SIMDVector();
+    }
+
+    snn::SIMDVector output;
+
+    std::string line;
+
+    std::getline(fifo,line);
+
+    std::stringstream line_read(line);
+
+    std::string num;
+
+    while(std::getline(line_read,num,';'))
+    {
+        output.append(std::stof(num,NULL));
+    }
+
+    return output;
+
+}
+
 
 int main(int argc,char** argv)
 {
@@ -122,10 +170,10 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first= std::make_shared<snn::LayerSegmented<inputSize,5,10>>(128,gauss1,cross,mutation);
-    auto second= std::make_shared<snn::LayerSegmented<128,5,10>>(128,gauss1,cross,mutation);
-    auto third= std::make_shared<snn::LayerSegmented<128,5,10>>(128,gauss1,cross,mutation);
-    auto forth= std::make_shared<snn::LayerSegmented<128,5,10>>(64,gauss1,cross,mutation);
+    auto first= std::make_shared<snn::LayerSegmented<inputSize,1,10>>(4,gauss1,cross,mutation);
+    auto second= std::make_shared<snn::LayerSegmented<128,1,10>>(128,gauss1,cross,mutation);
+    auto third= std::make_shared<snn::LayerSegmented<128,1,10>>(128,gauss1,cross,mutation);
+    auto forth= std::make_shared<snn::LayerSegmented<128,1,10>>(2,gauss1,cross,mutation);
 
     first->setActivationFunction(std::make_shared<snn::ReLu>());
     second->setActivationFunction(std::make_shared<snn::ReLu>());
@@ -144,7 +192,7 @@ int main(int argc,char** argv)
     // network->addLayer(ssm);
     network->addLayer(first);
     network->addLayer(second);
-    network->addLayer(third);
+    //network->addLayer(third);
     network->addLayer(forth);
 
     snn::SIMDVector input;
@@ -163,31 +211,23 @@ int main(int argc,char** argv)
 
     std::cout<<"Starting network"<<std::endl;
 
-    
 
-    //std::cout<<"Input: "<<input<<std::endl;
-    //std::cout<<"Output: "<<network->fire(input)<<std::endl;
-
-    for(size_t i=0;i<20;++i)
+    while(true)
     {
-        start = std::chrono::system_clock::now();
 
-        output = network->fire(input);
+        snn::SIMDVector cart_input = read_fifo();
 
-        network->applyReward(2.f);
+        network->applyReward(cart_input[4]);
 
-        end = std::chrono::system_clock::now();
+        std::cout<<"From CartPole: "<<cart_input<<std::endl;
 
-        std::chrono::duration<double> elapsed_seconds = end - start;
+        snn::SIMDVector output = network->fire(cart_input);
 
-        std::cout << "finished computation at " << elapsed_seconds.count() << std::endl;
-        std::cout<<"Output: "<<output<<std::endl;
+        std::cout<<"To CartPole: "<<output<<std::endl;
+
+        send_fifo(output);
 
     }
-
-//    trainer.fit(input,output,1);
-
-    
 
     return 0;
 

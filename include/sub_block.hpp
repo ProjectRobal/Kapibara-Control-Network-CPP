@@ -43,6 +43,8 @@ namespace snn
         SIMDVector long_past_var;
         SIMDVector long_past_rewards;
 
+        uint8_t Ticks;
+
         public:
 
         SubBlock()
@@ -53,6 +55,8 @@ namespace snn
 
             this->weight = 0;
             this->reward = 0;
+
+            this->Ticks = 100;
             
         }
 
@@ -106,7 +110,12 @@ namespace snn
 
                 number var = (this->long_past_var*this->long_past_rewards).reduce() / reduced_rewards;
 
-                // something wrong here:
+                std::cout<<"Global crossover: "<<std::endl;
+                std::cout<<"Mean: "<<mean<<std::endl;
+                std::cout<<"Var: "<<var<<std::endl;
+
+
+                // something wrong here!!!!:
 
                 this->distribution = std::normal_distribution<number>(mean,var);
 
@@ -121,7 +130,7 @@ namespace snn
             number mean;
             number std;
 
-            init->init(mean);
+            mean = 0.f;
             std = INITIAL_STD;
 
             this->distribution = std::normal_distribution<number>(mean,std);   
@@ -129,11 +138,21 @@ namespace snn
 
         void chooseWorkers()
         {
-            this->past_weights.append(this->weight);
-            this->past_rewards.append(this->reward);
-            this->reward = 0.f;
+            if( this->Ticks >= 10)
+            {
+                this->past_weights.append(this->weight);
+                this->past_rewards.append(this->reward);
+                this->reward = 0.f;
 
-            this->weight = this->distribution(this->gen);
+                this->weight = this->distribution(this->gen);
+
+                this->weight = std::max(this->weight,(number)-1000.0);
+                this->weight = std::min(this->weight,(number)1000.0);
+
+                this->Ticks = 0;
+            }
+
+            // this->weight = std::exp(this->weight)/( std::exp(this->weight)+1 );
 
         }
 
@@ -141,6 +160,8 @@ namespace snn
         {   
             reward += 0.0000001;
             this->reward += std::exp(reward);
+
+            this->Ticks++;
 
             // long double _reward = this->reward*0.8;
             // for( size_t i=0;i>std::min((size_t)5,this->past_weights.size());++i )
