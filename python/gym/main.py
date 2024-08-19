@@ -53,6 +53,8 @@ def main():
     sendInterface(to_send)
     
     last_observation = np.zeros(4,dtype=np.float32)
+    
+    steps = 0
         
     while True:
         
@@ -65,17 +67,23 @@ def main():
         observation, reward, terminated, truncated, info =env.step(interface[0]>interface[1])
         
         to_send[:4] = observation[:]
-        #to_send[4] = ( - (observation[0] ** 2) / 11.52 - (observation[2] ** 2) / 288) * 100.0
+        to_send[4] = ( - (observation[0] ** 2) / 11.52 - (observation[2] ** 2) / 288) * 25.0
         
-        to_send[4] = -( abs(observation[2]) - abs(last_observation[2]) ) * 100.0
+        #to_send[4] = -( abs(observation[2]) - abs(last_observation[2]) ) * 10.0
                  
         sendInterface(to_send)
+        
+        steps +=1
+        
+        to_send[4] = 0
         
         last_observation[:] = observation[:]
         
         if terminated:
             observation=env.reset()[0]
             last_observation[:] = observation[:]
+            #to_send[4] = - ( 500 - steps ) / 500.0
+            steps = 0
 
 
 
