@@ -64,6 +64,7 @@ namespace snn
         LayerSegmented()
         {
             this->activation_func=std::make_shared<Linear>();
+
         }
 
         LayerSegmented(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate,size_t TicksToReplacment=200)
@@ -109,7 +110,13 @@ namespace snn
 
             this->blocks[this->current_block].applyReward(reward);
             // block will switch it's weights every step
-            this->blocks[this->current_block].shuttle();
+
+            if( this->Ticks >= 1)
+            {
+                this->blocks[this->current_block].shuttle();
+
+                this->Ticks = 0;
+            }
         }
 
         number get_bias(size_t id) const
@@ -137,7 +144,6 @@ namespace snn
             this->hidden_planer.shuttle();
             this->planer.shuttle();
 
-            this->Ticks = 0;
             // }
             
         }
@@ -159,6 +165,8 @@ namespace snn
             output = this->blocks[0].fire(input);
 
             this->activation_func->activate(output);
+
+            this->Ticks ++;
 
             return output;
         }

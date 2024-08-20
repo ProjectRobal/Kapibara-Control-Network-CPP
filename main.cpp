@@ -170,15 +170,15 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first= std::make_shared<snn::LayerSegmented<inputSize,1,10>>(4,gauss1,cross,mutation);
-    auto second= std::make_shared<snn::LayerSegmented<128,1,10>>(128,gauss1,cross,mutation);
-    auto third= std::make_shared<snn::LayerSegmented<128,1,10>>(128,gauss1,cross,mutation);
-    auto forth= std::make_shared<snn::LayerSegmented<128,1,10>>(2,gauss1,cross,mutation);
+    auto first= std::make_shared<snn::LayerSegmented<inputSize,1,40>>(4,gauss1,cross,mutation);
+    auto second= std::make_shared<snn::LayerSegmented<128,1,40>>(256,gauss1,cross,mutation);
+    auto third= std::make_shared<snn::LayerSegmented<256,1,40>>(128,gauss1,cross,mutation);
+    auto forth= std::make_shared<snn::LayerSegmented<256,1,40>>(2,gauss1,cross,mutation);
 
     first->setActivationFunction(std::make_shared<snn::ReLu>());
     second->setActivationFunction(std::make_shared<snn::ReLu>());
     third->setActivationFunction(std::make_shared<snn::ReLu>());
-    forth->setActivationFunction(std::make_shared<snn::ReLu>());
+    forth->setActivationFunction(std::make_shared<snn::Linear>());
 
     auto ssm = std::make_shared<snn::LayerSSSM<inputSize>>(256,hu);
 
@@ -211,19 +211,33 @@ int main(int argc,char** argv)
 
     std::cout<<"Starting network"<<std::endl;
 
+    long double best_reward = -9999;
+
 
     while(true)
     {
 
         snn::SIMDVector cart_input = read_fifo();
 
-        network->applyReward(cart_input[4]);
+        if( cart_input[4] > 0)
+        {
 
-        std::cout<<"From CartPole: "<<cart_input<<std::endl;
+            if( cart_input[4] > best_reward )
+            {
+                best_reward = cart_input[4];
+
+                std::cout<<"New best reward: "<<best_reward<<std::endl;
+            }
+
+            network->applyReward(cart_input[4]);
+
+        }
+
+        //std::cout<<"From CartPole: "<<cart_input<<std::endl;
 
         snn::SIMDVector output = network->fire(cart_input);
 
-        std::cout<<"To CartPole: "<<output<<std::endl;
+        //std::cout<<"To CartPole: "<<output<<std::endl;
 
         send_fifo(output);
 

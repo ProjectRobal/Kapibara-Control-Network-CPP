@@ -148,6 +148,46 @@ namespace snn
         return this->vec[i];
     }
 
+    void SIMDVector::shift_block(size_t block_id,size_t from)
+    {
+        if( block_id >= this->vec.size() )
+        {
+            return;
+        }
+
+        SIMD& block = this->vec[block_id];
+
+        for(size_t i=from;i<MAX_SIMD_VECTOR_SIZE-1;++i)
+        {
+            block[i] = block[i+1];
+        }
+    }
+
+    number SIMDVector::pop(size_t i)
+    {
+        size_t block_id = i / MAX_SIMD_VECTOR_SIZE;
+
+        number to_ret = 0;
+
+        to_ret = this->vec[block_id][i - block_id*MAX_SIMD_VECTOR_SIZE];
+
+        this->shift_block(block_id,i - block_id*MAX_SIMD_VECTOR_SIZE);
+
+        this->vec[block_id][MAX_SIMD_VECTOR_SIZE-1] = this->get((block_id+1)*MAX_SIMD_VECTOR_SIZE);
+
+        while( block_id < this->vec.size() )
+        {
+            this->shift_block(block_id);
+
+            this->vec[block_id][MAX_SIMD_VECTOR_SIZE-1] = this->get((block_id+1)*MAX_SIMD_VECTOR_SIZE);
+
+            block_id++;
+        }
+
+        return to_ret;
+
+    }
+
     number SIMDVector::pop()
     {
         number ret=0;

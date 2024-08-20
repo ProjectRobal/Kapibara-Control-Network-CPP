@@ -69,6 +69,7 @@
         "span": "cpp",
         "valarray": "cpp",
         "filesystem": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "*.inc": "cpp"
     }
 }

@@ -39,6 +39,7 @@ namespace snn
         std::shared_ptr<Activation> activation_func;
 
         std::uniform_real_distribution<double> uniform;
+        
 
         public:
 

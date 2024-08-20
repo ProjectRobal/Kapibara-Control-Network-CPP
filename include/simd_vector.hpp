@@ -21,6 +21,8 @@ namespace snn
         size_t ptr;
         std::vector<SIMD> vec;
 
+        void shift_block(size_t block_id,size_t from=0);
+
         SIMD get_partially_filled_simd(size_t N,number value,number else_number=0.f) const;
 
         public:
@@ -83,6 +85,8 @@ namespace snn
         void set(const number& n, const size_t& i);
 
         number get(const size_t& i) const;
+
+        number pop(size_t i);
 
         number pop();
 

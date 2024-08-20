@@ -72,7 +72,66 @@ namespace snn
         return action_id;
     }
 
+    void swap(size_t a, size_t b,SIMDVector& vec) {
+            number temp = vec[a];
 
+            vec.set(vec[b],a);
+            vec.set(temp,b);
+        }
+
+    size_t partition(SIMDVector& arr, size_t low, size_t high) {
+        number pivot = arr[high];  // Choosing the last element as the pivot
+        size_t i = low - 1;        // Index of the smaller element
+
+        for (size_t j = low; j <= high - 1; ++j) {
+            // If the current element is smaller than or equal to the pivot
+            if (arr[j] <= pivot) {
+                ++i;    // Increment the index of the smaller element
+                swap(i, j,arr);
+            }
+        }
+        swap(i + 1, high,arr);
+        return (i + 1);
+    }
+
+    void quicksort(SIMDVector &arr, int low, int high) {
+        if (low < high) {
+            size_t pi = partition(arr, low, high);
+
+            // Separately sort elements before and after partition
+            quicksort(arr, low, pi - 1);
+            quicksort(arr, pi + 1, high);
+        }
+    }
+
+
+    size_t partition_mask(SIMDVector& arr, size_t low, size_t high,SIMDVector& mask) {
+        number pivot = mask[high];  // Choosing the last element as the pivot
+        size_t i = low - 1;        // Index of the smaller element
+
+        for (size_t j = low; j <= high - 1; ++j) {
+            // If the current element is smaller than or equal to the pivot
+            if (mask[j] <= pivot) {
+                ++i;    // Increment the index of the smaller element
+                swap(i, j,arr);
+                swap(i,j,mask);
+            }
+        }
+        swap(i + 1, high,arr);
+        swap(i + 1, high,mask);
+        
+        return (i + 1);
+    }
+
+    void quicksort_mask(SIMDVector &arr, int low, int high,SIMDVector& mask) {
+        if (low < high) {
+            size_t pi = partition_mask(arr, low, high,mask);
+
+            // Separately sort elements before and after partition
+            quicksort_mask(arr, low, pi - 1,mask);
+            quicksort_mask(arr, pi + 1, high,mask);
+        }
+    }
 
     SIMDVector power(const SIMDVector& vec, size_t N)
         {
