@@ -48,7 +48,7 @@ namespace snn
         number mean;
         number std;
 
-        long double current_reward;
+        long double best_reward;
 
         public:
 
@@ -64,7 +64,7 @@ namespace snn
             this->mean = 0;
             this->std = INITIAL_STD;
 
-            this->current_reward = 0;
+            this->best_reward = -999999;
             
         }
 
@@ -74,20 +74,6 @@ namespace snn
             this->mutate = _mutate;
         }
 
-        size_t find_best(const SIMDVector& vector)
-        {
-            size_t best_i = 0;
-            for(size_t i=1;i<vector.size();++i)
-            {
-                if(vector[i] > vector[best_i])
-                {
-                    best_i = i;
-                }
-            }
-
-            return best_i;
-        }
-
         void maiting()
         {
             // if lenght is sufficient
@@ -95,34 +81,49 @@ namespace snn
             if( this->long_past_rewards.size() >= Populus )
             {
                 // std::cout<<"Merging! "<<this->long_past_rewards.size()<<std::endl;
-                number reduced_rewards = this->long_past_rewards.reduce();
+                // number reduced_rewards = this->long_past_rewards.reduce();
 
                 number weighted_weights = (this->long_past_mean*this->long_past_rewards).reduce();
 
-                number mean = weighted_weights / reduced_rewards;
-                number std=0.f;
+                // some more professional way is welcome
+                for(size_t o=0;o<Populus/2;++o)
+                {
 
-                // this->past_weights-=mean;
+                    size_t max_i=0;
 
-                SIMDVector sqaure_weights = this->long_past_mean*this->long_past_mean;
+                    for(size_t i=1;i<this->long_past_mean.size()/4;++i)
+                    {
+                        if( this->long_past_rewards[i] > max_i )
+                        {
+                            max_i = i;
+                        }
+                    }
 
-                number var = ((sqaure_weights*this->long_past_rewards).reduce()/reduced_rewards) - mean*mean;
+                    this->past_rewards.append(this->long_past_rewards.pop(max_i));
+                    this->past_weights.append(this->long_past_mean.pop(max_i));
+                }
 
-                this->std = std::sqrt(var);
+                // std::cout<<"Best weights: "<<this->past_weights<<std::endl;
+                // std::cout<<"Best rewards: "<<this->past_rewards<<std::endl;
 
-                // std::cout<<"Global crossover: "<<std::endl;
-                // std::cout<<"Mean: "<<mean<<std::endl;
-                // std::cout<<"Var: "<<var<<std::endl;
+                number mean = this->past_weights.reduce() / this->past_weights.size();
 
+                SIMDVector square = this->past_weights - mean;
 
-                // something wrong here!!!!:
+                square = square*square;
+                this->std = std::sqrt(square.reduce() / square.size());
 
-                this->distribution = std::normal_distribution<number>(mean,var);
+                // std::cout<<"STD: "<<this->std<<std::endl;
+                // std::cout<<"Mean: "<<this->mean<<std::endl;
 
-                //this->long_past_rewards.clear();
-                //this->long_past_mean.clear();
-                this->long_past_var.clear();
+                this->long_past_rewards.clear();
+                this->long_past_mean.clear();
 
+                this->long_past_rewards.extend(this->past_rewards);
+                this->long_past_mean.extend(this->past_weights);
+
+                this->past_rewards.clear();
+                this->past_weights.clear();
 
             }
         }
@@ -136,29 +137,34 @@ namespace snn
         void chooseWorkers()
         {
 
-            this->long_past_mean.append(this->weight);
-            this->long_past_rewards.append(this->past_rewards.reduce());
-
-            this->past_rewards.clear();
-
-            size_t max_i=0;
-
-            for(size_t i=1;i<this->long_past_mean.size();++i)
+            if( ( this->reward / this->best_reward ) > 0.75f )
             {
-                if( this->long_past_rewards[i] > max_i )
-                {
-                    max_i = i;
-                }
+                this->long_past_mean.append(this->weight);
+                this->long_past_rewards.append(this->reward);
             }
 
-            this->mean = this->long_past_mean[max_i];
 
-            this->distribution = std::normal_distribution<number>(this->mean,this->std);   
+            this->reward = 0;
 
-            this->weight = this->distribution(this->gen);
 
-            this->weight = std::max(this->weight,(number)-1000.0);
-            this->weight = std::min(this->weight,(number)1000.0);
+            number weighted_weights = 0.f; 
+
+            if( this->long_past_mean.size() > 0 )
+            {
+                weighted_weights = (this->long_past_mean*this->long_past_rewards).reduce() / this->long_past_rewards.reduce();
+            }
+
+            // std::cout<<"Weight: "<<weighted_weights<<std::endl;
+
+            this->distribution = std::normal_distribution<number>(weighted_weights ,this->std);  
+
+            number n_weight =  this->distribution(this->gen);
+
+            // we could change the coefficients
+            this->weight = n_weight;
+
+            // this->weight = std::max(this->weight,(number)-1.0);
+            // this->weight = std::min(this->weight,(number)1.0);        
 
         }
 
@@ -168,7 +174,12 @@ namespace snn
 
             this->reward += reward;
 
-            this->past_rewards.append(this->reward);
+            if( this->reward > this->best_reward )
+            {
+                this->best_reward = this->reward;   
+            }
+
+            // this->past_rewards.append(this->reward);
 
             this->maiting();
         }

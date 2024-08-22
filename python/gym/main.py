@@ -81,6 +81,9 @@ def main():
         
         last_observation[:] = observation[:]
         
+        if steps >= 500:
+            terminated = True
+        
         if terminated:
             observation=env.reset()[0]
             last_observation[:] = observation[:]
