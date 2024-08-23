@@ -83,7 +83,7 @@ namespace snn
         void applyReward(long double reward)
         {
 
-            // reward/=this->blocks.size();
+            reward/=this->blocks.size();
 
             for(auto& block : this->blocks)
             {

@@ -211,7 +211,7 @@ int main(int argc,char** argv)
 
     std::cout<<"Starting network"<<std::endl;
 
-    long double best_reward = -9999;
+    long double best_reward = -9999999;
 
 
     while(true)
@@ -219,7 +219,7 @@ int main(int argc,char** argv)
 
         snn::SIMDVector cart_input = read_fifo();
 
-        if( cart_input[4] > 0)
+        if( cart_input[4] != 0)
         {
 
             if( cart_input[4] > best_reward )

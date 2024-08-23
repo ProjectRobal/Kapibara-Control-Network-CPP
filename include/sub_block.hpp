@@ -33,6 +33,8 @@ namespace snn
 
         std::normal_distribution<number> distribution;
 
+        std::uniform_real_distribution<float> mutation;
+
         number weight;
         long double reward;
 
@@ -49,6 +51,7 @@ namespace snn
         number std;
 
         long double best_reward;
+        
 
         public:
 
@@ -65,6 +68,8 @@ namespace snn
             this->std = INITIAL_STD;
 
             this->best_reward = -999999;
+
+            this->mutation = std::uniform_real_distribution<float>(0.f,1.f);
             
         }
 
@@ -106,12 +111,12 @@ namespace snn
                 // std::cout<<"Best weights: "<<this->past_weights<<std::endl;
                 // std::cout<<"Best rewards: "<<this->past_rewards<<std::endl;
 
-                number mean = this->past_weights.reduce() / this->past_weights.size();
+                // number mean = this->past_weights.reduce() / this->past_weights.size();
 
-                SIMDVector square = this->past_weights - mean;
+                // SIMDVector square = this->past_weights - mean;
 
-                square = square*square;
-                this->std = std::sqrt(square.reduce() / square.size());
+                // square = square*square;
+                // this->std = std::sqrt(square.reduce() / square.size());
 
                 // std::cout<<"STD: "<<this->std<<std::endl;
                 // std::cout<<"Mean: "<<this->mean<<std::endl;
@@ -137,34 +142,43 @@ namespace snn
         void chooseWorkers()
         {
 
-            if( ( this->reward / this->best_reward ) > 0.75f )
+            if( ( this->reward / this->best_reward ) > 0.5f )
             {
                 this->long_past_mean.append(this->weight);
-                this->long_past_rewards.append(this->reward);
+                this->long_past_rewards.append(std::exp(this->reward));
+
+                if( this->reward<0 )
+                {
+                    this->std = std::min(std::log(-0.05f*this->reward + 1)+MIN_STD,(long double)MAX_STD);
+                }
+                else
+                {
+                    this->std = MIN_STD;
+                }
             }
-
-
-            this->reward = 0;
-
 
             number weighted_weights = 0.f; 
 
-            if( this->long_past_mean.size() > 0 )
+            if( this->long_past_mean.size() > 1 )
             {
-                weighted_weights = (this->long_past_mean*this->long_past_rewards).reduce() / this->long_past_rewards.reduce();
+                weighted_weights = (this->long_past_mean*this->long_past_rewards).reduce() / this->long_past_rewards.reduce();              
             }
 
-            // std::cout<<"Weight: "<<weighted_weights<<std::endl;
+            number std = this->std;
 
-            this->distribution = std::normal_distribution<number>(weighted_weights ,this->std);  
+            if( this->mutation(this->gen) < 0.2f )
+            {
+                std = MAX_STD*this->mutation(this->gen);
+            }
+
+            this->distribution = std::normal_distribution<number>(weighted_weights ,std);  
 
             number n_weight =  this->distribution(this->gen);
 
             // we could change the coefficients
-            this->weight = n_weight;
+            this->weight = n_weight - std::trunc(n_weight);
 
-            // this->weight = std::max(this->weight,(number)-1.0);
-            // this->weight = std::min(this->weight,(number)1.0);        
+            this->reward = 0;    
 
         }
 
@@ -177,6 +191,7 @@ namespace snn
             if( this->reward > this->best_reward )
             {
                 this->best_reward = this->reward;   
+                this->mean = this->weight;
             }
 
             // this->past_rewards.append(this->reward);

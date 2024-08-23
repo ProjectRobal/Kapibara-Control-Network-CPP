@@ -87,7 +87,7 @@ def main():
         if terminated:
             observation=env.reset()[0]
             last_observation[:] = observation[:]
-            to_send[4] = steps
+            to_send[4] = steps - 500
             steps = 0
 
 
