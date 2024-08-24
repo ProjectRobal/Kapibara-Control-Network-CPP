@@ -50,6 +50,9 @@ namespace snn
         number mean;
         number std;
 
+        number min_std;
+        number max_std;
+
         long double best_reward;
         
 
@@ -66,6 +69,8 @@ namespace snn
 
             this->mean = 0;
             this->std = INITIAL_STD;
+
+            this->min_std = MIN_STD;
 
             this->best_reward = -999999;
 
@@ -133,8 +138,10 @@ namespace snn
             }
         }
 
-        void setup(std::shared_ptr<Initializer> init)
+        void setup(size_t inputSize,std::shared_ptr<Initializer> init)
         {
+            this->max_std = std::sqrt(2.f/inputSize);
+
             init->init(this->mean);
             this->distribution = std::normal_distribution<number>(this->mean,INITIAL_STD);   
         }
@@ -146,15 +153,16 @@ namespace snn
             {
                 this->long_past_mean.append(this->weight);
                 this->long_past_rewards.append(std::exp(this->reward));
+   
+            }
 
-                if( this->reward<0 )
-                {
-                    this->std = std::min(std::log(-0.05f*this->reward + 1)+MIN_STD,(long double)MAX_STD);
-                }
-                else
-                {
-                    this->std = MIN_STD;
-                }
+            if( this->reward<0 )
+            {
+                this->std = std::min(std::log(-0.05f*this->reward + 1)+this->min_std,(long double)this->max_std);
+            }
+            else
+            {
+                this->std = this->min_std;
             }
 
             number weighted_weights = 0.f; 
@@ -166,9 +174,9 @@ namespace snn
 
             number std = this->std;
 
-            if( this->mutation(this->gen) < 0.2f )
+            if( this->mutation(this->gen) < 0.1f )
             {
-                std = MAX_STD*this->mutation(this->gen);
+                std = this->max_std*this->mutation(this->gen) + this->min_std;
             }
 
             this->distribution = std::normal_distribution<number>(weighted_weights ,std);  
@@ -177,6 +185,10 @@ namespace snn
 
             // we could change the coefficients
             this->weight = n_weight - std::trunc(n_weight);
+
+            number dBest = (this->mean - this->weight)*0.1f;
+
+            this->weight += dBest;
 
             this->reward = 0;    
 

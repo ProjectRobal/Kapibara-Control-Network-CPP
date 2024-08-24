@@ -45,7 +45,7 @@ def main():
     
     terminated=False
     
-    to_send = np.zeros(5,dtype=np.float32)
+    to_send = np.zeros(6,dtype=np.float32)
     
     to_send[:4] = observation[:]
     to_send[4] = reward
@@ -75,6 +75,8 @@ def main():
                  
         sendInterface(to_send)
         
+        to_send[5] = 0.0
+        
         steps +=1
         
         to_send[4] = 0
@@ -88,7 +90,8 @@ def main():
             observation=env.reset()[0]
             last_observation[:] = observation[:]
             to_send[4] = steps - 500
-            steps = 0
+            to_send[5] = 1.0
+            steps = 0 
 
 
 

@@ -52,10 +52,10 @@ namespace snn
         {
             for(auto& subpopulation : population)
             {
-                subpopulation.setup(init);    
+                subpopulation.setup(inputSize,init);    
             }
 
-            biases.setup(init);              
+            biases.setup(inputSize,init);              
         }
 
         void chooseWorkers()

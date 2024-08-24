@@ -219,7 +219,7 @@ int main(int argc,char** argv)
 
         snn::SIMDVector cart_input = read_fifo();
 
-        if( cart_input[4] != 0)
+        if( cart_input[5] != 0)
         {
 
             if( cart_input[4] > best_reward )
