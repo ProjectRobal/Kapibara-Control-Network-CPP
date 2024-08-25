@@ -56,7 +56,9 @@ def main():
     
     steps = 0
     
+    log_file = open("log.csv","w")
     
+    timestamp = 0
         
     while True:
         
@@ -87,10 +89,13 @@ def main():
             terminated = True
         
         if terminated:
+            timestamp+=1
             observation=env.reset()[0]
             last_observation[:] = observation[:]
             to_send[4] = steps - 500
             to_send[5] = 1.0
+            
+            log_file.write("{};{}\n".format(timestamp,to_send[4]))
             steps = 0 
 
 
