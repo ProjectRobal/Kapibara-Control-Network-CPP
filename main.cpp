@@ -197,7 +197,17 @@ int main(int argc,char** argv)
 
     snn::SIMDVector input;
 
-    gauss->init(input,inputSize);
+    gauss->init(input,20);
+
+
+    // std::cout<<input<<std::endl;
+
+    // std::cout<<std::endl;
+
+    // snn::quicksort(input,0,19);
+
+    // std::cout<<input<<std::endl;
+
     
     snn::SIMDVector output(0.f,8);
 
@@ -219,7 +229,7 @@ int main(int argc,char** argv)
 
         snn::SIMDVector cart_input = read_fifo();
 
-        if( cart_input[5] != 0)
+        if( cart_input[5] > 0.5f)
         {
 
             if( cart_input[4] > best_reward )

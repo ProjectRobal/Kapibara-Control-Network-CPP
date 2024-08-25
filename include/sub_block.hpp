@@ -151,7 +151,7 @@ namespace snn
 
             if( this->reward < 0 )
             {
-                this->std = std::min((std::log(-1000.f*this->reward + 1) + 1.f )*this->std,(long double)this->max_std) + this->min_std;
+                this->std = std::min(2.f*this->std,(long double)this->max_std) + this->min_std;
             }
             else
             {
@@ -191,21 +191,41 @@ namespace snn
 
             if( this->past_rewards.size() >= Populus )
             {
+                // std::cout<<"Combine"<<std::endl;
+                // quicksort wywala zera na ostatnich miejscach
+                quicksort_mask(this->past_weights,0,this->past_weights.size()-1,this->past_rewards);
 
-                quicksort_mask(this->past_weights,0,this->past_weights.size(),this->past_rewards);
-
-                for(size_t i=0;i<this->past_weights.size()/2;++i)
+                for(size_t i=0;i<this->past_weights.size();++i)
                 {
-                    this->past_weights.set(0.f,i);
-                    this->past_rewards.set(0.f,i);
+                    if(i<this->past_weights.size()-5)
+                    {
+                        this->past_weights.set(0.f,i);
+                        this->past_rewards.set(0.f,i);
+                    }
+                    else
+                    {
+                        this->past_rewards.set(1.f,i);
+                    }
                 }
 
-                this->mean = this->past_weights.reduce() / (this->past_weights.size()/2);
 
-                this->std = this->min_std;
+                // long double mean_reward = 2*this->past_rewards.reduce() / this->past_rewards.size();
+
+                this->mean = (this->past_weights*this->past_rewards).reduce() / this->past_rewards.reduce();
+
+                snn::SIMDVector weight_meaned = (this->past_weights - this->mean)*this->past_rewards;
+
+                weight_meaned = weight_meaned*weight_meaned;
+
+                // this->mean = this->past_weights[this->past_weights.size()-1];
+
+                this->std = std::sqrt( weight_meaned.reduce() / this->past_rewards.reduce() );
 
                 this->past_weights.clear();
                 this->past_rewards.clear();
+
+                // this->past_weights.append(this->mean);
+                // this->past_rewards.append(mean_reward);
 
             }
 
@@ -216,14 +236,29 @@ namespace snn
                 std = this->max_std*this->mutation(this->gen) + this->min_std;
             }
 
+            number vec_weight = 0.f;
+
             this->distribution = std::normal_distribution<number>(this->mean,std);  
 
             number n_weight =  this->distribution(this->gen);
 
+            // if( this->past_weights.size() > 1 )
+            // {
+
+            //     snn::SIMDVector dweight = this->past_weights - n_weight;
+
+            //     long double total_reward = this->past_rewards.reduce();
+
+            //     dweight = ( (dweight*this->past_rewards)*0.8f ) / total_reward;
+
+            //     vec_weight = dweight.reduce() / this->past_weights.size();
+
+            // }
+
             // number middle_weight = (this->weight*this->reward + this->mean*this->best_reward)/(this->best_reward+this->reward);
 
             // we could change the coefficients
-            this->weight = n_weight; // - std::trunc(n_weight);
+            this->weight = n_weight + vec_weight; // - std::trunc(n_weight);
 
             // number dBest = (middle_weight - this->weight)*0.2f;
 

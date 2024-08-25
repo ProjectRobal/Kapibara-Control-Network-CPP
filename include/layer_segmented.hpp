@@ -111,12 +111,9 @@ namespace snn
             this->blocks[this->current_block].applyReward(reward);
             // block will switch it's weights every step
 
-            if( this->Ticks >= 1)
-            {
-                this->blocks[this->current_block].shuttle();
+            this->blocks[this->current_block].shuttle();
 
-                this->Ticks = 0;
-            }
+               
         }
 
         number get_bias(size_t id) const
