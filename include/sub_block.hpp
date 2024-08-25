@@ -158,8 +158,8 @@ namespace snn
                 this->std = this->min_std;
             }
 
-            this->past_weights.append(this->weight);
-            this->past_rewards.append(std::exp(this->reward));
+            // this->past_weights.append(this->weight);
+            // this->past_rewards.append(std::exp(this->reward));
 
             // if( this->reward<0 )
             // {
@@ -189,44 +189,50 @@ namespace snn
             //     } 
             // }
 
-            if( this->past_rewards.size() >= Populus )
+            // if( this->past_rewards.size() >= Populus )
+            // {
+            //     // std::cout<<"Combine"<<std::endl;
+            //     // quicksort wywala zera na ostatnich miejscach
+            //     quicksort_mask(this->past_weights,0,this->past_weights.size()-1,this->past_rewards);
+
+            //     for(size_t i=0;i<this->past_weights.size();++i)
+            //     {
+            //         if(i<this->past_weights.size()-5)
+            //         {
+            //             this->past_weights.set(0.f,i);
+            //             this->past_rewards.set(0.f,i);
+            //         }
+            //         else
+            //         {
+            //             this->past_rewards.set(1.f,i);
+            //         }
+            //     }
+
+
+            //     // long double mean_reward = 2*this->past_rewards.reduce() / this->past_rewards.size();
+
+            //     this->mean = (this->past_weights*this->past_rewards).reduce() / this->past_rewards.reduce();
+
+            //     snn::SIMDVector weight_meaned = (this->past_weights - this->mean)*this->past_rewards;
+
+            //     weight_meaned = weight_meaned*weight_meaned;
+
+            //     // this->mean = this->past_weights[this->past_weights.size()-1];
+
+            //     this->std = std::sqrt( weight_meaned.reduce() / this->past_rewards.reduce() );
+
+            //     this->past_weights.clear();
+            //     this->past_rewards.clear();
+
+            //     // this->past_weights.append(this->mean);
+            //     // this->past_rewards.append(mean_reward);
+
+            // }
+
+            if( this->reward > this->last_reward )
             {
-                // std::cout<<"Combine"<<std::endl;
-                // quicksort wywala zera na ostatnich miejscach
-                quicksort_mask(this->past_weights,0,this->past_weights.size()-1,this->past_rewards);
-
-                for(size_t i=0;i<this->past_weights.size();++i)
-                {
-                    if(i<this->past_weights.size()-5)
-                    {
-                        this->past_weights.set(0.f,i);
-                        this->past_rewards.set(0.f,i);
-                    }
-                    else
-                    {
-                        this->past_rewards.set(1.f,i);
-                    }
-                }
-
-
-                // long double mean_reward = 2*this->past_rewards.reduce() / this->past_rewards.size();
-
-                this->mean = (this->past_weights*this->past_rewards).reduce() / this->past_rewards.reduce();
-
-                snn::SIMDVector weight_meaned = (this->past_weights - this->mean)*this->past_rewards;
-
-                weight_meaned = weight_meaned*weight_meaned;
-
-                // this->mean = this->past_weights[this->past_weights.size()-1];
-
-                this->std = std::sqrt( weight_meaned.reduce() / this->past_rewards.reduce() );
-
-                this->past_weights.clear();
-                this->past_rewards.clear();
-
-                // this->past_weights.append(this->mean);
-                // this->past_rewards.append(mean_reward);
-
+                this->mean = this->weight;
+                this->std = this->std/2.f;
             }
 
             number std = this->std;
