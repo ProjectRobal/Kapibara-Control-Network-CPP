@@ -229,8 +229,11 @@ namespace snn
 
             // }
 
-            if( this->reward > this->last_reward )
+            this->best_reward = 0.99f*this->best_reward;
+
+            if( this->reward > this->best_reward )
             {
+                this->best_reward = this->reward;
                 this->mean = this->weight;
                 this->std = this->std/2.f;
             }
