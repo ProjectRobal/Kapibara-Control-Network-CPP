@@ -170,10 +170,10 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first= std::make_shared<snn::LayerSegmented<inputSize,1,20>>(4,gauss1,cross,mutation);
-    auto second= std::make_shared<snn::LayerSegmented<4,1,20>>(256,gauss1,cross,mutation);
-    auto third= std::make_shared<snn::LayerSegmented<256,1,20>>(128,gauss1,cross,mutation);
-    auto forth= std::make_shared<snn::LayerSegmented<256,1,20>>(2,gauss1,cross,mutation);
+    auto first= std::make_shared<snn::LayerSegmented<inputSize,1,10>>(4,gauss1,cross,mutation);
+    auto second= std::make_shared<snn::LayerSegmented<4,1,10>>(256,gauss1,cross,mutation);
+    auto third= std::make_shared<snn::LayerSegmented<256,1,10>>(128,gauss1,cross,mutation);
+    auto forth= std::make_shared<snn::LayerSegmented<256,1,10>>(2,gauss1,cross,mutation);
 
     first->setActivationFunction(std::make_shared<snn::ReLu>());
     second->setActivationFunction(std::make_shared<snn::ReLu>());

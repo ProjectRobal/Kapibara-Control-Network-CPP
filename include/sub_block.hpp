@@ -37,6 +37,7 @@ namespace snn
 
         number weight;
         long double reward;
+        long double last_reward;
 
         size_t weight_id;
 
@@ -55,6 +56,7 @@ namespace snn
 
             this->weight = 0;
             this->reward = 0;
+            this->last_reward = -9999;
 
             this->weight_id = 0;
 
@@ -101,12 +103,14 @@ namespace snn
            
             SIMDVector exp_rewards = snn::exp(this->pop_rewards);
 
+            number exp_rewards_mean = exp_rewards.reduce();
+
             // for(size_t i=0;i<this->pop_rewards.size();++i)
             // {
             //     exp_rewards.append(std::exp(this->pop_rewards[i]));
             // }
 
-            exp_rewards = exp_rewards / exp_rewards.reduce();
+            exp_rewards = exp_rewards / exp_rewards_mean;
 
             float probability = this->uniform(this->gen);
 
@@ -120,64 +124,61 @@ namespace snn
                     break;
                 }
             }
-            
-            // think about this part:
-            if(this->Ticks>Populus*4)
-            {
-                for(size_t i=0;i<exp_rewards.size();++i)
-                {   
-                    float mutation_probability = this->uniform(this->gen);
 
-                    if( mutation_probability <= (1.f - exp_rewards[i] ) )
+            number best_weight;
+
+            size_t max_i=0;
+
+            for(size_t i=1;i<exp_rewards.size();++i)
+            {
+                if( exp_rewards[i] > ( exp_rewards[max_i] ) )
+                {
+                    max_i = i;
+                }
+            }
+
+            best_weight = this->pop_weights[max_i];
+
+            snn::SIMDVector d_weight = ((this->pop_weights*-1.f) + best_weight)*0.1f;
+
+            this->pop_weights += d_weight;
+            // think about this part:
+            for(size_t i=0;i<pop_rewards.size();++i)
+            {   
+                float mutation_probability = this->uniform(this->gen);
+
+                number level = 1.f - ( exp_rewards[i]/exp_rewards_mean );
+
+                if( mutation_probability > level  )
+                {
+                    if( level > 0.4f )
                     {
                         this->pop_weights.set(this->distribution(this->gen),i);
-                        this->pop_rewards.set(0.f,i);   
                     }
-                }
+                    else
+                    {
+                        std::normal_distribution<number> dist(0,0.01);
 
-                this->Ticks = 0;
+                        this->pop_weights.set(best_weight+dist(this->gen),i);
+                    }
+                    // this->pop_rewards.set(0.f,i);   
+                }
             }
             
-            // if( this->Ticks > Populus*2 )
-            // {
-            //     number w1 = this->get_max();
-            //     number w2 = this->get_max();
-
-            //     number mean = (w1 + w2) / 2.f;
-
-            //     number std = std::sqrt(( (w1 - mean)*(w1 - mean) + (w2 - mean)*(w2 - mean) ) / 2.f);
-
-            //     std::normal_distribution<number> evo = std::normal_distribution<number>(mean,std);
-
-            //     this->pop_weights.clear();
-
-            //     this->pop_weights.append(w1);
-            //     this->pop_weights.append(w2);   
-
-            //     for(size_t i=0;i<Populus-2;++i)
-            //     {
-            //         this->pop_weights.append(evo(this->gen));
-            //     }
-
-            //     for(size_t i=0;i<5;++i)
-            //     {
-            //         this->pop_weights.append(this->distribution(this->gen));
-            //     }
-
-            //     this->pop_rewards = SIMDVector(0.f,Populus+5);
-
-            //     this->Ticks = 0;
-            // }
         }
 
         void giveReward(long double reward)
         {   
-            if( reward == 0 )
-            {
-                reward = 100;
-            }
+            // if( reward == 0 )
+            // {
+            //     reward = 100;
+            // }
 
-            this->pop_rewards.set(this->pop_rewards[this->weight_id]+reward,this->weight_id);
+            long double dr = (reward - this->last_reward)*20.f;
+
+            this->pop_rewards.set(reward+dr,this->weight_id);
+
+            this->last_reward = reward;
 
             this->Ticks++;
 
