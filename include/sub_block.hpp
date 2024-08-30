@@ -33,31 +33,17 @@ namespace snn
 
         std::normal_distribution<number> distribution;
 
-        std::uniform_real_distribution<float> mutation;
+        std::uniform_real_distribution<float> uniform;
 
         number weight;
         long double reward;
 
-        SIMDVector past_weights;
-        SIMDVector past_rewards;
+        size_t weight_id;
 
-        SIMDVector long_past_mean;
-        SIMDVector long_past_rewards;
-        SIMDVector long_past_var;
+        SIMDVector pop_weights;
+        SIMDVector pop_rewards;
 
-        uint8_t Ticks;
-
-        number mean;
-        number std;
-
-        number min_std;
-        number max_std;
-
-        long double best_reward;
-
-        long double last_reward;
-        
-        long double decay;
+        size_t Ticks;
 
         public:
 
@@ -70,14 +56,11 @@ namespace snn
             this->weight = 0;
             this->reward = 0;
 
-            this->mean = 0;
-            this->std = INITIAL_STD;
+            this->weight_id = 0;
 
-            this->min_std = MIN_STD;
+            this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
 
-            this->best_reward = -999999;
-
-            this->mutation = std::uniform_real_distribution<float>(0.f,1.f);
+            this->Ticks = 0;
             
         }
 
@@ -87,137 +70,122 @@ namespace snn
             this->mutate = _mutate;
         }
 
-        void maiting()
-        {
-            // if lenght is sufficient
-
-            if( this->long_past_rewards.size() >= Populus )
-            {
-                snn::SIMDVector filter_reward;
-                snn::SIMDVector filter_weight;
-
-                // std::cout<<"Maiting"<<std::endl;
-                // std::cout<<"Merging! "<<this->long_past_rewards.size()<<std::endl;
-                // number reduced_rewards = this->long_past_rewards.reduce();
-
-                // number weighted_weights = (this->long_past_mean*this->long_past_rewards).reduce();
-
-                // some more professional way is welcome
-                for(size_t o=0;o<4;++o)
-                {
-
-                    size_t max_i=0;
-
-                    for(size_t i=1;i<this->long_past_mean.size()/4;++i)
-                    {
-                        if( this->long_past_rewards[i] > max_i )
-                        {
-                            max_i = i;
-                        }
-                    }
-
-                    filter_reward.append(this->long_past_rewards.pop(max_i));
-                    filter_weight.append(this->long_past_mean.pop(max_i));
-                }
-
-                this->mean = filter_weight.reduce()/ filter_weight.size();
-
-                snn::SIMDVector square = filter_weight - this->mean;
-
-                square = square*square;
-
-                this->std = std::sqrt(square.reduce()/filter_reward.size());
-
-                this->long_past_rewards.clear();
-                this->long_past_mean.clear();
-
-            }
-        }
-
         void setup(size_t inputSize,std::shared_ptr<Initializer> init)
         {
-            this->max_std = std::sqrt(2.f/inputSize);
+            this->distribution = std::normal_distribution<number>(0.f,std::sqrt(2.f/inputSize));   
 
-            this->decay = 0.001;
+            for(size_t i=0;i<Populus;++i)
+            {
+                this->pop_weights.append(this->distribution(this->gen));
+            }
 
-            this->mean = 0.f;
-            this->distribution = std::normal_distribution<number>(this->mean,INITIAL_STD);   
+            this->pop_rewards = SIMDVector(0.f,Populus);
+        }
+
+        number get_max()
+        {
+            number max = 0;
+            for(size_t i=1;i<this->pop_weights.size();++i)
+            {
+                if( pop_rewards[i] > pop_rewards[max] )
+                {
+                    max = i;
+                }
+            }
+
+            return this->pop_weights.pop(max);
         }
 
         void chooseWorkers()
         {
-            this->reward = std::exp(this->reward);
-            // this->maiting();
+           
+            SIMDVector exp_rewards = snn::exp(this->pop_rewards);
 
-            if( this->reward < 0 )
-            {
-                // this->std = std::min(2.f*this->std,(long double)this->max_std) + this->min_std;
+            // for(size_t i=0;i<this->pop_rewards.size();++i)
+            // {
+            //     exp_rewards.append(std::exp(this->pop_rewards[i]));
+            // }
 
-                this->best_reward = 0.99f*this->best_reward;
+            exp_rewards = exp_rewards / exp_rewards.reduce();
+
+            float probability = this->uniform(this->gen);
+
+            for(size_t i=0;i<exp_rewards.size();++i)
+            {   
+                probability -= exp_rewards[i];
+
+                if( probability <= 0.f )
+                {
+                    this->weight_id = i;
+                    break;
+                }
             }
-            else
-            {
-                this->std = this->min_std;
-                this->best_reward = 0.6f*this->best_reward;
-            }
-
             
-
-            if( this->reward > this->best_reward*0.5f )
+            // think about this part:
+            if(this->Ticks>Populus*4)
             {
-                this->best_reward = this->reward;
-                this->mean = this->weight;
-                // this->std = this->std/2.f;
+                for(size_t i=0;i<exp_rewards.size();++i)
+                {   
+                    float mutation_probability = this->uniform(this->gen);
 
-                this->past_weights.append(this->mean);
+                    if( mutation_probability <= (1.f - exp_rewards[i] ) )
+                    {
+                        this->pop_weights.set(this->distribution(this->gen),i);
+                        this->pop_rewards.set(0.f,i);   
+                    }
+                }
+
+                this->Ticks = 0;
             }
+            
+            // if( this->Ticks > Populus*2 )
+            // {
+            //     number w1 = this->get_max();
+            //     number w2 = this->get_max();
 
-            if( this->past_weights.size() > 4 )
-            {
-                number _mean = this->past_weights.reduce() / this->past_weights.size();
-                snn::SIMDVector meaned = this->past_weights - _mean;
+            //     number mean = (w1 + w2) / 2.f;
 
-                meaned = meaned * meaned;
+            //     number std = std::sqrt(( (w1 - mean)*(w1 - mean) + (w2 - mean)*(w2 - mean) ) / 2.f);
 
-                this->std = std::sqrt(meaned.reduce()/this->past_weights.size());
+            //     std::normal_distribution<number> evo = std::normal_distribution<number>(mean,std);
 
-                this->past_weights.clear();
-            }
+            //     this->pop_weights.clear();
 
-            number std = this->std;
+            //     this->pop_weights.append(w1);
+            //     this->pop_weights.append(w2);   
 
-            if( this->mutation(this->gen) < 0.1f )
-            {
-                std = this->max_std*this->mutation(this->gen) + this->min_std;
-            }
+            //     for(size_t i=0;i<Populus-2;++i)
+            //     {
+            //         this->pop_weights.append(evo(this->gen));
+            //     }
 
-            number vec_weight = 0.f;
+            //     for(size_t i=0;i<5;++i)
+            //     {
+            //         this->pop_weights.append(this->distribution(this->gen));
+            //     }
 
-            this->distribution = std::normal_distribution<number>(this->mean,std);  
+            //     this->pop_rewards = SIMDVector(0.f,Populus+5);
 
-            number n_weight =  this->distribution(this->gen);
-
-            // we could change the coefficients
-            this->weight = n_weight + vec_weight; // - std::trunc(n_weight);
-
-            this->reward = 0;    
-
+            //     this->Ticks = 0;
+            // }
         }
 
         void giveReward(long double reward)
         {   
-            reward += 0.0000001;
+            if( reward == 0 )
+            {
+                reward = 100;
+            }
 
-            this->reward += reward;
+            this->pop_rewards.set(this->pop_rewards[this->weight_id]+reward,this->weight_id);
 
-            // this->past_rewards.append(this->reward);
+            this->Ticks++;
 
-            //this->maiting();
         }
 
         number get()
         {
-            return this->weight;
+            return this->pop_weights[this->weight_id];
         }
 
         number operator()()

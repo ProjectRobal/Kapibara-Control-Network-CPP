@@ -138,8 +138,8 @@ namespace snn
             // if( this->Ticks >= this->TicksToReplacment)
             // {
 
-            this->hidden_planer.shuttle();
-            this->planer.shuttle();
+            // this->hidden_planer.shuttle();
+            // this->planer.shuttle();
 
             // }
             
