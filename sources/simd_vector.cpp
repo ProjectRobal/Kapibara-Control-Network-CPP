@@ -672,3 +672,24 @@ std::ostream& operator<<(std::ostream& out,const snn::SIMDVector& vec)
 
     return out;
 }
+
+
+snn::SIMDVector operator*(number v,const snn::SIMDVector& vec)
+{
+    return vec*v;
+}
+
+snn::SIMDVector operator/(number v,const snn::SIMDVector& vec)
+{
+    return (v*vec)/(vec*vec);
+}
+
+snn::SIMDVector operator-(number v,const snn::SIMDVector& vec)
+{
+    return (vec*-1)+v;
+}
+
+snn::SIMDVector operator+(number v,const snn::SIMDVector& vec)
+{
+    return vec+v;
+}

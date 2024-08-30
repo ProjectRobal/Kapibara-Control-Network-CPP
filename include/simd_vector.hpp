@@ -210,3 +210,11 @@ namespace snn
 
 std::ostream& operator<<(std::ostream& out,const snn::SIMDVector& vec);
 
+
+snn::SIMDVector operator*(number v,const snn::SIMDVector& vec);
+
+snn::SIMDVector operator/(number v,const snn::SIMDVector& vec);
+
+snn::SIMDVector operator-(number v,const snn::SIMDVector& vec);
+
+snn::SIMDVector operator+(number v,const snn::SIMDVector& vec);

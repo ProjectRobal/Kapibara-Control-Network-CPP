@@ -204,7 +204,7 @@ int main(int argc,char** argv)
 
     // std::cout<<std::endl;
 
-    // snn::quicksort(input,0,19);
+    // input = snn::pexp(input);
 
     // std::cout<<input<<std::endl;
 

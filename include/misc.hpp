@@ -163,6 +163,19 @@ namespace snn
             
         }
 
+        SIMDVector pexp(const SIMDVector& vec)
+        {
+
+            SIMDVector xm=vec < 0.f;
+
+            xm = xm*vec;
+
+            xm = 1.f/(-xm+1);
+
+            return xm + (vec * (vec>0.f));
+            
+        }
+
         SIMDVector simd_abs(const SIMDVector& vec)
         {
             SIMDVector check = ((vec<0)*-2)+1;

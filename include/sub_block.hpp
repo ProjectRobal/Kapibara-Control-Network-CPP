@@ -99,7 +99,7 @@ namespace snn
         void chooseWorkers()
         {
            
-            SIMDVector exp_rewards = snn::exp(this->pop_rewards);
+            SIMDVector exp_rewards = snn::pexp(this->pop_rewards);
 
             // for(size_t i=0;i<this->pop_rewards.size();++i)
             // {
@@ -122,7 +122,7 @@ namespace snn
             }
             
             // think about this part:
-            if(this->Ticks>Populus*4)
+            if(this->Ticks>Populus*2)
             {
                 for(size_t i=0;i<exp_rewards.size();++i)
                 {   
@@ -172,12 +172,8 @@ namespace snn
 
         void giveReward(long double reward)
         {   
-            if( reward == 0 )
-            {
-                reward = 100;
-            }
 
-            this->pop_rewards.set(this->pop_rewards[this->weight_id]+reward,this->weight_id);
+            this->pop_rewards.set(0.5f*this->pop_rewards[this->weight_id]+reward,this->weight_id);
 
             this->Ticks++;
 
