@@ -109,11 +109,17 @@ namespace snn
 
             if( this->pop_weights.size() > Populus)
             {
-                snn::SIMDVector exp_rewards = snn::pexp(this->pop_rewards);
+                size_t max_i = 0;
 
-                this->mean = (this->pop_weights*exp_rewards).reduce();
+                for(size_t i=1;i<this->pop_rewards.size();++i)
+                {
+                    if( this->pop_rewards[i] > this->pop_rewards[max_i] )
+                    {
+                        max_i = i;
+                    }
+                }
 
-                this->mean /= exp_rewards.reduce();
+                this->mean = this->pop_weights[max_i];
 
                 this->pop_rewards.clear();
                 this->pop_weights.clear();
@@ -123,11 +129,17 @@ namespace snn
             // choose best weight
             if(this->pop_weights.size()>0)
             {
-                snn::SIMDVector exp_rewards = snn::pexp(this->pop_rewards);
+                size_t max_i = 0;
 
-                this->mean = (this->pop_weights*exp_rewards).reduce();
+                for(size_t i=1;i<this->pop_rewards.size();++i)
+                {
+                    if( this->pop_rewards[i] > this->pop_rewards[max_i] )
+                    {
+                        max_i = i;
+                    }
+                }
 
-                this->mean /= exp_rewards.reduce();
+                this->mean = this->pop_weights[max_i];
             }
 
             this->distribution = std::normal_distribution<number>(this->mean,this->std);
@@ -137,8 +149,6 @@ namespace snn
 
             this->weight = this->distribution(this->gen);
            
-            
-
             this->last_reward = reward;
 
             this->reward = 0.f;

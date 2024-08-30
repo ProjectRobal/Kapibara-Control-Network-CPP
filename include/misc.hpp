@@ -166,7 +166,7 @@ namespace snn
         SIMDVector pexp(const SIMDVector& vec)
         {
 
-            SIMDVector xm=vec < 0.f;
+            SIMDVector xm = vec < 0.f;
 
             xm = xm*vec;
 
