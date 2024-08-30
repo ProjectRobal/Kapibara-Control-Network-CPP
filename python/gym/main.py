@@ -93,6 +93,10 @@ def main():
             observation=env.reset()[0]
             last_observation[:] = observation[:]
             to_send[4] = (steps - 500)/500.0
+            
+            if to_send[4] == 0.0:
+                to_send[4] = 100.0
+            
             to_send[5] = 1.0
             
             log_file.write("{};{}\n".format(timestamp,to_send[4]))

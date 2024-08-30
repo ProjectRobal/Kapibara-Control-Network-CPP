@@ -81,7 +81,7 @@ namespace snn
                 this->pop_weights.append(this->distribution(this->gen));
             }
 
-            this->pop_rewards = SIMDVector(0.f,Populus);
+            this->pop_rewards = SIMDVector(1.f,Populus);
         }
 
         number get_max()
@@ -101,7 +101,7 @@ namespace snn
         void chooseWorkers()
         {
            
-            SIMDVector exp_rewards = snn::exp(this->pop_rewards);
+            SIMDVector exp_rewards = this->pop_rewards;
 
             number exp_rewards_mean = exp_rewards.reduce();
 
@@ -114,11 +114,13 @@ namespace snn
 
             float probability = this->uniform(this->gen);
 
+            float prob_sum = 0.f;
+
             for(size_t i=0;i<exp_rewards.size();++i)
             {   
-                probability -= exp_rewards[i];
+                prob_sum += exp_rewards[i];
 
-                if( probability <= 0.f )
+                if( prob_sum >= probability )
                 {
                     this->weight_id = i;
                     break;
@@ -147,9 +149,9 @@ namespace snn
             {   
                 float mutation_probability = this->uniform(this->gen);
 
-                number level = 1.f - ( exp_rewards[i]/exp_rewards_mean );
+                number level = 1.f - ( exp_rewards[i] );
 
-                if( mutation_probability > level  )
+                if( mutation_probability < level  )
                 {
                     if( level > 0.4f )
                     {
@@ -174,9 +176,9 @@ namespace snn
             //     reward = 100;
             // }
 
-            long double dr = (reward - this->last_reward)*20.f;
+            // long double dr = (reward - this->last_reward)*20.f;
 
-            this->pop_rewards.set(reward+dr,this->weight_id);
+            this->pop_rewards.set(std::exp(reward),this->weight_id);
 
             this->last_reward = reward;
 
