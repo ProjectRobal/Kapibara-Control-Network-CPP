@@ -76,7 +76,7 @@ namespace snn
             {
                 this->blocks.push_back(BlockKAC<inputSize,Populus>(_mutate));
                 this->blocks.back().setup(init);
-                this->blocks.back().chooseWorkers();
+                // this->blocks.back().chooseWorkers();
             }
         }
 

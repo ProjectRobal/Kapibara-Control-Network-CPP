@@ -55,7 +55,17 @@ namespace snn
                 subpopulation.setup(inputSize,init);    
             }
 
-            biases.setup(inputSize,init);              
+            biases.setup(inputSize,init);  
+
+            this->bias = this->biases.get();   
+
+            size_t i=0;
+            for(auto& subpopulation : this->population)
+            {
+                this->worker.set(subpopulation.get(),i);
+                ++i;
+            }            
+            
         }
 
         void chooseWorkers()

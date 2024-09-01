@@ -33,6 +33,7 @@ namespace snn
         number std;
 
         std::normal_distribution<number> distribution;
+        std::normal_distribution<number> global;
 
         std::uniform_real_distribution<float> uniform;
 
@@ -83,9 +84,12 @@ namespace snn
         {
             this->std = std::sqrt(2.f/inputSize);
             this->distribution = std::normal_distribution<number>(0.f,this->std);   
+            this->global = std::normal_distribution<number>(0.f,this->std);  
 
             this->max_std = this->std;
             this->min_std = MIN_STD;
+
+            this->weight = this->distribution(this->gen);
 
             // this->pop_rewards = SIMDVector(0.f,Populus+5);
         }
@@ -107,69 +111,57 @@ namespace snn
         void chooseWorkers()
         {
 
-            if( this->pop_weights.size() > Populus)
-            {
-                size_t max_i = 0;
+            this->pop_rewards.append(this->reward);
+            this->pop_weights.append(this->weight);
 
-                for(size_t i=1;i<this->pop_rewards.size();++i)
+            if( this->pop_rewards.size() >= Populus )
+            {
+                snn::quicksort_mask(this->pop_weights,0,this->pop_weights.size()-1,this->pop_rewards);
+
+                snn::SIMDVector best;
+
+                for(size_t i=0;i<Populus/2;++i)
                 {
-                    if( this->pop_rewards[i] > this->pop_rewards[max_i] )
-                    {
-                        max_i = i;
-                    }
+                    best.append(this->pop_weights[this->pop_weights.size()-1 - i]);
                 }
 
-                this->mean = this->pop_weights[max_i];
+                number mean = best.reduce() / best.size();
+
+                best = best - mean;
+
+                best = best*best;
+
+                number std = std::sqrt(best.reduce()/best.size());
+
+                this->distribution = std::normal_distribution<number>(mean,std);
 
                 this->pop_rewards.clear();
                 this->pop_weights.clear();
             }
 
 
-            // choose best weight
-            if(this->pop_weights.size()>0)
+            number mutation_probability_level = std::max(std::exp(this->reward),static_cast<number>(1.f));
+
+
+            number mutation_chooser = this->uniform(this->gen);
+
+            if( mutation_chooser > mutation_probability_level )
             {
-                size_t max_i = 0;
-
-                for(size_t i=1;i<this->pop_rewards.size();++i)
-                {
-                    if( this->pop_rewards[i] > this->pop_rewards[max_i] )
-                    {
-                        max_i = i;
-                    }
-                }
-
-                this->mean = this->pop_weights[max_i];
+                this->weight = this->global(this->gen);
+            }
+            else
+            {
+                this->weight = this->distribution(this->gen);
             }
 
-            this->distribution = std::normal_distribution<number>(this->mean,this->std);
-
-            this->pop_rewards.append(this->reward);
-            this->pop_weights.append(this->weight);
-
-            this->weight = this->distribution(this->gen);
-           
-            this->last_reward = reward;
-
+            
             this->reward = 0.f;
         }
 
         // let's tread reward not as reward rather than error
         void giveReward(long double reward)
         {   
-
-            // this->pop_rewards.set(0.5f*this->pop_rewards[this->weight_id]+reward,this->weight_id);
-
             this->reward += reward;
-
-            if( this->reward < 0.f )
-            { 
-                this->std = (-snn::pexp(4.f*this->reward)+1)*this->max_std + this->min_std;
-            }
-            else
-            {
-                this->std = this->min_std;
-            }
         }
 
         number get()
