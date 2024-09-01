@@ -203,14 +203,14 @@ namespace snn
 
             in.read(buffer,SERIALIZED_NUMBER_SIZE);
 
-            number mean = deserialize_number(buffer);
+            number mean = deserialize_number<number>(buffer);
 
             in.read(buffer,SERIALIZED_NUMBER_SIZE);
 
-            number std = deserialize_number(buffer);
+            number std = deserialize_number<number>(buffer);
 
             this->distribution = std::normal_distribution<number>(mean,std);
-            
+
         }
 
         
