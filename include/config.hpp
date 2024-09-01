@@ -27,3 +27,5 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 #define MIN_STD 0.00001f
 
 #define MAX_STD 0.5f
+
+#define MUTATION_PROBABILITY 0.1f

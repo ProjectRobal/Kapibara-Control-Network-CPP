@@ -105,34 +105,22 @@ namespace snn
 
         void dump(std::ofstream& out) const
         {
-            // for(auto neuron : this->population)
-            // {
-            //     neuron->save(out);
-            // }   
+            this->biases.dump(out);
 
-            // uint64_t maiting = this->mating_counter;
-
-            // char maiting_data[sizeof(uint64_t)]={0};
-
-            // out.write(maiting_data,sizeof(uint64_t));
+            for(const auto& block : this->population)
+            {
+                block.dump(out);
+            }
         }
 
         void load(std::ifstream& in)
         {
-            // for(auto neuron : this->population)
-            // {
-            //     neuron->load(in);
-            // }
+            this->biases.load(in);
 
-            // uint64_t maiting = 0;
-
-            // char maiting_data[sizeof(uint64_t)]={0};
-
-            // in.read(maiting_data,sizeof(uint64_t));
-
-            // memmove(reinterpret_cast<char*>(&maiting),maiting_data,sizeof(uint64_t));
-
-            // this->mating_counter=maiting;
+            for(auto& block : this->population)
+            {
+                block.load(in);
+            }
         }
 
         

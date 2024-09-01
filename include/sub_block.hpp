@@ -110,15 +110,15 @@ namespace snn
         void chooseWorkers()
         {
 
-            if(this->reward>=0.f)
-            {
-                this->distribution = std::normal_distribution<number>(this->weight,MIN_STD);
-            }
-            else
-            {
+            // if(this->reward>=0.f)
+            // {
+            //     this->distribution = std::normal_distribution<number>(this->weight,MIN_STD);
+            // }
+            // else
+            // {
                 this->pop_rewards.append(this->reward);
                 this->pop_weights.append(this->weight);
-            }
+            // }
 
             if( this->pop_rewards.size() >= Populus )
             {
@@ -144,11 +144,11 @@ namespace snn
 
             // number mutation_probability_level = std::max(std::exp(this->reward),static_cast<number>(1.f));
 
-            number mutation_probability_level = (this->reward<0)*0.9f + (this->reward>=0);
+            number mutation_probability_level = (this->reward<0)*MUTATION_PROBABILITY + (this->reward>=0);
 
             number mutation_chooser = this->uniform(this->gen);
 
-            if( mutation_chooser > mutation_probability_level )
+            if( mutation_chooser < mutation_probability_level )
             {
                 this->weight = this->global(this->gen);
             }
@@ -185,29 +185,32 @@ namespace snn
             //     neuron->save(out);
             // }   
 
-            // uint64_t maiting = this->mating_counter;
+            char buffer[SERIALIZED_NUMBER_SIZE];
 
-            // char maiting_data[sizeof(uint64_t)]={0};
+            serialize_number(this->distribution.mean(),buffer);
 
-            // out.write(maiting_data,sizeof(uint64_t));
+            out.write(buffer,SERIALIZED_NUMBER_SIZE);
+
+            serialize_number(this->distribution.stddev(),buffer);
+
+            out.write(buffer,SERIALIZED_NUMBER_SIZE);
+
         }
 
         void load(std::ifstream& in)
         {
-            // for(auto neuron : this->population)
-            // {
-            //     neuron->load(in);
-            // }
+            char buffer[SERIALIZED_NUMBER_SIZE];
 
-            // uint64_t maiting = 0;
+            in.read(buffer,SERIALIZED_NUMBER_SIZE);
 
-            // char maiting_data[sizeof(uint64_t)]={0};
+            number mean = deserialize_number(buffer);
 
-            // in.read(maiting_data,sizeof(uint64_t));
+            in.read(buffer,SERIALIZED_NUMBER_SIZE);
 
-            // memmove(reinterpret_cast<char*>(&maiting),maiting_data,sizeof(uint64_t));
+            number std = deserialize_number(buffer);
 
-            // this->mating_counter=maiting;
+            this->distribution = std::normal_distribution<number>(mean,std);
+            
         }
 
         

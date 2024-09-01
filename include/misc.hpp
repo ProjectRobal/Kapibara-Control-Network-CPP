@@ -14,7 +14,7 @@ namespace snn
 {
     // serialize number of type T, and return it as serialized stream
     template<typename T>
-    char* serialize_number(const T& num)
+    char* serialize_number(T num)
     {
         int exp=0;
 
@@ -28,6 +28,21 @@ namespace snn
         memmove(output+sizeof(int64_t),reinterpret_cast<char*>(&_exp),sizeof(int64_t));
 
         return output;
+    }
+
+    template<typename T>
+    // buffer size 2*sizeof(int64_t)
+    void serialize_number(T num,char* buffer)
+    {
+        int exp=0;
+
+        int64_t mant=std::numeric_limits<std::int64_t>::max()*std::frexp(num,&exp);
+
+        int64_t _exp=exp;
+        
+        memmove(buffer,reinterpret_cast<char*>(&mant),sizeof(int64_t));
+        memmove(buffer+sizeof(int64_t),reinterpret_cast<char*>(&_exp),sizeof(int64_t));
+
     }
 
     // deserialize number of type T
