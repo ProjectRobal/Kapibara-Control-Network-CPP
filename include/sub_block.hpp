@@ -21,7 +21,7 @@
 namespace snn
 {
 
-    template<size_t Populus,size_t LongPopulus=4*Populus>
+    template<size_t Populus,size_t MaxSpeciesCount=4>
     class SubBlock
     {   
 
@@ -32,7 +32,7 @@ namespace snn
         std::mt19937 gen; 
         number std;
 
-        std::normal_distribution<number> distribution;
+        std::normal_distribution<number> distribution[MaxSpeciesCount];
         std::normal_distribution<number> global;
 
         std::uniform_real_distribution<float> uniform;
@@ -43,12 +43,12 @@ namespace snn
         long double reward;
         long double last_reward;
 
-        size_t weight_id;
+        size_t population_counter;
 
         SIMDVector pop_weights;
         SIMDVector pop_rewards;
 
-        size_t Ticks;
+        size_t population_count;
 
         number max_std;
         number min_std;
@@ -65,11 +65,11 @@ namespace snn
             this->reward = 0;
             this->mean = 0;
 
-            this->weight_id = 0;
+            this->population_counter = 0;
 
             this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
 
-            this->Ticks = 0;
+            this->population_count = 0;
             this->last_reward = -99999;
             
         }
@@ -83,13 +83,15 @@ namespace snn
         void setup(size_t inputSize,std::shared_ptr<Initializer> init)
         {
             this->std = std::sqrt(2.f/inputSize);
-            this->distribution = std::normal_distribution<number>(0.f,this->std);   
+            this->distribution[0] = std::normal_distribution<number>(0.f,this->std);   
             this->global = std::normal_distribution<number>(0.f,this->std);  
 
             this->max_std = this->std;
             this->min_std = MIN_STD;
 
             this->weight = this->distribution(this->gen);
+
+            this->population_count = 1;
 
             // this->pop_rewards = SIMDVector(0.f,Populus+5);
         }
@@ -106,6 +108,54 @@ namespace snn
             }
 
             return this->pop_weights.pop(max);
+        }
+
+        void estimate_specie(const SIMDVector& weights,size_t specie_id)
+        {
+            number mean = weights.reduce()/weights.size();
+
+            number std = weights - mean;
+
+            std = std*std;
+
+            std = std::sqrt(std.reduce()/std.size());
+
+            this->distribution[specie_id] = std::normal_distribution<number>(mean,std);
+        }
+
+        void split_into_species(const SIMDVector& weights)
+        {
+            size_t species_total=0; 
+            SIMDVector specie;
+
+            specie.append(weights[0]);
+
+            for(size_t i=1;i<weights.size();++i)
+            {
+                number diff = weights[i] - weights[i-1];
+
+                // if difference is small enought put it into the same specie
+                if(( diff <  0.5f )||( species_total == MaxSpeciesCount-1 ))
+                { 
+                    specie.append(weights[i]);
+                }
+                else
+                {
+                    // move to next specie
+
+                    this->estimate_specie(specie,species_total++);
+                    
+                    specie.clear();
+                }
+
+            }
+
+            if( specie.size()>0 )
+            {
+                this->estimate_specie(specie,species_total++);
+            }
+
+            this->population_count = species_total;
         }
 
         void chooseWorkers()
@@ -125,6 +175,8 @@ namespace snn
                     best.append(this->pop_weights[this->pop_weights.size()-1 - i]);
                 }
 
+                // split it into species
+
                 number mean = best.reduce() / best.size();
 
                 best = best - mean;
@@ -133,10 +185,11 @@ namespace snn
 
                 number std = std::sqrt(best.reduce()/best.size());
 
-                this->distribution = std::normal_distribution<number>(mean,std);
+                this->distribution[0] = std::normal_distribution<number>(mean,std);
 
                 this->pop_rewards.clear();
                 this->pop_weights.clear();
+                this->population_counter = 0;
             }
 
 
@@ -151,7 +204,14 @@ namespace snn
             }
             else
             {
-                this->weight = this->distribution(this->gen);
+                this->weight = this->distribution[this->population_counter](this->gen);
+
+                this->population_counter++;
+
+                if(this->population_counter==this->population_count)
+                {
+                    this->population_counter = 0;
+                }
             }
 
             
