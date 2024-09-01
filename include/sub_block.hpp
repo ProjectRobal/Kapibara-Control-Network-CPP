@@ -21,34 +21,25 @@
 namespace snn
 {
 
-    template<size_t Populus,size_t MaxSpeciesCount=4>
+    template<size_t Populus,size_t AmountofMembersThatPass=5>
     class SubBlock
     {   
 
         std::shared_ptr<Mutation> mutate;
 
-        size_t mating_counter;
-
         std::mt19937 gen; 
-        number std;
 
-        std::normal_distribution<number> distribution[MaxSpeciesCount];
+        std::normal_distribution<number> distribution;
         std::normal_distribution<number> global;
 
         std::uniform_real_distribution<float> uniform;
 
         number weight;
-        number mean;
 
         long double reward;
-        long double last_reward;
-
-        size_t population_counter;
 
         SIMDVector pop_weights;
         SIMDVector pop_rewards;
-
-        size_t population_count;
 
         number max_std;
         number min_std;
@@ -65,14 +56,8 @@ namespace snn
 
             this->weight = 0;
             this->reward = 0;
-            this->mean = 0;
-
-            this->population_counter = 0;
-
+            
             this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
-
-            this->population_count = 0;
-            this->last_reward = -99999;
             
         }
 
@@ -84,18 +69,15 @@ namespace snn
 
         void setup(size_t inputSize,std::shared_ptr<Initializer> init)
         {
-            this->std = std::sqrt(2.f/inputSize);
-            this->distribution[0] = std::normal_distribution<number>(0.f,this->std);   
-            this->global = std::normal_distribution<number>(0.f,this->std);  
+            number std = std::sqrt(2.f/inputSize);
+            this->distribution = std::normal_distribution<number>(0.f,std);   
+            this->global = std::normal_distribution<number>(0.f,std);  
 
-            this->max_std = this->std;
+            this->max_std = std;
             this->min_std = MIN_STD;
 
-            this->weight = this->distribution[0](this->gen);
+            this->weight = this->distribution(this->gen);
 
-            this->population_count = 1;
-
-            // this->pop_rewards = SIMDVector(0.f,Populus+5);
         }
 
         number get_max()
@@ -112,7 +94,7 @@ namespace snn
             return this->pop_weights.pop(max);
         }
 
-        void estimate_specie(const SIMDVector& weights,size_t specie_id)
+        void estimate_specie(const SIMDVector& weights)
         {
             number mean = weights.reduce()/weights.size();
 
@@ -122,50 +104,21 @@ namespace snn
 
             number std = std::sqrt(w.reduce()/w.size());
 
-            this->distribution[specie_id] = std::normal_distribution<number>(mean,std);
-        }
-
-        void split_into_species(const SIMDVector& weights)
-        {
-            size_t species_total=0; 
-            SIMDVector specie;
-
-            specie.append(weights[0]);
-
-            for(size_t i=1;i<weights.size();++i)
-            {
-                number diff = abs(weights[i]/weights[i-1]);
-
-                // if difference is small enought put it into the same specie
-                if((( diff <  1.25f )&&(diff>0.1f))||( species_total == MaxSpeciesCount-1 ))
-                { 
-                    specie.append(weights[i]);
-                }
-                else
-                {
-                    // move to next specie
-
-                    this->estimate_specie(specie,species_total++);
-                    
-                    specie.clear();
-                    specie.append(weights[i]);
-                }
-
-            }
-
-            if( specie.size()>0 )
-            {
-                this->estimate_specie(specie,species_total++);
-            }
-
-            this->population_count = species_total;
+            this->distribution = std::normal_distribution<number>(mean,std);
         }
 
         void chooseWorkers()
         {
 
-            this->pop_rewards.append(this->reward);
-            this->pop_weights.append(this->weight);
+            if(this->reward>=0.f)
+            {
+                this->distribution = std::normal_distribution<number>(this->weight,MIN_STD);
+            }
+            else
+            {
+                this->pop_rewards.append(this->reward);
+                this->pop_weights.append(this->weight);
+            }
 
             if( this->pop_rewards.size() >= Populus )
             {
@@ -173,23 +126,25 @@ namespace snn
 
                 snn::SIMDVector best;
 
-                for(size_t i=0;i<Populus/2;++i)
+                for(size_t i=0;i<AmountofMembersThatPass;++i)
                 {
                     best.append(this->pop_weights[this->pop_weights.size()-1 - i]);
                 }
 
                 // split it into species
 
-                this->split_into_species(best);
+                // this->split_into_species(best);
+
+                this->estimate_specie(best);
 
                 this->pop_rewards.clear();
                 this->pop_weights.clear();
-                this->population_counter = 0;
             }
 
 
-            number mutation_probability_level = std::max(std::exp(this->reward),static_cast<number>(1.f));
+            // number mutation_probability_level = std::max(std::exp(this->reward),static_cast<number>(1.f));
 
+            number mutation_probability_level = (this->reward<0)*0.9f + (this->reward>=0);
 
             number mutation_chooser = this->uniform(this->gen);
 
@@ -199,14 +154,7 @@ namespace snn
             }
             else
             {
-                this->weight = this->distribution[this->population_counter](this->gen);
-
-                this->population_counter++;
-
-                if( this->population_counter == this->population_count )
-                {
-                    this->population_counter = 0;
-                }
+                this->weight = this->distribution(this->gen);
             }
 
             
