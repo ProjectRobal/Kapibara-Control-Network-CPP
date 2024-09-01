@@ -143,7 +143,10 @@ namespace snn
 
             snn::SIMDVector d_weight = ((this->pop_weights*-1.f) + best_weight)*0.1f;
 
+            d_weight.set(0.f,max_i);
+
             this->pop_weights += d_weight;
+
             // think about this part:
             for(size_t i=0;i<pop_rewards.size();++i)
             {   
@@ -153,17 +156,9 @@ namespace snn
 
                 if( mutation_probability < level  )
                 {
-                    if( level > 0.4f )
-                    {
-                        this->pop_weights.set(this->distribution(this->gen),i);
-                    }
-                    else
-                    {
-                        std::normal_distribution<number> dist(0,0.01);
-
-                        this->pop_weights.set(best_weight+dist(this->gen),i);
-                    }
-                    // this->pop_rewards.set(0.f,i);   
+                    
+                    this->pop_weights.set(this->distribution(this->gen),i);
+                    
                 }
             }
             

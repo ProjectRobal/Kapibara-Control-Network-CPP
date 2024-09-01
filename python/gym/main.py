@@ -95,7 +95,7 @@ def main():
             to_send[4] = (steps - 500)/500.0
             
             if to_send[4] == 0.0:
-                to_send[4] = 100.0
+                to_send[4] = 10.0
             
             to_send[5] = 1.0
             
