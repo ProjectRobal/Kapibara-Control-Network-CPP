@@ -55,6 +55,8 @@ namespace snn
 
         public:
 
+        static size_t SubBLockId;
+
         SubBlock()
         {
             std::random_device rd;
@@ -89,7 +91,7 @@ namespace snn
             this->max_std = this->std;
             this->min_std = MIN_STD;
 
-            this->weight = this->distribution(this->gen);
+            this->weight = this->distribution[0](this->gen);
 
             this->population_count = 1;
 
@@ -114,11 +116,11 @@ namespace snn
         {
             number mean = weights.reduce()/weights.size();
 
-            number std = weights - mean;
+            SIMDVector w = weights - mean;
 
-            std = std*std;
+            w = w*w;
 
-            std = std::sqrt(std.reduce()/std.size());
+            number std = std::sqrt(w.reduce()/w.size());
 
             this->distribution[specie_id] = std::normal_distribution<number>(mean,std);
         }
@@ -132,10 +134,10 @@ namespace snn
 
             for(size_t i=1;i<weights.size();++i)
             {
-                number diff = weights[i] - weights[i-1];
+                number diff = abs(weights[i]/weights[i-1]);
 
                 // if difference is small enought put it into the same specie
-                if(( diff <  0.5f )||( species_total == MaxSpeciesCount-1 ))
+                if((( diff <  1.25f )&&(diff>0.1f))||( species_total == MaxSpeciesCount-1 ))
                 { 
                     specie.append(weights[i]);
                 }
@@ -146,6 +148,7 @@ namespace snn
                     this->estimate_specie(specie,species_total++);
                     
                     specie.clear();
+                    specie.append(weights[i]);
                 }
 
             }
@@ -177,15 +180,7 @@ namespace snn
 
                 // split it into species
 
-                number mean = best.reduce() / best.size();
-
-                best = best - mean;
-
-                best = best*best;
-
-                number std = std::sqrt(best.reduce()/best.size());
-
-                this->distribution[0] = std::normal_distribution<number>(mean,std);
+                this->split_into_species(best);
 
                 this->pop_rewards.clear();
                 this->pop_weights.clear();
@@ -208,7 +203,7 @@ namespace snn
 
                 this->population_counter++;
 
-                if(this->population_counter==this->population_count)
+                if( this->population_counter == this->population_count )
                 {
                     this->population_counter = 0;
                 }
@@ -269,4 +264,5 @@ namespace snn
 
         
     };
+
 }
