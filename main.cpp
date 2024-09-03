@@ -55,6 +55,7 @@
 
 #include "serializaers/network_serialize.hpp"
 
+#include "sub_block.hpp"
 
 /*
 
@@ -146,6 +147,9 @@ snn::SIMDVector read_fifo()
     return output;
 
 }
+
+template<>
+size_t snn::SubBlock<20,5>::SubBLockId = 0;
 
 
 int main(int argc,char** argv)

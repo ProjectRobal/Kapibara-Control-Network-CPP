@@ -20,7 +20,7 @@
 
 namespace snn
 {
-
+    // with only two best members it converenge faster
     template<size_t Populus,size_t AmountofMembersThatPass=5>
     class SubBlock
     {   
@@ -35,8 +35,10 @@ namespace snn
         std::uniform_real_distribution<float> uniform;
 
         number weight;
+        number best_weight;
 
         long double reward;
+        long double best_reward;
 
         SIMDVector pop_weights;
         SIMDVector pop_rewards;
@@ -44,18 +46,27 @@ namespace snn
         number max_std;
         number min_std;
 
+        number std;
+
+        size_t id;
+
         public:
 
         static size_t SubBLockId;
 
         SubBlock()
         {
+            SubBlock::SubBLockId++;
+            this->id = SubBlock::SubBLockId;
+
             std::random_device rd;
 
             this->gen = std::mt19937(rd());
 
             this->weight = 0;
             this->reward = 0;
+            this->best_reward = -9999999.f;
+            this->best_weight = 0.f;
             
             this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
             
@@ -116,13 +127,38 @@ namespace snn
             // }
             // else
             // {
+            // if(this->reward >= this->best_reward)
+            {
                 this->pop_rewards.append(this->reward);
                 this->pop_weights.append(this->weight);
+
+            }
+
+            if(this->reward >= this->best_reward)
+            {
+                this->best_reward = this->reward;
+                this->best_weight = this->weight;
+            }
             // }
+
+            // number distance = abs(this->distribution.mean() - this->weight)*abs(this->reward);
+
+            // number gain = std::exp(-distance);
+
+            // number dweight = this->distribution.stddev()*0.1f;
+
+            // gain = gain*-(this->distribution.mean()<this->weight);
+
+            // this->distribution = std::normal_distribution<number>(this->distribution.mean()+gain*dweight,this->distribution.stddev()*1);
 
             if( this->pop_rewards.size() >= Populus )
             {
                 snn::quicksort_mask(this->pop_weights,0,this->pop_weights.size()-1,this->pop_rewards);
+
+                if(this->id==10)
+                {
+                    std::cout<<this->pop_rewards<<std::endl;
+                }
 
                 snn::SIMDVector best;
 
@@ -131,14 +167,28 @@ namespace snn
                     best.append(this->pop_weights[this->pop_weights.size()-1 - i]);
                 }
 
+
                 // split it into species
 
                 // this->split_into_species(best);
+
+                if(this->id == 10)
+                {
+                    std::cout<<"Best weights: "<<best<<std::endl;
+                    std::cout<<"Best rewards: "<<pop_rewards[this->pop_rewards.size()-2]<<", "<<pop_rewards[this->pop_rewards.size()-1]<<std::endl;
+                    std::cout<<"Distribution: "<<this->distribution.mean()<<", "<<this->distribution.stddev()<<std::endl;
+                }
+
 
                 this->estimate_specie(best);
 
                 this->pop_rewards.clear();
                 this->pop_weights.clear();
+
+                // this->pop_rewards.append(this->best_reward);
+                // this->pop_weights.append(this->best_weight);
+
+                // this->best_reward = -999999.f;
             }
 
 
@@ -155,6 +205,10 @@ namespace snn
             else
             {
                 this->weight = this->distribution(this->gen);
+
+                number force = std::min(std::exp(this->best_reward),static_cast<number>(0.9f));
+
+                this->weight += force*( this->best_weight - this->weight );
             }
 
             

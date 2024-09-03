@@ -28,4 +28,4 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 
 #define MAX_STD 0.5f
 
-#define MUTATION_PROBABILITY 0.1f
+#define MUTATION_PROBABILITY 0.25f
