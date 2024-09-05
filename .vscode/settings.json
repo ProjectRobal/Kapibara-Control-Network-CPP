@@ -70,6 +70,7 @@
         "valarray": "cpp",
         "filesystem": "cpp",
         "typeindex": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "hash_map": "cpp"
     }
 }

@@ -185,15 +185,15 @@ namespace snn
 
             xm = xm*vec;
 
-            xm = 1.f/(-xm+1);
+            xm = 1.f/((xm*-1)+1);
 
-            return xm + (vec * (vec>0.f));
+            return xm + (vec * (vec>=0.f));
             
         }
 
         number pexp(number v)
         {
-            return (v>0.f)*v + ((v<=0.f)/(-v+1));
+            return (v>0.f)*(v+1) + ((v<=0.f)/(-v+1));
         }
 
         SIMDVector simd_abs(const SIMDVector& vec)

@@ -42,11 +42,14 @@ namespace snn
 
         SIMDVector pop_weights;
         SIMDVector pop_rewards;
+        SIMDVector pop_tested;
 
         number max_std;
         number min_std;
 
         number std;
+
+        size_t choosen_weight;
 
         size_t id;
 
@@ -67,6 +70,8 @@ namespace snn
             this->reward = 0;
             this->best_reward = -9999999.f;
             this->best_weight = 0.f;
+
+            this->choosen_weight = 0;
             
             this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
             
@@ -88,6 +93,13 @@ namespace snn
             this->min_std = MIN_STD;
 
             this->weight = this->distribution(this->gen);
+
+            for(size_t i=0;i<Populus;++i)
+            {
+                this->pop_weights.append(this->global(this->gen));
+                this->pop_rewards.append(0.f);
+                this->pop_tested.append(0.f);
+            }
 
         }
 
@@ -120,110 +132,108 @@ namespace snn
 
         void chooseWorkers()
         {
+            snn::quicksort_mask(this->pop_weights,0,this->pop_weights.size()-1,this->pop_rewards);
 
-            // if(this->reward>=0.f)
-            // {
-            //     this->distribution = std::normal_distribution<number>(this->weight,MIN_STD);
-            // }
-            // else
-            // {
-            // if(this->reward >= this->best_reward)
+            snn::SIMDVector norm_rewards = snn::pexp(this->pop_rewards);
+
+            norm_rewards = norm_rewards / norm_rewards.reduce();
+
+            number tested = (this->pop_tested>=15.f).reduce();
+
+            if(this->id == 10)
             {
-                this->pop_rewards.append(this->reward);
-                this->pop_weights.append(this->weight);
-
+                std::cout<<this->pop_rewards<<std::endl;
+                std::cout<<norm_rewards<<std::endl;
+                std::cout<<"Testing:"<<std::endl;
+                std::cout<<this->pop_tested<<std::endl;
+                std::cout<<"Tested: "<<std::endl;
+                std::cout<<tested<<std::endl;
             }
 
-            if(this->reward >= this->best_reward)
-            {
-                this->best_reward = this->reward;
-                this->best_weight = this->weight;
-            }
-            // }
 
-            // number distance = abs(this->distribution.mean() - this->weight)*abs(this->reward);
-
-            // number gain = std::exp(-distance);
-
-            // number dweight = this->distribution.stddev()*0.1f;
-
-            // gain = gain*-(this->distribution.mean()<this->weight);
-
-            // this->distribution = std::normal_distribution<number>(this->distribution.mean()+gain*dweight,this->distribution.stddev()*1);
-
-            if( this->pop_rewards.size() >= Populus )
+            // perform crossover!
+            if( tested >= Populus/2 )
             {
                 snn::quicksort_mask(this->pop_weights,0,this->pop_weights.size()-1,this->pop_rewards);
 
-                if(this->id==10)
+                // a k best weights leave alone
+                // other weights will be discarded and replaced by mutated best weight with variance calculated from best weight or just use simple mutation :)
+                // rest of population will be random weights
+
+                if( this->id == 10 )
                 {
-                    std::cout<<this->pop_rewards<<std::endl;
+                    std::cout<<"Crossover!"<<std::endl;
                 }
 
                 snn::SIMDVector best;
 
-                for(size_t i=0;i<AmountofMembersThatPass;++i)
+                for(size_t i=0;i<5;++i)
                 {
-                    best.append(this->pop_weights[this->pop_weights.size()-1 - i]);
+                    best.append(this->pop_weights[this->pop_weights.size()-i-1]);
                 }
 
+                std::normal_distribution<number> best_dist(0.f,this->global.stddev()*0.1f);
 
-                // split it into species
-
-                // this->split_into_species(best);
-
-                if(this->id == 10)
+                for(size_t i=0;i<this->pop_rewards.size();++i)
                 {
-                    std::cout<<"Best weights: "<<best<<std::endl;
-                    std::cout<<"Best rewards: "<<pop_rewards[this->pop_rewards.size()-2]<<", "<<pop_rewards[this->pop_rewards.size()-1]<<std::endl;
-                    std::cout<<"Distribution: "<<this->distribution.mean()<<", "<<this->distribution.stddev()<<std::endl;
+                    this->pop_rewards.set(0.f,i);
+                    this->pop_tested.set(0.f,i);
                 }
 
+                // this->pop_rewards -= this->pop_rewards[this->pop_rewards.size()-1];
 
-                this->estimate_specie(best);
+                for(size_t i=0;i<5;++i)
+                {
+                    this->pop_weights.set(best[i],i);
+                }
 
-                this->pop_rewards.clear();
-                this->pop_weights.clear();
+                for(size_t i=5;i<15;++i)
+                {
+                    number weight = best[i % best.size()] + best_dist(this->gen);
+                    this->pop_weights.set(weight,i);
+                }
 
-                // this->pop_rewards.append(this->best_reward);
-                // this->pop_weights.append(this->best_weight);
-
-                // this->best_reward = -999999.f;
+                for(size_t i=15;i<Populus;++i)
+                {
+                    this->pop_weights.set(this->global(this->gen),i);
+                }
             }
 
+            // choose weights
 
-            // number mutation_probability_level = std::max(std::exp(this->reward),static_cast<number>(1.f));
+            number dice = this->uniform(this->gen);
 
-            number mutation_probability_level = (this->reward<0)*MUTATION_PROBABILITY + (this->reward>=0);
-
-            number mutation_chooser = this->uniform(this->gen);
-
-            if( mutation_chooser < mutation_probability_level )
+            for(size_t i=norm_rewards.size()-1;i>=0;--i)
             {
-                this->weight = this->global(this->gen);
-            }
-            else
-            {
-                this->weight = this->distribution(this->gen);
+                dice -= norm_rewards[i];
 
-                number force = std::min(std::exp(this->best_reward),static_cast<number>(0.9f));
+                if( dice <= 0 )
+                {
+                    this->choosen_weight = i;
 
-                this->weight += force*( this->best_weight - this->weight );
+                    if(this->id == 10)
+                    {
+                        std::cout<<"Choosen weight id: "<<this->choosen_weight<<std::endl;
+                        std::cout<<" with probability "<<norm_rewards[i]<<std::endl;
+                    }
+                    break;
+                }
             }
+
 
             
-            this->reward = 0.f;
         }
 
         // let's tread reward not as reward rather than error
         void giveReward(long double reward)
         {   
-            this->reward += reward;
+            this->pop_rewards.set(0.5f*this->pop_rewards[this->choosen_weight]+reward,this->choosen_weight);
+            this->pop_tested.set(this->pop_tested[this->choosen_weight]+1,this->choosen_weight);
         }
 
         number get()
         {
-            return this->weight;
+            return this->pop_weights[this->choosen_weight];
         }
 
         number operator()()

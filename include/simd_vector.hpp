@@ -82,7 +82,7 @@ namespace snn
 
         void extend(const SIMDVector& vec);
 
-        void set(const number& n, const size_t& i);
+        void set(number n,size_t i);
 
         number get(const size_t& i) const;
 
@@ -197,7 +197,12 @@ namespace snn
         {
             for(size_t i=0;i<this->size();++i)
             {
+                // const SIMD& si = this->vec[i];
                 out<<(*this)[i]<<" ";
+                // for(size_t o=0;o<MAX_SIMD_VECTOR_SIZE;o++)
+                // {
+                //     out<<this->vec[i][o]<<" ";
+                // }
             }
         }
 

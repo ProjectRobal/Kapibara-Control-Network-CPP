@@ -203,6 +203,8 @@ int main(int argc,char** argv)
 
     gauss->init(input,20);
 
+    input = snn::SIMDVector(0,20);
+
 
     // std::cout<<input<<std::endl;
 
@@ -211,6 +213,10 @@ int main(int argc,char** argv)
     // input = snn::pexp(input);
 
     // std::cout<<input<<std::endl;
+
+    // std::cout<<snn::pexp(0)<<std::endl;
+
+    // return 0;
 
     
     snn::SIMDVector output(0.f,8);
