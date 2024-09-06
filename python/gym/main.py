@@ -95,7 +95,7 @@ def main():
             to_send[4] = (steps - 500)
             
             if to_send[4] == 0:
-                to_send[4] = 10000
+                to_send[4] = 1000
             
             to_send[5] = 1.0
             

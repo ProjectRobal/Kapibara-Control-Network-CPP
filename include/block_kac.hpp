@@ -99,7 +99,7 @@ namespace snn
 
         number fire(SIMDVector input)
         {
-            return ( this->worker*input ).reduce() + this->bias;
+            return ( this->worker*input ).reduce();// + this->bias;
         }       
 
 
