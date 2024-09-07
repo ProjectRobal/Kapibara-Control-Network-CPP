@@ -51,7 +51,7 @@ namespace snn
 
         void applyReward(number reward)
         {
-            reward=reward/this->layers.size();
+            // reward=reward/this->layers.size();
 
             for(auto layer : layers)
             {
