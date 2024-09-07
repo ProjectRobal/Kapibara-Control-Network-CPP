@@ -72,7 +72,7 @@ namespace snn
             this->best_reward = -9999999.f;
             this->best_weight = 0.f;
 
-            this->Ticks = 0;
+            // this->Ticks = 0;
 
             this->choosen_weight = 0;
             
@@ -157,42 +157,42 @@ namespace snn
                 best.append(this->pop_weights[this->pop_weights.size()-i-1]);
             }
 
-            if( this->Ticks >= 200 )
-            {
+            // if( this->Ticks >= 200 )
+            // {
 
-                if( this->id == 10 )
-                {
-                    std::cout<<"Crossover!"<<std::endl;
-                }
+            //     if( this->id == 10 )
+            //     {
+            //         std::cout<<"Crossover!"<<std::endl;
+            //     }
 
-                // number reward_mean = this->pop_rewards.reduce() / this->pop_rewards.size();
+            //     // number reward_mean = this->pop_rewards.reduce() / this->pop_rewards.size();
 
-                this->pop_rewards /=10.f;
+            //     this->pop_rewards /=10.f;
 
-                // // this->pop_rewards -= this->pop_rewards[this->pop_rewards.size()-1];
+            //     // // this->pop_rewards -= this->pop_rewards[this->pop_rewards.size()-1];
 
-                // number best_mean = best.reduce()/best.size();
+            //     // number best_mean = best.reduce()/best.size();
 
-                // best = best - best_mean;
+            //     // best = best - best_mean;
 
-                // best = best * best;
+            //     // best = best * best;
 
-                // std::normal_distribution<number> best_dist(best_mean,std::sqrt(best.reduce()/best.size()));
+            //     // std::normal_distribution<number> best_dist(best_mean,std::sqrt(best.reduce()/best.size()));
 
-                // for(size_t i=0;i<Populus;++i)
-                // {
-                //     this->pop_weights.set(best_dist(this->gen),i);
-                //     this->pop_rewards.set(0,i);
-                // }
+            //     // for(size_t i=0;i<Populus;++i)
+            //     // {
+            //     //     this->pop_weights.set(best_dist(this->gen),i);
+            //     //     this->pop_rewards.set(0,i);
+            //     // }
 
-                // this->choosen_weight = 0;
+            //     // this->choosen_weight = 0;
 
-                this->Ticks = 0;
+            //     this->Ticks = 0;
 
-                return;
-            }
+            //     return;
+            // }
 
-            this->Ticks++;
+            // this->Ticks++;
 
 
             // perform crossover!
