@@ -90,27 +90,48 @@ namespace snn
 
         void chooseWorkers()
         {
+            std::chrono::time_point<std::chrono::system_clock> start, end;
+
+            start = std::chrono::system_clock::now();
+
             snn::quicksort_mask(this->pop_weights,0,this->pop_weights.size()-1,this->pop_rewards);
             
+            end = std::chrono::system_clock::now();
+
+            if(this->id == 10)
+            {
+                std::cout<<"First: "<<std::chrono::duration<double>(end-start).count()<<std::endl;
+            }
+
+            start = std::chrono::system_clock::now();
 
             snn::SIMDVector norm_rewards = snn::pexp(this->pop_rewards);
 
             norm_rewards = norm_rewards / norm_rewards.reduce();
 
+            end = std::chrono::system_clock::now();
 
             if(this->id == 10)
             {
-                std::cout<<"Weights: "<<std::endl;
-                std::cout<<this->pop_weights<<std::endl;
-                std::cout<<this->pop_rewards<<std::endl;
-                std::cout<<norm_rewards<<std::endl;
+                std::cout<<"Second: "<<std::chrono::duration<double>(end-start).count()<<std::endl;
             }
+
+
+            // if(this->id == 10)
+            // {
+            //     std::cout<<"Weights: "<<std::endl;
+            //     std::cout<<this->pop_weights<<std::endl;
+            //     std::cout<<this->pop_rewards<<std::endl;
+            //     std::cout<<norm_rewards<<std::endl;
+            // }
 
             // perform crossover!
             
             // a k best weights leave alone
             // other weights will be discarded and replaced by mutated best weight with variance calculated from best weight or just use simple mutation :)
             // rest of population will be random weights
+
+            start = std::chrono::system_clock::now();
 
             for(size_t i=0;i<Populus/2;++i)
             {
@@ -125,6 +146,15 @@ namespace snn
 
                 }
             }
+
+            end = std::chrono::system_clock::now();
+
+            if(this->id == 10)
+            {
+                std::cout<<"Third: "<<std::chrono::duration<double>(end-start).count()<<std::endl;
+            }
+
+            start = std::chrono::system_clock::now();
 
             for(size_t i=Populus/2;i<Populus-1;++i)
             {
@@ -156,7 +186,16 @@ namespace snn
 
             }
 
+            end = std::chrono::system_clock::now();
+
+            if(this->id == 10)
+            {
+                std::cout<<"Forth: "<<std::chrono::duration<double>(end-start).count()<<std::endl;
+            }
+
             // choose weights
+
+            start = std::chrono::system_clock::now();
 
             number dice = this->uniform(this->gen);
 
@@ -169,14 +208,21 @@ namespace snn
                     this->choosen_weight = i;
                     // this->choosen_weight = this->pop_weights.size()-1;
 
-                    if(this->id == 10)
-                    {
-                        std::cout<<"Choosen weight id: "<<this->choosen_weight<<std::endl;
-                        std::cout<<" with probability "<<norm_rewards[i]<<std::endl;
-                    }
+                    // if(this->id == 10)
+                    // {
+                    //     std::cout<<"Choosen weight id: "<<this->choosen_weight<<std::endl;
+                    //     std::cout<<" with probability "<<norm_rewards[i]<<std::endl;
+                    // }
                     break;
                 }
                 
+            }
+
+            end = std::chrono::system_clock::now();
+
+            if(this->id == 10)
+            {
+                std::cout<<"Fivth: "<<std::chrono::duration<double>(end-start).count()<<std::endl;
             }
 
         }
