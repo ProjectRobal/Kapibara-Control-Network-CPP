@@ -254,7 +254,7 @@ int main(int argc,char** argv)
         }
 
         // I have to speed up it just a bit 
-        // network->applyReward(cart_input[4]);
+        network->applyReward(cart_input[4]);
 
         //std::cout<<"From CartPole: "<<cart_input<<std::endl;
 

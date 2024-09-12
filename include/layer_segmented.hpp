@@ -138,7 +138,7 @@ namespace snn
             // if( this->Ticks >= this->TicksToReplacment)
             // {
 
-            // This is quite slow
+            // This is still quite slow
             // this->hidden_planer.shuttle();
             // this->planer.shuttle();
 

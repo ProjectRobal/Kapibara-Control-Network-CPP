@@ -39,6 +39,10 @@ namespace snn
         SubBlock<Populus> biases;
 
 
+        // now since each sub block gets the same reward we will just them a pointer to it.
+        long double *reward;
+
+
         public:
 
         BlockKAC(std::shared_ptr<Mutation> _mutate)
@@ -46,18 +50,20 @@ namespace snn
         population({SubBlock<Populus>()})
         {
             this->worker = SIMDVector(0.f,inputSize);
+            this->reward = new long double(0.f);
         }
 
         void setup(std::shared_ptr<Initializer> init)
         {
+
             for(auto& subpopulation : population)
             {
-                subpopulation.setup(inputSize,init);    
+                subpopulation.setup(inputSize,init,this->reward);    
             }
 
-            biases.setup(inputSize,init);  
+            // biases.setup(inputSize,init);  
 
-            this->bias = this->biases.get();   
+            // this->bias = this->biases.get();   
 
             size_t i=0;
             for(auto& subpopulation : this->population)
@@ -70,14 +76,14 @@ namespace snn
 
         void chooseWorkers()
         {
-            this->biases.chooseWorkers();
+            // this->biases.chooseWorkers();
 
-            this->bias = this->biases.get();
+            // this->bias = this->biases.get();
 
             size_t i=0;
             for(auto& subpopulation : this->population)
-            {
-                subpopulation.chooseWorkers();    
+            {                
+                subpopulation.chooseWorkers();
                 this->worker.set(subpopulation.get(),i);
                 ++i;
             }   
@@ -87,14 +93,17 @@ namespace snn
 
         void giveReward(long double reward)
         {          
-            this->biases.giveReward(reward);
+            // this->biases.giveReward(reward);
 
-            for(auto& subpopulation : this->population)
-            {
-                subpopulation.giveReward(reward);
-                std::cout.setstate(std::ios_base::failbit);
-            }
-            std::cout.clear();
+            *this->reward += reward;
+
+            // this takes a lot
+            // for(auto& subpopulation : this->population)
+            // {
+            //     // subpopulation.giveReward(reward);
+            //     std::cout.setstate(std::ios_base::failbit);
+            // }
+            // std::cout.clear();
         }
 
         number fire(SIMDVector input)
