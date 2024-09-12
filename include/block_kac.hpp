@@ -30,7 +30,6 @@ namespace snn
             It will store each genome with a counter which indicate how many times entity was tested.
         */
 
-        std::shared_ptr<Mutation> mutate;
 
         SIMDVector worker;
         number bias;
@@ -45,20 +44,19 @@ namespace snn
 
         public:
 
-        BlockKAC(std::shared_ptr<Mutation> _mutate)
-        : mutate(_mutate),
-        population({SubBlock<Populus>()})
+        BlockKAC()
+        : population({SubBlock<Populus>()})
         {
             this->worker = SIMDVector(0.f,inputSize);
             this->reward = new long double(0.f);
         }
 
-        void setup(std::shared_ptr<Initializer> init)
+        void setup()
         {
 
             for(auto& subpopulation : population)
             {
-                subpopulation.setup(inputSize,init,this->reward);    
+                subpopulation.setup(inputSize,this->reward);    
             }
 
             // biases.setup(inputSize,init);  
@@ -132,6 +130,10 @@ namespace snn
             }
         }
 
+        ~BlockKAC()
+        {
+            delete reward;
+        }
         
     };
 }

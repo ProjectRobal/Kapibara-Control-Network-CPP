@@ -35,7 +35,7 @@ namespace snn
 
         virtual void applyReward(long double reward){};
 
-        virtual void setInitializer(std::shared_ptr<Initializer> init)=0;
+        virtual void setInitializer(std::shared_ptr<Initializer> init){};
 
         virtual void setActivationFunction(std::shared_ptr<Activation> active)=0;
 

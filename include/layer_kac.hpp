@@ -35,12 +35,10 @@ namespace snn
     class LayerKAC : public LayerProto
     { 
         std::vector<BlockKAC<inputSize,Populus>> blocks;
-        std::shared_ptr<Initializer> init;
         std::shared_ptr<Activation> activation_func;
 
         std::uniform_real_distribution<double> uniform;
         
-
         public:
 
         LayerKAC()
@@ -48,15 +46,11 @@ namespace snn
             this->activation_func=std::make_shared<Linear>();
         }
 
-        LayerKAC(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
+        LayerKAC(size_t N)
         {
-            this->setup(N,init,_crossing,_mutate);
+            this->setup(N);
         }
 
-        void setInitializer(std::shared_ptr<Initializer> init)
-        {
-            this->init=init;
-        }
 
         void setActivationFunction(std::shared_ptr<Activation> active)
         {
@@ -64,18 +58,18 @@ namespace snn
         }
 
 
-        void setup(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
+        void setup(size_t N)
         {
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
             this->activation_func=std::make_shared<Linear>();
             this->blocks.clear();
 
-            this->init=init;
+            this->blocks.reserve(N);
 
             for(size_t i=0;i<N;++i)
             {
-                this->blocks.push_back(BlockKAC<inputSize,Populus>(_mutate));
-                this->blocks.back().setup(init);
+                this->blocks.push_back(BlockKAC<inputSize,Populus>());
+                this->blocks.back().setup();
                 // this->blocks.back().chooseWorkers();
             }
         }

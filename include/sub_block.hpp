@@ -36,19 +36,7 @@ namespace snn
 
         SIMDVector best_weights;
 
-        number max_std;
-        number min_std;
-
-        number std;
-
         size_t choosen_weight;
-
-        size_t id;
-
-        size_t Ticks;
-
-        number weight;
-
 
         long double* curr_reward;
 
@@ -59,7 +47,7 @@ namespace snn
         SubBlock()
         {
             SubBlock::SubBLockId++;
-            this->id = SubBlock::SubBLockId;
+            // this->id = SubBlock::SubBLockId;
 
             std::random_device rd;
 
@@ -73,21 +61,15 @@ namespace snn
             
         }
 
-        SubBlock(std::shared_ptr<Mutation> _mutate)
-        :SubBlock()
-        {
-
-        }
-
-        void setup(size_t inputSize,std::shared_ptr<Initializer> init,long double* curr_reward)
+        void setup(size_t inputSize,long double* curr_reward)
         {
             this->curr_reward = curr_reward;
 
             number std = std::sqrt(2.f/inputSize);
             this->global = std::normal_distribution<number>(0.f,std);  
 
-            this->max_std = std;
-            this->min_std = MIN_STD;
+            // this->max_std = std;
+            // this->min_std = MIN_STD;
 
             // this->weight = this->global(this->gen);
 
