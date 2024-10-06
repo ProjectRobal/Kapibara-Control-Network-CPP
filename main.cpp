@@ -59,15 +59,24 @@
 
 /*
 
- Our theory is right but only when input values are positive,
- the other problem is exploding gradient
+ To save on memory we can store weights on disk and then load it to ram as a buffer.
 
- but it has some potential in discreate problems.
+  load 32 numbers from file.
+  when execution is made load another 32 numbers in background.
 
- when reward is positive the last action is fortified.
- when reward is negative that last action is dumped.
+  Each kac block will have line with N weights , each representing each population, plus one id with indicate what weight is choosen. In file we store
+  weight with coresponding reward.
+  When executing operation we will load each weight from each population.
 
- decreasing values works fine but increasing don't work quite well.
+ Each weights is going to have it's own population. We choose weight from population.
+ Active weight gets reward, the lower reward is the higher probability of replacing weight,
+ between 0.01 to 0.5 . 
+ 
+ Sometimes the weights in population are going to be replace, the worst half of poplulation.
+Some weights will be random some are going to be generated from collection of best weights, plus mutations.
+The wieghts that achived positive rewards are collected and then used as replacment with some mutations
+maybe. 
+ Or to save on space we can generate new weights just using random distribution.
 
 */
 
@@ -156,16 +165,6 @@ int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
 
-    std::shared_ptr<snn::NormalizedGaussInit> norm_gauss=std::make_shared<snn::NormalizedGaussInit>(0.f,0.01f);
-    std::shared_ptr<snn::GaussInit> gauss=std::make_shared<snn::GaussInit>(0.f,0.25f);
-    std::shared_ptr<snn::GaussInit> gauss1=std::make_shared<snn::GaussInit>(0.f,0.01f);
-    std::shared_ptr<snn::ConstantInit> constant=std::make_shared<snn::ConstantInit>(0.1f);
-    std::shared_ptr<snn::UniformInit> uniform=std::make_shared<snn::UniformInit>(0.f,1.f);
-    std::shared_ptr<snn::HuInit> hu=std::make_shared<snn::HuInit>();
-
-    std::shared_ptr<snn::GaussMutation> mutation=std::make_shared<snn::GaussMutation>(0.f,0.01f,0.5f);
-    std::shared_ptr<snn::OnePoint> cross=std::make_shared<snn::OnePoint>();
-
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
     // we can compress FFT data from 512 to 24 therotically
@@ -174,10 +173,10 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first= std::make_shared<snn::LayerKAC<4,20>>(512);
-    auto second= std::make_shared<snn::LayerKAC<512,20>>(512);
+    auto first= std::make_shared<snn::LayerKAC<4,20>>(64,0);
+    auto second= std::make_shared<snn::LayerKAC<64,20>>(64,1);
     // auto third= std::make_shared<snn::LayerKAC<512,20>>(256);
-    auto forth= std::make_shared<snn::LayerKAC<512,20>>(2);
+    auto forth= std::make_shared<snn::LayerKAC<64,20>>(2,2);
 
     first->setActivationFunction(std::make_shared<snn::ReLu>());
     second->setActivationFunction(std::make_shared<snn::ReLu>());
@@ -198,14 +197,6 @@ int main(int argc,char** argv)
     network->addLayer(second);
     //network->addLayer(third);
     network->addLayer(forth);
-
-    snn::SIMDVector input;
-
-    gauss->init(input,20);
-
-    input = snn::SIMDVector(0,20);
-
-
     // std::cout<<input<<std::endl;
 
     // std::cout<<std::endl;
@@ -217,11 +208,6 @@ int main(int argc,char** argv)
     // std::cout<<snn::pexp(0)<<std::endl;
 
     // return 0;
-
-    
-    snn::SIMDVector output(0.f,8);
-
-    output.set(1.f,2);
 
     end = std::chrono::system_clock::now();
 

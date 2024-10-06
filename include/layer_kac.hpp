@@ -22,6 +22,8 @@
 
 #include "layer_utils.hpp"
 
+#include <filesystem>
+
 /*
 
  A layer that use evolutionary algorithm for learing called CoSyne.
@@ -38,16 +40,22 @@ namespace snn
         std::shared_ptr<Activation> activation_func;
 
         std::uniform_real_distribution<double> uniform;
+
+        size_t id;
         
         public:
 
-        LayerKAC()
+        LayerKAC(size_t id)
+        : id(id)
         {
             this->activation_func=std::make_shared<Linear>();
         }
 
-        LayerKAC(size_t N)
+        LayerKAC(size_t N,size_t id)
+        : LayerKAC(id)
         {
+            std::string layer_folder = "layer_"+std::to_string(id);
+            std::filesystem::create_directories(layer_folder);
             this->setup(N);
         }
 
@@ -68,7 +76,7 @@ namespace snn
 
             for(size_t i=0;i<N;++i)
             {
-                this->blocks.push_back(BlockKAC<inputSize,Populus>());
+                this->blocks.push_back(BlockKAC<inputSize,Populus>(i,this->id));
                 this->blocks.back().setup();
                 // this->blocks.back().chooseWorkers();
             }

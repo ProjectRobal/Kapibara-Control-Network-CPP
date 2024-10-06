@@ -30,45 +30,122 @@ namespace snn
             It will store each genome with a counter which indicate how many times entity was tested.
         */
 
-
-        SIMDVector worker;
+        SIMD worker;
         number bias;
 
-        std::array<SubBlock<Populus>,inputSize> population;
-        SubBlock<Populus> biases;
+        std::string block_name;
 
+        std::mt19937 gen; 
+
+        std::normal_distribution<number> global;
+
+        std::uniform_real_distribution<float> uniform;
+
+
+        // weight from population with rewward
+        typedef struct weight
+        {
+            long double weight;
+            long double reward;
+        } weight_t;
+ 
+        // there will be inputsize amount of block
+        typedef struct block
+        {
+            uint32_t id;
+
+            weight_t weights[Populus];
+
+        } block_t;
 
         // now since each sub block gets the same reward we will just them a pointer to it.
-        long double *reward;
+        long double reward;
 
+        size_t id;
+
+        bool create_buffer()
+        {
+            std::fstream file;
+
+            file.open(this->block_name,std::ios::in|std::ios::binary);
+
+            if( !file.good() )
+            {
+                // initialize buffer
+                file.open(this->block_name,std::ios::out|std::ios::binary);
+
+                if(!file.good())
+                {
+                    std::cerr<<"Cannot open: "<<this->block_name<<std::endl;
+                    return false;
+                }
+                
+                for(size_t i=0;i<inputSize;++i)
+                {
+                    block_t block = {0};
+
+                    block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
+
+                    for( weight_t& w : block.weights )
+                    {
+                        w.weight = this->global(this->gen);
+                    }
+
+                    file.write((char*)&block,sizeof(block_t));                    
+                }
+
+                file.close();
+
+                return true;
+            }
+
+            file.close();
+
+            return true;
+        }
 
         public:
 
-        BlockKAC()
-        : population({SubBlock<Populus>()})
+        BlockKAC(size_t id,size_t layer_id)
         {
-            this->worker = SIMDVector(0.f,inputSize);
-            this->reward = new long double(0.f);
+            this->worker = SIMD(0);
+            this->reward = 0.f;
+
+            std::random_device rd;
+
+            this->gen = std::mt19937(rd());
+
+            this->id = id;
+
+            this->block_name = "layer_"+std::to_string(layer_id)+"/block_"+std::to_string(id)+".kac";
+
+            this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
+
+            number std = std::sqrt(2.f/inputSize);
+            this->global = std::normal_distribution<number>(0.f,std);  
         }
 
         void setup()
         {
+            // create file if not exits
 
-            for(auto& subpopulation : population)
-            {
-                subpopulation.setup(inputSize,this->reward);    
-            }
+            this->create_buffer();
 
-            // biases.setup(inputSize,init);  
+            // for(auto& subpopulation : population)
+            // {
+            //     subpopulation.setup(inputSize,this->reward);    
+            // }
 
-            // this->bias = this->biases.get();   
+            // // biases.setup(inputSize,init);  
 
-            size_t i=0;
-            for(auto& subpopulation : this->population)
-            {
-                this->worker.set(subpopulation.get(),i);
-                ++i;
-            }            
+            // // this->bias = this->biases.get();   
+
+            // size_t i=0;
+            // for(auto& subpopulation : this->population)
+            // {
+            //     this->worker.set(subpopulation.get(),i);
+            //     ++i;
+            // }            
 
         }
 
@@ -76,15 +153,17 @@ namespace snn
         {
             // this->biases.chooseWorkers();
 
+            // select new id in files 
+
             // this->bias = this->biases.get();
 
-            size_t i=0;
-            for(auto& subpopulation : this->population)
-            {                
-                subpopulation.chooseWorkers();
-                this->worker.set(subpopulation.get(),i);
-                ++i;
-            }   
+            // size_t i=0;
+            // for(auto& subpopulation : this->population)
+            // {                
+            //     subpopulation.chooseWorkers();
+            //     this->worker.set(subpopulation.get(),i);
+            //     ++i;
+            // }   
 
         }
 
@@ -92,8 +171,6 @@ namespace snn
         void giveReward(long double reward)
         {          
             // this->biases.giveReward(reward);
-
-            *this->reward += reward;
 
             // this takes a lot
             // for(auto& subpopulation : this->population)
@@ -106,33 +183,23 @@ namespace snn
 
         number fire(SIMDVector input)
         {
-            return ( this->worker*input ).reduce();// + this->bias;
+            // load values from files
+
+            number output = 0;
+
+            //return ( this->worker*input ).reduce();// + this->bias;
+            return output;
         }       
 
 
         void dump(std::ofstream& out) const
         {
-            this->biases.dump(out);
-
-            for(const auto& block : this->population)
-            {
-                block.dump(out);
-            }
+            
         }
 
         void load(std::ifstream& in)
         {
-            this->biases.load(in);
-
-            for(auto& block : this->population)
-            {
-                block.load(in);
-            }
-        }
-
-        ~BlockKAC()
-        {
-            delete reward;
+            
         }
         
     };

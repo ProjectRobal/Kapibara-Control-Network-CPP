@@ -31,10 +31,8 @@ namespace snn
 
         std::uniform_real_distribution<float> uniform;
 
-        SIMDVector pop_weights;
-        SIMDVector pop_rewards;
-
-        SIMDVector best_weights;
+        float pop_weights[Populus];
+        float pop_rewards[Populus];
 
         size_t choosen_weight;
 
@@ -75,8 +73,8 @@ namespace snn
 
             for(size_t i=0;i<Populus;++i)
             {
-                this->pop_weights.append(this->global(this->gen));
-                this->pop_rewards.append(0.f);
+                this->pop_weights[i]=(this->global(this->gen));
+                this->pop_rewards[i]=(0.f);
             }
 
         }
@@ -225,7 +223,7 @@ namespace snn
 
             if( this->uniform(this->gen) < 0.5 )
             {
-                this->pop_rewards.set(0.4f*this->pop_rewards[this->choosen_weight] + *curr_reward,this->choosen_weight);
+                // this->pop_rewards.set(0.4f*this->pop_rewards[this->choosen_weight] + *curr_reward,this->choosen_weight);
                 this->choosen_weight = static_cast<size_t>(this->uniform(this->gen)*(Populus-1));
 
                 *curr_reward = 0.f;
@@ -236,7 +234,7 @@ namespace snn
         void giveReward(long double reward)
         {   
             
-            this->pop_rewards.set(0.4f*this->pop_rewards[this->choosen_weight]+reward,this->choosen_weight);
+            // this->pop_rewards.set(0.4f*this->pop_rewards[this->choosen_weight]+reward,this->choosen_weight);
            
             // if(reward>=0)
             // {
@@ -257,7 +255,7 @@ namespace snn
 
         number get()
         {
-            return this->pop_weights[this->choosen_weight];
+            return this->choosen_weight;
         }
 
         number operator()()
@@ -273,83 +271,83 @@ namespace snn
             //     neuron->save(out);
             // }   
 
-            char buffer[SERIALIZED_NUMBER_SIZE];
+            // char buffer[SERIALIZED_NUMBER_SIZE];
 
 
-            for(size_t i=0;i<Populus;++i)
-            {
-                serialize_number(this->pop_weights[i],buffer);
+            // for(size_t i=0;i<Populus;++i)
+            // {
+            //     serialize_number(this->pop_weights[i],buffer);
 
-                out.write(buffer,SERIALIZED_NUMBER_SIZE);
-            }
+            //     out.write(buffer,SERIALIZED_NUMBER_SIZE);
+            // }
 
-            for(size_t i=0;i<Populus;++i)
-            {
-                serialize_number(this->pop_rewards[i],buffer);
+            // for(size_t i=0;i<Populus;++i)
+            // {
+            //     serialize_number(this->pop_rewards[i],buffer);
 
-                out.write(buffer,SERIALIZED_NUMBER_SIZE);
-            }
+            //     out.write(buffer,SERIALIZED_NUMBER_SIZE);
+            // }
 
-            // save rewards:
-            size_t reward_count = this->best_weights.size();
+            // // save rewards:
+            // size_t reward_count = this->best_weights.size();
 
-            char count_buffer[sizeof(size_t)];
+            // char count_buffer[sizeof(size_t)];
 
-            memcpy(count_buffer,(char*)&reward_count,sizeof(size_t));
+            // memcpy(count_buffer,(char*)&reward_count,sizeof(size_t));
 
-            out.write(count_buffer,sizeof(size_t));
+            // out.write(count_buffer,sizeof(size_t));
 
-            for(size_t i=0;i<reward_count;++i)
-            {
-                serialize_number(this->best_weights[i],buffer);
+            // for(size_t i=0;i<reward_count;++i)
+            // {
+            //     serialize_number(this->best_weights[i],buffer);
 
-                out.write(buffer,SERIALIZED_NUMBER_SIZE);
-            }
+            //     out.write(buffer,SERIALIZED_NUMBER_SIZE);
+            // }
 
         }
 
         void load(std::ifstream& in)
         {
-            char buffer[SERIALIZED_NUMBER_SIZE];
+            // char buffer[SERIALIZED_NUMBER_SIZE];
 
-            for(size_t i=0;i<Populus;++i)
-            {
+            // for(size_t i=0;i<Populus;++i)
+            // {
 
-                in.read(buffer,SERIALIZED_NUMBER_SIZE);
+            //     in.read(buffer,SERIALIZED_NUMBER_SIZE);
 
-                number weight = deserialize_number<number>(buffer);
+            //     number weight = deserialize_number<number>(buffer);
 
-                this->pop_weights.set(weight,i);
+            //     this->pop_weights.set(weight,i);
 
-            }
+            // }
 
-            for(size_t i=0;i<Populus;++i)
-            {
+            // for(size_t i=0;i<Populus;++i)
+            // {
 
-                in.read(buffer,SERIALIZED_NUMBER_SIZE);
+            //     in.read(buffer,SERIALIZED_NUMBER_SIZE);
 
-                number reward = deserialize_number<number>(buffer);
+            //     number reward = deserialize_number<number>(buffer);
 
-                this->pop_rewards.set(reward,i);
+            //     this->pop_rewards.set(reward,i);
             
-            }
+            // }
 
-            char count_buffer[sizeof(size_t)];
+            // char count_buffer[sizeof(size_t)];
 
-            in.read(count_buffer,sizeof(size_t));
+            // in.read(count_buffer,sizeof(size_t));
 
-            size_t rewards_count;
+            // size_t rewards_count;
 
-            memcpy((char*)&rewards_count,count_buffer,sizeof(size_t));
+            // memcpy((char*)&rewards_count,count_buffer,sizeof(size_t));
 
-            for(size_t i=0;i<rewards_count;++i)
-            {
-                in.read(buffer,SERIALIZED_NUMBER_SIZE);
+            // for(size_t i=0;i<rewards_count;++i)
+            // {
+            //     in.read(buffer,SERIALIZED_NUMBER_SIZE);
 
-                number weight = deserialize_number<number>(buffer);
+            //     number weight = deserialize_number<number>(buffer);
 
-                this->best_weights.append(weight);
-            }
+            //     this->best_weights.append(weight);
+            // }
 
         }
 
