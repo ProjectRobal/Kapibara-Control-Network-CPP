@@ -30,7 +30,7 @@ namespace snn
             It will store each genome with a counter which indicate how many times entity was tested.
         */
 
-        SIMD worker;
+        SIMDVector worker;
         number bias;
 
         std::string block_name;
@@ -58,57 +58,17 @@ namespace snn
 
         } block_t;
 
+        block_t block[inputSize];
+
         // now since each sub block gets the same reward we will just them a pointer to it.
         long double reward;
 
         size_t id;
 
-        bool create_buffer()
-        {
-            std::fstream file;
-
-            file.open(this->block_name,std::ios::in|std::ios::binary);
-
-            if( !file.good() )
-            {
-                // initialize buffer
-                file.open(this->block_name,std::ios::out|std::ios::binary);
-
-                if(!file.good())
-                {
-                    std::cerr<<"Cannot open: "<<this->block_name<<std::endl;
-                    return false;
-                }
-                
-                for(size_t i=0;i<inputSize;++i)
-                {
-                    block_t block = {0};
-
-                    block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
-
-                    for( weight_t& w : block.weights )
-                    {
-                        w.weight = this->global(this->gen);
-                    }
-
-                    file.write((char*)&block,sizeof(block_t));                    
-                }
-
-                file.close();
-
-                return true;
-            }
-
-            file.close();
-
-            return true;
-        }
-
         public:
 
         BlockKAC(size_t id,size_t layer_id)
         {
-            this->worker = SIMD(0);
             this->reward = 0.f;
 
             std::random_device rd;
@@ -123,29 +83,30 @@ namespace snn
 
             number std = std::sqrt(2.f/inputSize);
             this->global = std::normal_distribution<number>(0.f,std);  
+
+            this->worker = SIMDVector(0,inputSize);
+
         }
 
         void setup()
         {
             // create file if not exits
 
-            this->create_buffer();
+            size_t i=0;
 
-            // for(auto& subpopulation : population)
-            // {
-            //     subpopulation.setup(inputSize,this->reward);    
-            // }
+            for(block_t& block : this->block)
+            {
+                block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
 
-            // // biases.setup(inputSize,init);  
+                for( weight_t& w : block.weights )
+                {
+                    w.weight = this->global(this->gen);
+                }
 
-            // // this->bias = this->biases.get();   
+                this->worker.set(block.weights[id].weight,i);
 
-            // size_t i=0;
-            // for(auto& subpopulation : this->population)
-            // {
-            //     this->worker.set(subpopulation.get(),i);
-            //     ++i;
-            // }            
+                ++i;
+            }
 
         }
 
@@ -183,12 +144,7 @@ namespace snn
 
         number fire(SIMDVector input)
         {
-            // load values from files
-
-            number output = 0;
-
-            //return ( this->worker*input ).reduce();// + this->bias;
-            return output;
+            return ( this->worker*input ).reduce();// + this->bias;
         }       
 
 
