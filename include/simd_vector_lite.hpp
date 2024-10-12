@@ -9,7 +9,7 @@
 namespace snn
 {
 
-#define VEC_COUNT static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)+1
+#define VEC_COUNT (static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)+1)
 
 template<size_t Size>
 class SIMDVectorLite
@@ -22,7 +22,7 @@ private:
     {
         for(size_t i=0;i<count;++i)
         {
-            this->_vec[VEC_COUNT-1][MAX_SIMD_VECTOR_SIZE-i] = 0;
+            this->_vec[VEC_COUNT-1][MAX_SIMD_VECTOR_SIZE-i] = 0.f;
         }
     }
 
@@ -32,9 +32,11 @@ private:
 
         for(uint16_t i = 0; i< MAX_SIMD_VECTOR_SIZE; ++i)
         {
-            output[i] = static_cast<number>(mask[i]);
+            output[i] = mask[i] ? 1.f : 0.f;
+
         }
 
+        return output;
     }
 
 public:
@@ -45,6 +47,8 @@ public:
     number reduce();
 
     number operator[](size_t i) const;
+
+    SIMD::reference operator[](size_t i);
 
     size_t size() const
     {
@@ -123,15 +127,13 @@ SIMDVectorLite<Size>::SIMDVectorLite(number num)
 
     size_t to_set = VEC_COUNT;
 
-    if(element_left > 0)
-    {
-        to_set --;
-    }
     
     for(size_t i=0;i<to_set;++i)
     {
         this->_vec[i] = SIMD(num);
     }
+
+    to_set -=1 ;
 
     this->_vec[to_set] = SIMD(0);
 
@@ -157,6 +159,19 @@ number SIMDVectorLite<Size>:: reduce()
 
 template<size_t Size>
 number SIMDVectorLite<Size>::operator[](size_t i) const
+{
+    if(i>=Size)
+    {
+        i = 0;
+    }
+
+    size_t simd_id = i/MAX_SIMD_VECTOR_SIZE;
+
+    return _vec[simd_id][i - simd_id*MAX_SIMD_VECTOR_SIZE];
+}
+
+template<size_t Size>
+SIMD::reference SIMDVectorLite<Size>::operator[](size_t i)
 {
     if(i>=Size)
     {
@@ -460,6 +475,8 @@ SIMDVectorLite<Size> SIMDVectorLite<Size>::operator>(const SIMDVectorLite<Size>&
         output._vec[i] = this->mask_to_simd(this->_vec[i] > v._vec[i]);
     }
 
+    output.zeros_last_element(VEC_COUNT*MAX_SIMD_VECTOR_SIZE - Size);
+
     return output;
 }
 
@@ -472,6 +489,8 @@ SIMDVectorLite<Size> SIMDVectorLite<Size>::operator<(const SIMDVectorLite<Size>&
     {
         output._vec[i] = this->mask_to_simd(this->_vec[i] < v._vec[i]);
     }
+
+    output.zeros_last_element(VEC_COUNT*MAX_SIMD_VECTOR_SIZE - Size);
 
     return output;
 }

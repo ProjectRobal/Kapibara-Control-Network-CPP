@@ -89,14 +89,21 @@ namespace snn
 
             for(block_t& block : this->block)
             {
-                block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
+                block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-1)));
 
                 for( weight_t& w : block.weights )
                 {
                     w.weight = this->global(this->gen);
+
+                    if(std::isnan(w.weight))
+                    {
+                        std::cout<<"Nan occured!"<<std::endl;
+                    }
                 }
 
-                this->worker.set(i,block.weights[block.id].weight);
+                // this->worker.set(i,block.weights[block.id].weight);
+
+                this->worker[i] = block.weights[block.id].weight;
 
                 ++i;
             }
@@ -105,23 +112,25 @@ namespace snn
 
         void chooseWorkers()
         {
-            // this->biases.chooseWorkers();
+            for(block_t& _block : this->block)
+            {
+                weight_t& w = _block.weights[_block.id];
 
-            // select new id in files 
+                w.reward = w.reward + 0.5*this->reward;
 
-            // this->bias = this->biases.get();
+                float switch_probability = 0.01;
 
-            // size_t i=0;
-            // for(auto& subpopulation : this->population)
-            // {                
-            //     subpopulation.chooseWorkers();
-            //     this->worker.set(subpopulation.get(),i);
-            //     ++i;
-            // }   
+                if( w.reward < 0 )
+                {
+                    switch_probability = std::min<float>(-0.001f*w.reward,0.5f);
+                }
 
+                if( this->uniform(this->gen) < switch_probability )
+                {
+                    _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
+                }
 
-            
-
+            }
         }
 
 
@@ -130,8 +139,9 @@ namespace snn
             this->reward += reward;
         }
 
-        number fire(SIMDVectorLite<inputSize> input)
+        number fire(const SIMDVectorLite<inputSize>& input)
         {
+            SIMDVectorLite<inputSize> res = this->worker*input;
             return ( this->worker*input ).reduce();// + this->bias;
         }       
 

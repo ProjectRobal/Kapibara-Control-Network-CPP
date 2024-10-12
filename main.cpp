@@ -176,7 +176,7 @@ snn::SIMDVector read_fifo()
 
 }
 
-snn::SIMDVectorLite<5> read_fifo_static()
+snn::SIMDVectorLite<6> read_fifo_static()
 {
     std::fstream fifo;
 
@@ -185,10 +185,10 @@ snn::SIMDVectorLite<5> read_fifo_static()
     if(!fifo.good())
     {
         std::cerr<<"Cannot open fifo for reading"<<std::endl;
-        return snn::SIMDVectorLite<5>();
+        return snn::SIMDVectorLite<6>();
     }
 
-    snn::SIMDVectorLite<5> output;
+    snn::SIMDVectorLite<6> output;
 
     std::string line;
 
@@ -202,8 +202,9 @@ snn::SIMDVectorLite<5> read_fifo_static()
 
     while(std::getline(line_read,num,';'))
     {
-        output.set(std::stof(num,NULL),i);
-        i++;
+        output[i] = std::stof(num,NULL);
+
+        i+=1;
     }
 
     return output;
@@ -231,8 +232,12 @@ int main(int argc,char** argv)
     // // auto third=snn::LayerKAC<512,256,20>();
     auto forth= snn::LayerKAC<256,2,20>();
 
-    first.setActivationFunction(std::make_shared<snn::ReLu>());
-    second.setActivationFunction(std::make_shared<snn::ReLu>());
+    first.setup();
+    second.setup();
+    forth.setup();
+
+    first.setActivationFunction(std::make_shared<snn::Linear>());
+    second.setActivationFunction(std::make_shared<snn::Linear>());
     // // third->setActivationFunction(std::make_shared<snn::ReLu>());
     forth.setActivationFunction(std::make_shared<snn::Linear>());
 
@@ -260,27 +265,18 @@ int main(int argc,char** argv)
 
     // std::cout<<snn::pexp(0)<<std::endl;
 
+    // snn::SIMDVectorLite<36> simd1;
+    // snn::SIMDVectorLite<36> simd2;
+
+    // std::cout<<(simd1*simd2).reduce()<<std::endl;
+
+    // // return 0;
+
+    // char x;
+    // std::cin>>x;
+
     // return 0;
 
-    snn::SIMDVectorLite<36> test_simd1(1);
-
-    snn::SIMDVectorLite<36> test_simd2(2);
-
-    std::cout<<test_simd1<<std::endl;
-
-    std::cout<<test_simd2<<std::endl;
-
-    std::cout<<std::endl;
-
-    std::cout<<(test_simd1+test_simd2).reduce()<<std::endl;
-    std::cout<<test_simd1-test_simd2<<std::endl;
-    std::cout<<test_simd1*test_simd2<<std::endl;
-    std::cout<<test_simd1/test_simd2<<std::endl;
-
-    char x;
-    std::cin>>x;
-
-    return 0;
     end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed_initialization_seconds = end - start;
@@ -295,7 +291,7 @@ int main(int argc,char** argv)
     while(true)
     {
 
-        snn::SIMDVectorLite<5> cart_input = read_fifo_static();
+        snn::SIMDVectorLite<6> cart_input = read_fifo_static();
 
         if( cart_input[5] > 0.5f)
         {
@@ -308,19 +304,43 @@ int main(int argc,char** argv)
             }
 
             // network->applyReward(cart_input[4]);
+            first.applyReward(cart_input[4]);
+            second.applyReward(cart_input[4]);
+            forth.applyReward(cart_input[4]);
+
+            first.shuttle();
+            second.shuttle();
+            forth.shuttle();
 
         }
 
+        snn::SIMDVectorLite<4> input;
+
+        input[0] = cart_input[0];
+        input[1] = cart_input[1];
+        input[2] = cart_input[2];
+        input[3] = cart_input[3];
+
         // I have to speed up it just a bit 
         // network->applyReward(cart_input[4]);
+        
 
         //std::cout<<"From CartPole: "<<cart_input<<std::endl;
 
         //snn::SIMDVector output = network->fire(cart_input);
 
-        //std::cout<<"To CartPole: "<<output<<std::endl;
+        std::cout<<"From CartPole: "<<input<<std::endl;
 
-        //send_fifo(output);
+        snn::SIMDVectorLite output1 = first.fire(input);
+        snn::SIMDVectorLite output2 = second.fire(output1);
+
+        snn::SIMDVectorLite output3 = forth.fire(output2);
+
+        std::cout<<"To CartPole: "<<output3<<std::endl;
+
+        std::cout<<std::endl;
+
+        send_fifo(output3);
 
     }
 

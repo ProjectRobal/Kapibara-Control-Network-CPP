@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <array>
 #include <functional>
 #include <fstream>
 #include <algorithm>
@@ -37,7 +37,7 @@ namespace snn
     template<size_t inputSize,size_t N,size_t Populus>
     class LayerKAC 
     { 
-        std::vector<BlockKAC<inputSize,Populus>> blocks;
+        BlockKAC<inputSize,Populus>* blocks;
         std::shared_ptr<Activation> activation_func;
 
         std::uniform_real_distribution<double> uniform;
@@ -46,6 +46,8 @@ namespace snn
 
         LayerKAC()
         {
+            this->blocks = new BlockKAC<inputSize,Populus>[N];
+
             this->activation_func=std::make_shared<Linear>();
         }
 
@@ -59,14 +61,11 @@ namespace snn
         {
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
             this->activation_func=std::make_shared<Linear>();
-            this->blocks.clear();
-
-            this->blocks.reserve(N);
 
             for(size_t i=0;i<N;++i)
             {
-                this->blocks.push_back(BlockKAC<inputSize,Populus>());
-                this->blocks.back().setup();
+                this->blocks[i]= BlockKAC<inputSize,Populus>();
+                this->blocks[i].setup();
                 // this->blocks.back().chooseWorkers();
             }
         }
@@ -76,9 +75,9 @@ namespace snn
 
             // reward/=this->blocks.size();
 
-            for(auto& block : this->blocks)
+            for(size_t i=0;i<N;++i)
             {
-                block.giveReward(reward);
+                this->blocks[i].giveReward(reward);
             }
         }
 
@@ -89,23 +88,21 @@ namespace snn
         void shuttle()
         {
             
-            for(auto& block : this->blocks)
+            for(size_t i=0;i<N;++i)
             {
-                block.chooseWorkers();
+                this->blocks[i].chooseWorkers();
             }   
         }
 
         SIMDVectorLite<N> fire(const SIMDVectorLite<inputSize>& input)
         {
-            SIMDVectorLite<N> output;
-            //output.reserve(this->blocks[0].outputSize());
+            SIMDVectorLite<N> output(0);
 
-            size_t i=0;
 
-            for(auto& block : this->blocks)
+            for(size_t i=0;i<N;++i)
             {
-                
-                output.set(i++,block.fire(input));
+                number v = this->blocks[i].fire(input);
+                output[i] = v;
 
             }
 
@@ -123,17 +120,17 @@ namespace snn
         void generate_metadata(nlohmann::json& j) const
         {
             j["input_size"]=inputSize;
-            j["output_size"]=blocks.size();
+            j["output_size"]=N;
         }
 
         int8_t load(std::ifstream& in)
         {
 
-            for(auto& block : this->blocks)
+            for(size_t i=0;i<N;++i)
             {
                 if(in.good())
                 {
-                    block.load(in);
+                    this->blocks[i].load(in);
                 }
                 else
                 {
@@ -147,11 +144,11 @@ namespace snn
         int8_t save(std::ofstream& out) const
         {
             
-            for(const auto& block : this->blocks)
+            for(size_t i=0;i<N;++i)
             {
                 if(out.good())
                 {
-                    block.dump(out);
+                    this->blocks[i].dump(out);
                 }
                 else
                 {
@@ -161,6 +158,11 @@ namespace snn
 
             return 0;
         }        
+
+        ~LayerKAC()
+        {
+            delete [] this->blocks;
+        }
 
     };  
     

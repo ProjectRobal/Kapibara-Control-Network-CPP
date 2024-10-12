@@ -15,6 +15,9 @@ namespace snn
         */
         virtual inline void activate(SIMDVector& vec)=0;
 
+        template<size_t Size>
+        inline void activate(SIMDVectorLite<Size>& vec){}
+
         /*
             Inverse function of activation function
         */
