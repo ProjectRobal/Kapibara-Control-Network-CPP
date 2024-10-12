@@ -94,11 +94,6 @@ namespace snn
                 for( weight_t& w : block.weights )
                 {
                     w.weight = this->global(this->gen);
-
-                    if(std::isnan(w.weight))
-                    {
-                        std::cout<<"Nan occured!"<<std::endl;
-                    }
                 }
 
                 // this->worker.set(i,block.weights[block.id].weight);
@@ -112,6 +107,7 @@ namespace snn
 
         void chooseWorkers()
         {
+            size_t iter=0;
             for(block_t& _block : this->block)
             {
                 weight_t& w = _block.weights[_block.id];
@@ -128,7 +124,11 @@ namespace snn
                 if( this->uniform(this->gen) < switch_probability )
                 {
                     _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
+
+                    this->worker[iter] = _block.weights[_block.id].weight;
                 }
+
+                iter++;
 
             }
         }
