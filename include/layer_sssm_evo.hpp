@@ -45,7 +45,7 @@ namespace snn
 {
     #define LAYERSSSM 2
 
-    template<size_t InputSize,size_t Populus,size_t deltaRank = static_cast<size_t>(ceil(InputSize/16.f))>
+    template<size_t InputSize,size_t N,size_t Populus,size_t deltaRank = static_cast<size_t>(ceil(InputSize/16.f))>
     class LayerSSSMEVO : public LayerProto
     {
 
@@ -53,14 +53,14 @@ namespace snn
         std::shared_ptr<Activation> activation_func;
 
         // it will generate delta , B and C, it is not using biases
-        LayerKAC<InputSize,Populus> x_proj;
+        LayerKAC<InputSize,deltaRank+N*2,Populus> x_proj;
 
         // it projects delta from dt_rank ( size of delta vector ) to the input size 
-        LayerKAC<deltaRank,Populus> d_proj;
+        LayerKAC<deltaRank,InputSize,Populus> d_proj;
         
-        std::array<snn::SIMDVector,InputSize> hidden_state;
+        std::array<snn::SIMDVectorLite<N>,InputSize> hidden_state;
 
-        std::array<snn::SIMDVector,InputSize> A;
+        std::array<snn::SIMDVectorLite<N>,InputSize> A;
 
         std::array<SIMDVector,InputSize> dB;
 
@@ -77,10 +77,10 @@ namespace snn
             this->activation_func=std::make_shared<Linear>();
         }
 
-        LayerSSSMEVO(size_t N,std::shared_ptr<Initializer> init,size_t TicksToShuttle=200,number dt_min = 0.001,number dt_max = 0.1)
+        LayerSSSMEVO(std::shared_ptr<Initializer> init,size_t TicksToShuttle=200,number dt_min = 0.001,number dt_max = 0.1)
         : LayerSSSMEVO()
         {
-            this->setup(N,init,TicksToShuttle);
+            this->setup(init,TicksToShuttle);
         }
 
         void shuttle()
@@ -127,11 +127,13 @@ namespace snn
 
             this->dB.fill(SIMDVector(0.f,N));
 
-            SIMDVector a_vec([](size_t i)->number{
+            // SIMDVector a_vec([](size_t i)->number{
 
-                return -static_cast<number>( i+1 );
+            //     return -static_cast<number>( i+1 );
 
-            },N);
+            // },N);
+
+            SIMDVectorLite<N> a_vec;
 
             this->A.fill(a_vec);
 
@@ -142,7 +144,7 @@ namespace snn
             std::shared_ptr<UniformInit> d_uniform = std::make_shared<UniformInit>(-dt_init_std,dt_init_std);
 
             // there should be diffrent initializer I think, it will use silu activation
-            this->d_proj.setup(InputSize,d_uniform);
+            this->d_proj.setup(d_uniform);
 
             this->d_proj.setActivationFunction(std::make_shared<SiLu>());
 

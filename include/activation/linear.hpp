@@ -13,6 +13,12 @@ namespace snn
             // do nothing, placeholder activation
         }
 
+        template<size_t Size>
+        inline void activate(SIMDVectorLite<Size>& vec)
+        {
+            // do nothing, placeholder activation
+        }
+
         inline void inverse(SIMDVector& vec)
         {
             // do nothing, placeholder activation

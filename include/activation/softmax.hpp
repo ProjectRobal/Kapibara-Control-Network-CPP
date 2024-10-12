@@ -20,6 +20,16 @@ namespace snn
             vec = v / sum;
         }
 
+        template<size_t Size>
+        inline void activate(SIMDVectorLite<Size>& vec)
+        {
+            SIMDVectorLite<Size> v=exp(vec);
+
+            number sum = v.reduce();
+
+            vec = v / sum;
+        }
+
         inline void inverse(SIMDVector& vec)
         {
             

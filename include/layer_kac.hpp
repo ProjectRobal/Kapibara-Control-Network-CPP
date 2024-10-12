@@ -14,6 +14,7 @@
 #include "layer_proto.hpp"
 
 #include "simd_vector.hpp"
+#include "simd_vector_lite.hpp"
 
 #include "config.hpp"
 
@@ -33,32 +34,20 @@ namespace snn
 {
     #define STATICLAYERID 1
 
-    template<size_t inputSize,size_t Populus>
-    class LayerKAC : public LayerProto
+    template<size_t inputSize,size_t N,size_t Populus>
+    class LayerKAC 
     { 
         std::vector<BlockKAC<inputSize,Populus>> blocks;
         std::shared_ptr<Activation> activation_func;
 
         std::uniform_real_distribution<double> uniform;
-
-        size_t id;
         
         public:
 
-        LayerKAC(size_t id)
-        : id(id)
+        LayerKAC()
         {
             this->activation_func=std::make_shared<Linear>();
         }
-
-        LayerKAC(size_t N,size_t id)
-        : LayerKAC(id)
-        {
-            std::string layer_folder = "layer_"+std::to_string(id);
-            std::filesystem::create_directories(layer_folder);
-            this->setup(N);
-        }
-
 
         void setActivationFunction(std::shared_ptr<Activation> active)
         {
@@ -66,7 +55,7 @@ namespace snn
         }
 
 
-        void setup(size_t N)
+        void setup()
         {
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
             this->activation_func=std::make_shared<Linear>();
@@ -76,7 +65,7 @@ namespace snn
 
             for(size_t i=0;i<N;++i)
             {
-                this->blocks.push_back(BlockKAC<inputSize,Populus>(i,this->id));
+                this->blocks.push_back(BlockKAC<inputSize,Populus>());
                 this->blocks.back().setup();
                 // this->blocks.back().chooseWorkers();
             }
@@ -106,15 +95,17 @@ namespace snn
             }   
         }
 
-        SIMDVector fire(const SIMDVector& input)
+        SIMDVectorLite<N> fire(const SIMDVectorLite<inputSize>& input)
         {
-            SIMDVector output;
+            SIMDVectorLite<N> output;
             //output.reserve(this->blocks[0].outputSize());
+
+            size_t i=0;
 
             for(auto& block : this->blocks)
             {
                 
-                output.append(block.fire(input));
+                output.set(i++,block.fire(input));
 
             }
 

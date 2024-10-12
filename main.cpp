@@ -39,9 +39,8 @@
 
 #include "layer_st.hpp"
 #include "layer.hpp"
-#include "layer_sssm.hpp"
-#include "layer_segmented.hpp"
-#include "layer_sssm_evo.hpp"
+// #include "layer_sssm.hpp"
+// #include "layer_sssm_evo.hpp"
 
 #include "fastkac.hpp"
 
@@ -56,6 +55,8 @@
 #include "serializaers/network_serialize.hpp"
 
 #include "sub_block.hpp"
+
+#include "simd_vector_lite.hpp"
 
 /*
 
@@ -126,6 +127,24 @@ void send_fifo(const snn::SIMDVector& to_send)
     fifo.close();
 }
 
+template<size_t Size>
+void send_fifo(const snn::SIMDVectorLite<Size>& to_send)
+{
+    std::fstream fifo;
+
+    fifo.open("fifo",std::ios::out);
+
+    if(!fifo.good())
+    {
+        std::cerr<<"Cannot open fifo for writing"<<std::endl;
+        return;
+    }
+
+    fifo<<to_send[0]<<";"<<to_send[1]<<std::endl;
+
+    fifo.close();
+}
+
 snn::SIMDVector read_fifo()
 {
     std::fstream fifo;
@@ -157,6 +176,40 @@ snn::SIMDVector read_fifo()
 
 }
 
+snn::SIMDVectorLite<5> read_fifo_static()
+{
+    std::fstream fifo;
+
+    fifo.open("fifo_in",std::ios::in);
+
+    if(!fifo.good())
+    {
+        std::cerr<<"Cannot open fifo for reading"<<std::endl;
+        return snn::SIMDVectorLite<5>();
+    }
+
+    snn::SIMDVectorLite<5> output;
+
+    std::string line;
+
+    std::getline(fifo,line);
+
+    std::stringstream line_read(line);
+
+    std::string num;
+
+    size_t i=0;
+
+    while(std::getline(line_read,num,';'))
+    {
+        output.set(std::stof(num,NULL),i);
+        i++;
+    }
+
+    return output;
+
+}
+
 template<>
 size_t snn::SubBlock<20,5>::SubBLockId = 0;
 
@@ -173,15 +226,15 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first= std::make_shared<snn::LayerKAC<4,20>>(1024,0);
-    auto second= std::make_shared<snn::LayerKAC<1024,20>>(1024,1);
-    // auto third= std::make_shared<snn::LayerKAC<512,20>>(256);
-    auto forth= std::make_shared<snn::LayerKAC<1024,20>>(2,2);
+    auto first = snn::LayerKAC<4,1024,20>();
+    auto second= snn::LayerKAC<1024,256,20>();
+    // // auto third=snn::LayerKAC<512,256,20>();
+    auto forth= snn::LayerKAC<256,2,20>();
 
-    first->setActivationFunction(std::make_shared<snn::ReLu>());
-    second->setActivationFunction(std::make_shared<snn::ReLu>());
-    // third->setActivationFunction(std::make_shared<snn::ReLu>());
-    forth->setActivationFunction(std::make_shared<snn::Linear>());
+    first.setActivationFunction(std::make_shared<snn::ReLu>());
+    second.setActivationFunction(std::make_shared<snn::ReLu>());
+    // // third->setActivationFunction(std::make_shared<snn::ReLu>());
+    forth.setActivationFunction(std::make_shared<snn::Linear>());
 
     // auto ssm = std::make_shared<snn::LayerSSSM<inputSize>>(256,hu);
 
@@ -190,13 +243,13 @@ int main(int argc,char** argv)
 
     //layer3->setActivationFunction(relu);
 
-    std::shared_ptr<snn::Network> network = std::make_shared<snn::Network>();
+    // std::shared_ptr<snn::Network> network = std::make_shared<snn::Network>();
 
-    // network->addLayer(ssm);
-    network->addLayer(first);
-    network->addLayer(second);
-    //network->addLayer(third);
-    network->addLayer(forth);
+    // // network->addLayer(ssm);
+    // network->addLayer(first);
+    // network->addLayer(second);
+    // //network->addLayer(third);
+    // network->addLayer(forth);
     // std::cout<<input<<std::endl;
 
     // std::cout<<std::endl;
@@ -209,6 +262,25 @@ int main(int argc,char** argv)
 
     // return 0;
 
+    snn::SIMDVectorLite<36> test_simd1(1);
+
+    snn::SIMDVectorLite<36> test_simd2(2);
+
+    std::cout<<test_simd1<<std::endl;
+
+    std::cout<<test_simd2<<std::endl;
+
+    std::cout<<std::endl;
+
+    std::cout<<(test_simd1+test_simd2).reduce()<<std::endl;
+    std::cout<<test_simd1-test_simd2<<std::endl;
+    std::cout<<test_simd1*test_simd2<<std::endl;
+    std::cout<<test_simd1/test_simd2<<std::endl;
+
+    char x;
+    std::cin>>x;
+
+    return 0;
     end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed_initialization_seconds = end - start;
@@ -223,7 +295,7 @@ int main(int argc,char** argv)
     while(true)
     {
 
-        snn::SIMDVector cart_input = read_fifo();
+        snn::SIMDVectorLite<5> cart_input = read_fifo_static();
 
         if( cart_input[5] > 0.5f)
         {
@@ -235,20 +307,20 @@ int main(int argc,char** argv)
                 std::cout<<"New best reward: "<<best_reward<<std::endl;
             }
 
-            network->applyReward(cart_input[4]);
+            // network->applyReward(cart_input[4]);
 
         }
 
         // I have to speed up it just a bit 
-        network->applyReward(cart_input[4]);
+        // network->applyReward(cart_input[4]);
 
         //std::cout<<"From CartPole: "<<cart_input<<std::endl;
 
-        snn::SIMDVector output = network->fire(cart_input);
+        //snn::SIMDVector output = network->fire(cart_input);
 
         //std::cout<<"To CartPole: "<<output<<std::endl;
 
-        send_fifo(output);
+        //send_fifo(output);
 
     }
 

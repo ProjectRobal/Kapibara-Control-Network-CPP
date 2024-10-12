@@ -9,6 +9,7 @@
 #include <fstream>
 
 #include "simd_vector.hpp"
+#include "simd_vector_lite.hpp"
 
 #include "neuron.hpp"
 #include "initializer.hpp"

@@ -18,6 +18,12 @@ namespace snn
             
         }
 
+        template<size_t Size>
+        inline void activate(SIMDVectorLite<Size>& vec)
+        {
+            vec=vec/(abs(vec)+1);   
+        }
+
         // add boundary check
         inline void inverse(SIMDVector& vec)
         {

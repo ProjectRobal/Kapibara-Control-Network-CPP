@@ -1,6 +1,7 @@
 #pragma once
 
 #include "simd_vector.hpp"
+#include "simd_vector_lite.hpp"
 
 namespace snn
 {

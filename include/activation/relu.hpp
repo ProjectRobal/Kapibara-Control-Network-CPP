@@ -15,6 +15,14 @@ namespace snn
             vec=vec*filtered;
         }
 
+        template<size_t Size>
+        inline void activate(SIMDVectorLite<Size>& vec)
+        {
+            SIMDVectorLite<Size> filtered=vec>0;
+
+            vec=vec*filtered;
+        }
+
         inline void inverse(SIMDVector& vec)
         {
             // clear values that are less than zero

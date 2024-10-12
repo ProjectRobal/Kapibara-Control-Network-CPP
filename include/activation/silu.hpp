@@ -18,6 +18,14 @@ namespace snn
             vec=(v/(v+1))*vec;
         }
 
+        template<size_t Size>
+        inline void activate(SIMDVectorLite<Size>& vec)
+        {
+            SIMDVectorLite<Size> v=exp(vec);
+
+            vec=(v/(v+1))*vec;
+        }
+
         inline void inverse(SIMDVector& vec)
         {
             

@@ -9,6 +9,8 @@
 
 
 #include "simd_vector.hpp"
+#include "simd_vector_lite.hpp"
+
 #include "neuron.hpp"
 #include "initializer.hpp"
 #include "crossover.hpp"
@@ -30,10 +32,7 @@ namespace snn
             It will store each genome with a counter which indicate how many times entity was tested.
         */
 
-        SIMDVector worker;
-        number bias;
-
-        std::string block_name;
+        SIMDVectorLite<inputSize> worker;
 
         std::mt19937 gen; 
 
@@ -63,11 +62,9 @@ namespace snn
         // now since each sub block gets the same reward we will just them a pointer to it.
         long double reward;
 
-        size_t id;
-
         public:
 
-        BlockKAC(size_t id,size_t layer_id)
+        BlockKAC()
         {
             this->reward = 0.f;
 
@@ -75,16 +72,12 @@ namespace snn
 
             this->gen = std::mt19937(rd());
 
-            this->id = id;
-
-            this->block_name = "layer_"+std::to_string(layer_id)+"/block_"+std::to_string(id)+".kac";
-
             this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
 
             number std = std::sqrt(2.f/inputSize);
             this->global = std::normal_distribution<number>(0.f,std);  
 
-            this->worker = SIMDVector(0,inputSize);
+            this->worker = SIMDVectorLite<inputSize>(0);
 
         }
 
@@ -103,7 +96,7 @@ namespace snn
                     w.weight = this->global(this->gen);
                 }
 
-                this->worker.set(block.weights[id].weight,i);
+                this->worker.set(i,block.weights[block.id].weight);
 
                 ++i;
             }
@@ -126,23 +119,18 @@ namespace snn
             //     ++i;
             // }   
 
+
+            
+
         }
 
 
-        void giveReward(long double reward)
+        void giveReward(long double reward) 
         {          
-            // this->biases.giveReward(reward);
-
-            // this takes a lot
-            // for(auto& subpopulation : this->population)
-            // {
-            //     // subpopulation.giveReward(reward);
-            //     std::cout.setstate(std::ios_base::failbit);
-            // }
-            // std::cout.clear();
+            this->reward += reward;
         }
 
-        number fire(SIMDVector input)
+        number fire(SIMDVectorLite<inputSize> input)
         {
             return ( this->worker*input ).reduce();// + this->bias;
         }       
