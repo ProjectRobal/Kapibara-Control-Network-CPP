@@ -19,6 +19,17 @@
 
 namespace snn
 {
+    class BlockCounter
+    {
+        public:
+
+        static size_t BlockID;
+
+        BlockCounter()
+        {
+            this->BlockID++;
+        }
+    };
 
     template<size_t inputSize,size_t Populus>
     class BlockKAC
@@ -52,6 +63,7 @@ namespace snn
             weight_t weights[Populus];
             long double best_weight_buffer;
             uint16_t collected_b_weight;
+            long double worse_reward;
 
         } block_t;
 
@@ -61,6 +73,8 @@ namespace snn
         long double reward;
 
         public:
+
+        size_t Id;
 
         BlockKAC()
         {
@@ -77,11 +91,19 @@ namespace snn
 
             this->worker = SIMDVectorLite<inputSize>(0);
 
+            this->Id = BlockCounter::BlockID;
+
+            std::cout<<this->Id<<std::endl;
+
+            BlockCounter::BlockID++;
+
         }
 
         void setup()
         {
             // create file if not exits
+
+            std::cout<<this->Id<<std::endl;
 
             size_t i=0;
 
@@ -91,6 +113,7 @@ namespace snn
                 block.swap_count = 0;
                 block.best_weight_buffer = 0;
                 block.collected_b_weight = 0;
+                block.worse_reward = 0;
 
                 for( weight_t& w : block.weights )
                 {
@@ -107,6 +130,21 @@ namespace snn
  
         }
 
+        number give_new_weight(block_t& victim)
+        {
+            if( victim.collected_b_weight > 0 )
+            {
+                if( this->uniform(this->gen) >= 0.1f )
+                {
+                    return victim.best_weight_buffer / static_cast<number>(victim.collected_b_weight);
+                }
+
+                return (victim.best_weight_buffer / static_cast<number>(victim.collected_b_weight)) + this->global(this->gen);
+            }
+
+            return this->global(this->gen);
+        }
+
         void selection(block_t& victim)
         {
             victim.id = 0;
@@ -115,26 +153,44 @@ namespace snn
                 return ((weight_t*)b)->reward - ((weight_t*)a)->reward;
             });
 
-            for(size_t i=Populus/2;i<Populus;++i)
+            if( this->Id == 100 )
             {
-                victim.weights[i].weight = this->global(this->gen);
+                std::cout<<"Sorted: "<<std::endl;
+                std::cout<<"first: "<<victim.weights[0].reward<<" last: "<<victim.weights[Populus-1].reward<<std::endl;
+            }
+
+            float prob = 0.5f / Populus;
+
+            for(size_t i=0;i<Populus;++i)
+            {
+                if( prob*(i+1) > this->uniform(this->gen) )
+                {
+                    victim.weights[i].weight = this->give_new_weight(victim);
+                }
+
                 victim.weights[i].reward = 0.f;
             }
 
-            for(size_t i=0;i<Populus/2;++i)
-            {
-                victim.weights[i].reward = 0.f;
-            }
+            victim.worse_reward = 0.f;
         }
 
         void chooseWorkers()
         {
+            if(this->Id==100)
+            {
+                std::cout<<"Choose workers"<<std::endl;
+            }
             size_t iter=0;
             for(block_t& _block : this->block)
             {
                 weight_t& w = _block.weights[_block.id];
 
-                w.reward = w.reward + 0.5*this->reward;
+                w.reward = this->reward + 0.5*w.reward;
+
+                if( w.reward < _block.worse_reward )
+                {
+                    _block.worse_reward = w.reward;
+                }
 
                 float switch_probability = 0.01;
 
@@ -144,20 +200,40 @@ namespace snn
                 }
                 else
                 {
+                    if(this->Id == 100)
+                    {
+                        std::cout<<"New best weight found! "<<std::endl;
+                    }
                     _block.best_weight_buffer += w.weight;
                     _block.collected_b_weight ++ ;
+
+                    if( _block.collected_b_weight > Populus )
+                    {
+                        _block.best_weight_buffer = _block.best_weight_buffer / static_cast<number>(_block.collected_b_weight);
+
+                        _block.collected_b_weight = 1;
+                    }
                 }
 
                 if( this->uniform(this->gen) < switch_probability )
                 {
+                    if(this->Id==100)
+                    {
+                        std::cout<<"Swap occured!"<<std::endl;
+                        std::cout<<"Swap count: "<<_block.swap_count+1<<std::endl;
+                    }
                     _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
 
                     this->worker[iter] = _block.weights[_block.id].weight;
 
                     _block.swap_count++;
 
-                    if( _block.swap_count >= Populus )
+                    if( _block.swap_count >= Populus*2 )
                     {
+                        if(this->Id==100)
+                        {
+                            std::cout<<"Selection started!"<<std::endl;
+                        }
                         this->selection(_block);
                         _block.swap_count = 0;
                     }

@@ -186,6 +186,10 @@ snn::SIMDVectorLite<6> read_fifo_static()
 
 }
 
+#include "block_kac.hpp"
+
+size_t snn::BlockCounter::BlockID = 0;
+
 int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
@@ -259,16 +263,15 @@ int main(int argc,char** argv)
 
         //snn::SIMDVector output = network->fire(cart_input);
 
-        std::cout<<"From CartPole: "<<input<<std::endl;
+
+        // std::cout<<"From CartPole: "<<input<<std::endl;
 
         snn::SIMDVectorLite output1 = first->fire(input);
         snn::SIMDVectorLite output2 = second->fire(output1);
 
         snn::SIMDVectorLite output3 = forth->fire(output2);
 
-        std::cout<<"To CartPole: "<<output3<<std::endl;
-
-        std::cout<<std::endl;
+        // std::cout<<"To CartPole: "<<output3<<std::endl;
 
         send_fifo(output3);
 
