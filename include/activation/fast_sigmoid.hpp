@@ -6,12 +6,12 @@
 
 namespace snn
 {
-    class FastSigmoid : public Activation
+    class FastSigmoid
     {
         
         public:
 
-        inline void activate(SIMDVector& vec)
+        static inline void activate(SIMDVector& vec)
         {
 
             vec=vec/(abs(vec)+1);
@@ -19,13 +19,13 @@ namespace snn
         }
 
         template<size_t Size>
-        inline void activate(SIMDVectorLite<Size>& vec)
+        static inline void activate(SIMDVectorLite<Size>& vec)
         {
             vec=vec/(abs(vec)+1);   
         }
 
         // add boundary check
-        inline void inverse(SIMDVector& vec)
+        static inline void inverse(SIMDVector& vec)
         {
             
             vec=(vec/(vec+1))+(vec/(-vec+1));

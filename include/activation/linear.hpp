@@ -4,22 +4,22 @@
 
 namespace snn
 {
-    class Linear : public Activation
+    class Linear
     {
         public:
 
-        inline void activate(SIMDVector& vec)
+        static inline void activate(SIMDVector& vec)
         {
             // do nothing, placeholder activation
         }
 
         template<size_t Size>
-        inline void activate(SIMDVectorLite<Size>& vec)
+        static inline void activate(SIMDVectorLite<Size>& vec)
         {
             // do nothing, placeholder activation
         }
 
-        inline void inverse(SIMDVector& vec)
+        static inline void inverse(SIMDVector& vec)
         {
             // do nothing, placeholder activation
         }

@@ -6,21 +6,16 @@
 #include <memory>
 #include <random>
 #include <fstream>
-
+#include <algorithm>
 
 #include "simd_vector.hpp"
 #include "simd_vector_lite.hpp"
 
-#include "neuron.hpp"
 #include "initializer.hpp"
-#include "crossover.hpp"
-#include "mutation.hpp"
 
 #include "config.hpp"
 
 #include "misc.hpp"
-
-#include "sub_block.hpp"
 
 namespace snn
 {
@@ -46,14 +41,17 @@ namespace snn
         {
             long double weight;
             long double reward;
+            
         } weight_t;
  
         // there will be inputsize amount of block
         typedef struct block
         {
             uint32_t id;
-
+            uint16_t swap_count;
             weight_t weights[Populus];
+            long double best_weight_buffer;
+            uint16_t collected_b_weight;
 
         } block_t;
 
@@ -90,10 +88,14 @@ namespace snn
             for(block_t& block : this->block)
             {
                 block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-1)));
+                block.swap_count = 0;
+                block.best_weight_buffer = 0;
+                block.collected_b_weight = 0;
 
                 for( weight_t& w : block.weights )
                 {
                     w.weight = this->global(this->gen);
+                    w.reward = 0.f;
                 }
 
                 // this->worker.set(i,block.weights[block.id].weight);
@@ -102,7 +104,27 @@ namespace snn
 
                 ++i;
             }
+ 
+        }
 
+        void selection(block_t& victim)
+        {
+            victim.id = 0;
+
+            qsort(victim.weights,Populus,sizeof(weight_t),[](const void* a,const void* b)->int{
+                return ((weight_t*)b)->reward - ((weight_t*)a)->reward;
+            });
+
+            for(size_t i=Populus/2;i<Populus;++i)
+            {
+                victim.weights[i].weight = this->global(this->gen);
+                victim.weights[i].reward = 0.f;
+            }
+
+            for(size_t i=0;i<Populus/2;++i)
+            {
+                victim.weights[i].reward = 0.f;
+            }
         }
 
         void chooseWorkers()
@@ -120,12 +142,25 @@ namespace snn
                 {
                     switch_probability = std::min<float>(-0.001f*w.reward,0.5f);
                 }
+                else
+                {
+                    _block.best_weight_buffer += w.weight;
+                    _block.collected_b_weight ++ ;
+                }
 
                 if( this->uniform(this->gen) < switch_probability )
                 {
                     _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
 
                     this->worker[iter] = _block.weights[_block.id].weight;
+
+                    _block.swap_count++;
+
+                    if( _block.swap_count >= Populus )
+                    {
+                        this->selection(_block);
+                        _block.swap_count = 0;
+                    }
                 }
 
                 iter++;

@@ -10,17 +10,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "parallel.hpp"
 
 #include "config.hpp"
 
 #include "simd_vector.hpp"
 
-#include "neurons/forwardneuron.hpp"
-
-#include "crossovers/onepoint.hpp"
-#include "crossovers/fastuniform.hpp"
-#include "crossovers/fastonepoint.hpp"
+#include "layer_kac.hpp"
  
 #include "initializers/gauss.hpp"
 #include "initializers/normalized_gauss.hpp"
@@ -28,33 +23,13 @@
 #include "initializers/uniform.hpp"
 #include "initializers/hu.hpp"
 
-#include "mutatiom/gauss_mutation.hpp"
-
-#include "parallel.hpp"
-
-#include "block.hpp"
-#include "layer.hpp"
-
-#include "layer_kac.hpp"
-
-#include "layer_st.hpp"
-#include "layer.hpp"
 // #include "layer_sssm.hpp"
 // #include "layer_sssm_evo.hpp"
-
-#include "fastkac.hpp"
 
 #include "activation/sigmoid.hpp"
 #include "activation/relu.hpp"
 #include "activation/softmax.hpp"
 
-#include "shared_mem.hpp"
-
-#include "network.hpp"
-
-#include "serializaers/network_serialize.hpp"
-
-#include "sub_block.hpp"
 
 #include "simd_vector_lite.hpp"
 
@@ -211,10 +186,6 @@ snn::SIMDVectorLite<6> read_fifo_static()
 
 }
 
-template<>
-size_t snn::SubBlock<20,5>::SubBLockId = 0;
-
-
 int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
@@ -227,55 +198,14 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first = snn::LayerKAC<4,1024,20>();
-    auto second= snn::LayerKAC<1024,256,20>();
+    auto *first = new snn::LayerKAC<4,64,40,snn::ReLu>();
+    auto *second= new snn::LayerKAC<64,32,40,snn::ReLu>();
     // // auto third=snn::LayerKAC<512,256,20>();
-    auto forth= snn::LayerKAC<256,2,20>();
+    auto *forth= new snn::LayerKAC<32,2,40>();
 
-    first.setup();
-    second.setup();
-    forth.setup();
-
-    first.setActivationFunction(std::make_shared<snn::Linear>());
-    second.setActivationFunction(std::make_shared<snn::Linear>());
-    // // third->setActivationFunction(std::make_shared<snn::ReLu>());
-    forth.setActivationFunction(std::make_shared<snn::Linear>());
-
-    // auto ssm = std::make_shared<snn::LayerSSSM<inputSize>>(256,hu);
-
-    // ssm->setActivationFunction(std::make_shared<snn::Linear>());
-    
-
-    //layer3->setActivationFunction(relu);
-
-    // std::shared_ptr<snn::Network> network = std::make_shared<snn::Network>();
-
-    // // network->addLayer(ssm);
-    // network->addLayer(first);
-    // network->addLayer(second);
-    // //network->addLayer(third);
-    // network->addLayer(forth);
-    // std::cout<<input<<std::endl;
-
-    // std::cout<<std::endl;
-
-    // input = snn::pexp(input);
-
-    // std::cout<<input<<std::endl;
-
-    // std::cout<<snn::pexp(0)<<std::endl;
-
-    // snn::SIMDVectorLite<36> simd1;
-    // snn::SIMDVectorLite<36> simd2;
-
-    // std::cout<<(simd1*simd2).reduce()<<std::endl;
-
-    // // return 0;
-
-    // char x;
-    // std::cin>>x;
-
-    // return 0;
+    first->setup();
+    second->setup();
+    forth->setup();
 
     end = std::chrono::system_clock::now();
 
@@ -304,13 +234,13 @@ int main(int argc,char** argv)
             }
 
             // network->applyReward(cart_input[4]);
-            first.applyReward(cart_input[4]);
-            second.applyReward(cart_input[4]);
-            forth.applyReward(cart_input[4]);
+            first->applyReward(cart_input[4]);
+            second->applyReward(cart_input[4]);
+            forth->applyReward(cart_input[4]);
 
-            first.shuttle();
-            second.shuttle();
-            forth.shuttle();
+            first->shuttle();
+            second->shuttle();
+            forth->shuttle();
 
         }
 
@@ -331,10 +261,10 @@ int main(int argc,char** argv)
 
         std::cout<<"From CartPole: "<<input<<std::endl;
 
-        snn::SIMDVectorLite output1 = first.fire(input);
-        snn::SIMDVectorLite output2 = second.fire(output1);
+        snn::SIMDVectorLite output1 = first->fire(input);
+        snn::SIMDVectorLite output2 = second->fire(output1);
 
-        snn::SIMDVectorLite output3 = forth.fire(output2);
+        snn::SIMDVectorLite output3 = forth->fire(output2);
 
         std::cout<<"To CartPole: "<<output3<<std::endl;
 

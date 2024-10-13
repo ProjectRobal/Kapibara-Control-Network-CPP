@@ -1,6 +1,4 @@
 #include "simd_vector.hpp"
-#include "parallel.hpp"
-
 
 namespace snn
 {

@@ -4,11 +4,11 @@
 
 namespace snn
 {
-    class ReLu : public Activation
+    class ReLu
     {
         public:
 
-        inline void activate(SIMDVector& vec)
+        static inline void activate(SIMDVector& vec)
         {
             SIMDVector filtered=vec>0;
 
@@ -16,14 +16,14 @@ namespace snn
         }
 
         template<size_t Size>
-        inline void activate(SIMDVectorLite<Size>& vec)
+        static inline void activate(SIMDVectorLite<Size>& vec)
         {
             SIMDVectorLite<Size> filtered=vec>0;
 
             vec=vec*filtered;
         }
 
-        inline void inverse(SIMDVector& vec)
+        static inline void inverse(SIMDVector& vec)
         {
             // clear values that are less than zero
             SIMDVector filtered=vec>0;

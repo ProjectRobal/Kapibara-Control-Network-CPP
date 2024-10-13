@@ -6,12 +6,12 @@
 
 namespace snn
 {
-    class SiLu : public Activation
+    class SiLu
     {
         
         public:
 
-        inline void activate(SIMDVector& vec)
+        static inline void activate(SIMDVector& vec)
         {
             SIMDVector v=exp(vec);
 
@@ -19,14 +19,14 @@ namespace snn
         }
 
         template<size_t Size>
-        inline void activate(SIMDVectorLite<Size>& vec)
+        static inline void activate(SIMDVectorLite<Size>& vec)
         {
             SIMDVectorLite<Size> v=exp(vec);
 
             vec=(v/(v+1))*vec;
         }
 
-        inline void inverse(SIMDVector& vec)
+        static inline void inverse(SIMDVector& vec)
         {
             
             

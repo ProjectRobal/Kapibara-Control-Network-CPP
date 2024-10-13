@@ -6,12 +6,12 @@
 
 namespace snn
 {
-    class SoftMax : public Activation
+    class SoftMax
     {
         
         public:
 
-        inline void activate(SIMDVector& vec)
+        static inline void activate(SIMDVector& vec)
         {
             SIMDVector v=exp(vec);
 
@@ -21,7 +21,7 @@ namespace snn
         }
 
         template<size_t Size>
-        inline void activate(SIMDVectorLite<Size>& vec)
+        static inline void activate(SIMDVectorLite<Size>& vec)
         {
             SIMDVectorLite<Size> v=exp(vec);
 
@@ -30,7 +30,7 @@ namespace snn
             vec = v / sum;
         }
 
-        inline void inverse(SIMDVector& vec)
+        static inline void inverse(SIMDVector& vec)
         {
             
             

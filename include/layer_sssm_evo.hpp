@@ -8,15 +8,11 @@
 
 #include <array>
 
-#include "block.hpp"
-#include "neuron.hpp"
 #include "initializer.hpp"
-#include "mutation.hpp"
 #include "crossover.hpp"
 
 #include "layer_proto.hpp"
 
-#include "layer_st.hpp"
 #include "layer_kac.hpp"
 
 #include "simd_vector.hpp"
@@ -46,7 +42,7 @@ namespace snn
     #define LAYERSSSM 2
 
     template<size_t InputSize,size_t N,size_t Populus,size_t deltaRank = static_cast<size_t>(ceil(InputSize/16.f))>
-    class LayerSSSMEVO : public LayerProto
+    class LayerSSSMEVO
     {
 
         std::shared_ptr<Initializer> init;

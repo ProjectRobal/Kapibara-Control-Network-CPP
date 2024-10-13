@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include "parallel.hpp"
 
 #include "config.hpp"
 

@@ -6,12 +6,7 @@
 #include <algorithm>
 
 #include "block_kac.hpp"
-#include "neuron.hpp"
 #include "initializer.hpp"
-#include "mutation.hpp"
-#include "crossover.hpp"
-
-#include "layer_proto.hpp"
 
 #include "simd_vector.hpp"
 #include "simd_vector_lite.hpp"
@@ -25,6 +20,8 @@
 
 #include <filesystem>
 
+#include "nlohmann/json.hpp"
+
 /*
 
  A layer that use evolutionary algorithm for learing called CoSyne.
@@ -34,11 +31,10 @@ namespace snn
 {
     #define STATICLAYERID 1
 
-    template<size_t inputSize,size_t N,size_t Populus>
+    template<size_t inputSize,size_t N,size_t Populus,class Activation = Linear>
     class LayerKAC 
     { 
         BlockKAC<inputSize,Populus>* blocks;
-        std::shared_ptr<Activation> activation_func;
 
         std::uniform_real_distribution<double> uniform;
         
@@ -47,8 +43,6 @@ namespace snn
         LayerKAC()
         {
             this->blocks = new BlockKAC<inputSize,Populus>[N];
-
-            this->activation_func=std::make_shared<Linear>();
         }
 
         void setActivationFunction(std::shared_ptr<Activation> active)
@@ -60,7 +54,6 @@ namespace snn
         void setup()
         {
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
-            this->activation_func=std::make_shared<Linear>();
 
             for(size_t i=0;i<N;++i)
             {
@@ -106,7 +99,7 @@ namespace snn
 
             }
 
-            this->activation_func->activate(output);
+            Activation::activate(output);
 
             return output;
         }
