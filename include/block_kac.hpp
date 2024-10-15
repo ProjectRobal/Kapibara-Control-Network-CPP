@@ -187,9 +187,9 @@ namespace snn
 
                 w.reward = this->reward + 0.5*w.reward;
 
-                if( w.reward < _block.worse_reward )
+                if( this->reward >=0 )
                 {
-                    _block.worse_reward = w.reward;
+                    w.reward = this->reward;
                 }
 
                 float switch_probability = 0.01;
@@ -242,6 +242,8 @@ namespace snn
                 iter++;
 
             }
+
+            this->reward = 0;
         }
 
 
