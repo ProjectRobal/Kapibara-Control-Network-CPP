@@ -71,6 +71,7 @@ namespace snn
 
         // now since each sub block gets the same reward we will just them a pointer to it.
         long double reward;
+        long double last_reward;
 
         public:
 
@@ -79,6 +80,8 @@ namespace snn
         BlockKAC()
         {
             this->reward = 0.f;
+
+            this->last_reward = 0.f;
 
             std::random_device rd;
 
@@ -153,7 +156,7 @@ namespace snn
                 return ((weight_t*)b)->reward - ((weight_t*)a)->reward;
             });
 
-            if( this->Id == 100 )
+            if( this->Id == 1 )
             {
                 std::cout<<"Sorted: "<<std::endl;
                 std::cout<<"first: "<<victim.weights[0].reward<<" last: "<<victim.weights[Populus-1].reward<<std::endl;
@@ -176,7 +179,7 @@ namespace snn
 
         void chooseWorkers()
         {
-            if(this->Id==100)
+            if(this->Id==1)
             {
                 std::cout<<"Choose workers"<<std::endl;
             }
@@ -185,7 +188,7 @@ namespace snn
             {
                 weight_t& w = _block.weights[_block.id];
 
-                w.reward = this->reward + 0.5*w.reward;
+                w.reward = this->reward + 0.1*w.reward + 0*(this->reward - w.reward);
 
                 if( this->reward >=0 )
                 {
@@ -196,11 +199,11 @@ namespace snn
 
                 if( w.reward < 0 )
                 {
-                    switch_probability = std::min<float>(-0.001f*w.reward,0.5f);
+                    switch_probability = std::min<float>(REWARD_TO_SWITCH_PROBABILITY*this->reward,0.25f);
                 }
                 else
                 {
-                    if(this->Id == 100)
+                    if(this->Id == 1)
                     {
                         std::cout<<"New best weight found! "<<std::endl;
                     }
@@ -217,10 +220,11 @@ namespace snn
 
                 if( this->uniform(this->gen) < switch_probability )
                 {
-                    if(this->Id==100)
+                    if(this->Id==1)
                     {
                         std::cout<<"Swap occured!"<<std::endl;
                         std::cout<<"Swap count: "<<_block.swap_count+1<<std::endl;
+                        std::cout<<"with probability "<<switch_probability<<std::endl;
                     }
                     _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
 
@@ -230,7 +234,7 @@ namespace snn
 
                     if( _block.swap_count >= Populus*2 )
                     {
-                        if(this->Id==100)
+                        if(this->Id==1)
                         {
                             std::cout<<"Selection started!"<<std::endl;
                         }
@@ -249,7 +253,9 @@ namespace snn
 
         void giveReward(long double reward) 
         {          
-            this->reward += reward;
+            this->reward += ( reward + REWARD_DIFFERENCE_GAIN*(reward - this->last_reward) );
+
+            this->last_reward = reward;
         }
 
         number fire(const SIMDVectorLite<inputSize>& input)
@@ -259,14 +265,22 @@ namespace snn
         }       
 
 
-        void dump(std::ofstream& out) const
+        void dump(std::ostream& out) const
         {
-            
+            for(size_t i=0;i<inputSize;++i)
+            {
+                out.write((char*)&this->block[i],sizeof(block_t));
+            }
         }
 
-        void load(std::ifstream& in)
+        void load(std::istream& in)
         {
-            
+            for(size_t i=0;i<inputSize;++i)
+            {
+                in.read((char*)&this->block[i],sizeof(block_t));
+
+                this->worker[i] = this->block[i].weights[this->block[i].id].weight;
+            }   
         }
         
     };

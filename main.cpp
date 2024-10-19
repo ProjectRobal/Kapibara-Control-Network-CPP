@@ -33,6 +33,8 @@
 
 #include "simd_vector_lite.hpp"
 
+#include "layer_counter.hpp"
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -190,6 +192,8 @@ snn::SIMDVectorLite<6> read_fifo_static()
 
 size_t snn::BlockCounter::BlockID = 0;
 
+size_t snn::LayerCounter::LayerIDCounter = 0;
+
 int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
@@ -207,9 +211,33 @@ int main(int argc,char** argv)
     // // auto third=snn::LayerKAC<512,256,20>();
     auto *forth= new snn::LayerKAC<32,2,40>();
 
-    first->setup();
-    second->setup();
-    forth->setup();
+    if( first->load() == 0)
+    {
+        std::cout<<"Loaded first network"<<std::endl;
+    }
+    else
+    {
+        first->setup();
+    }
+
+    if( second->load() == 0)
+    {
+        std::cout<<"Loaded second network"<<std::endl;
+    }
+    else
+    {
+        second->setup();
+    }
+ 
+    if( forth->load() == 0)
+    {
+        std::cout<<"Loaded forth network"<<std::endl;
+    }
+    else
+    {
+        forth->setup();
+    }
+
 
     end = std::chrono::system_clock::now();
 
@@ -230,11 +258,17 @@ int main(int argc,char** argv)
         if( cart_input[5] > 0.5f)
         {
 
-            if( cart_input[4] > best_reward )
+            if(( cart_input[4] > best_reward ) || cart_input[4] >= 0 )
             {
                 best_reward = cart_input[4];
 
                 std::cout<<"New best reward: "<<best_reward<<std::endl;
+
+                first->save();
+
+                second->save();
+
+                forth->save();
             }
 
             // network->applyReward(cart_input[4]);
