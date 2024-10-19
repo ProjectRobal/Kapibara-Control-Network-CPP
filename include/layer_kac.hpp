@@ -17,6 +17,8 @@
 #include "activation.hpp"
 #include "activation/linear.hpp"
 
+#include "layer.hpp"
+
 #include "layer_utils.hpp"
 
 #include <filesystem>
@@ -27,17 +29,17 @@
 
 /*
 
+
  A layer that use evolutionary algorithm for learing called CoSyne.
 
 */
 namespace snn
-{
-    #define STATICLAYERID 1
-
-
+{    
     template<size_t inputSize,size_t N,size_t Populus,class Activation = Linear>
-    class LayerKAC 
+    class LayerKAC : public Layer
     { 
+        const uint32_t LAYER_KAC_ID = 2148;
+
         BlockKAC<inputSize,Populus>* blocks;
 
         std::uniform_real_distribution<double> uniform;
@@ -46,6 +48,7 @@ namespace snn
 
         struct metadata
         {
+            uint32_t id;
             size_t input_size;
             size_t node_size;
             size_t population_size;
@@ -61,12 +64,6 @@ namespace snn
 
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
         }
-
-        void setActivationFunction(std::shared_ptr<Activation> active)
-        {
-            this->activation_func=active;
-        }
-
 
         void setup()
         {
@@ -88,10 +85,6 @@ namespace snn
             {
                 this->blocks[i].giveReward(reward);
             }
-        }
-
-        size_t neuron_count(){
-            return 0;
         }
 
         void shuttle()
@@ -120,18 +113,6 @@ namespace snn
             return output;
         }
 
-
-        size_t getTypeID()
-        {
-            return STATICLAYERID;
-        };
-
-        void generate_metadata(nlohmann::json& j) const
-        {
-            j["input_size"]=inputSize;
-            j["output_size"]=N;
-        }
-
         int8_t load()
         {
             std::string filename = "layer_"+std::to_string(this->id)+".layer";
@@ -153,7 +134,7 @@ namespace snn
 
         }
 
-        int8_t save()
+        int8_t save() const
         {
             std::string filename = "layer_"+std::to_string(this->id)+".layer";
 
@@ -181,7 +162,7 @@ namespace snn
 
             in.read((char*)&meta,sizeof(LayerKAC::metadata));
 
-            if( meta.input_size != inputSize || meta.node_size != N || meta.population_size != Populus )
+            if( meta.id != LayerKAC::LAYER_KAC_ID || meta.input_size != inputSize || meta.node_size != N || meta.population_size != Populus )
             {
                 return -3;
             }
@@ -205,6 +186,7 @@ namespace snn
         {
 
             LayerKAC::metadata meta = {
+                .id = LayerKAC::LAYER_KAC_ID,
                 .input_size = inputSize,
                 .node_size = N,
                 .population_size = Populus

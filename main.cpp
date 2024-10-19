@@ -35,6 +35,8 @@
 
 #include "layer_counter.hpp"
 
+#include "arbiter.hpp"
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -206,36 +208,24 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto *first = new snn::LayerKAC<4,64,40,snn::ReLu>();
-    auto *second= new snn::LayerKAC<64,32,40,snn::ReLu>();
+    auto first = std::make_shared<snn::LayerKAC<4,64,40,snn::ReLu>>();
+    auto second =  std::make_shared<snn::LayerKAC<64,32,40,snn::ReLu>>();
     // // auto third=snn::LayerKAC<512,256,20>();
-    auto *forth= new snn::LayerKAC<32,2,40>();
+    auto forth = std::make_shared<snn::LayerKAC<32,2,40>>();
 
-    if( first->load() == 0)
-    {
-        std::cout<<"Loaded first network"<<std::endl;
-    }
-    else
-    {
-        first->setup();
-    }
+    snn::Arbiter arbiter;
 
-    if( second->load() == 0)
+    arbiter.addLayer(first);
+    arbiter.addLayer(second);
+    arbiter.addLayer(forth);
+
+    if( arbiter.load() == 0 )
     {
-        std::cout<<"Loaded second network"<<std::endl;
+        std::cout<<"Loaded networks"<<std::endl;
     }
     else
     {
-        second->setup();
-    }
- 
-    if( forth->load() == 0)
-    {
-        std::cout<<"Loaded forth network"<<std::endl;
-    }
-    else
-    {
-        forth->setup();
+        arbiter.setup();
     }
 
 
@@ -264,21 +254,13 @@ int main(int argc,char** argv)
 
                 std::cout<<"New best reward: "<<best_reward<<std::endl;
 
-                first->save();
-
-                second->save();
-
-                forth->save();
+                arbiter.save();
             }
 
-            // network->applyReward(cart_input[4]);
-            first->applyReward(cart_input[4]);
-            second->applyReward(cart_input[4]);
-            forth->applyReward(cart_input[4]);
 
-            first->shuttle();
-            second->shuttle();
-            forth->shuttle();
+            arbiter.applyReward(cart_input[4]);
+
+            arbiter.shuttle();
 
         }
 
