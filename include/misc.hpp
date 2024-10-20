@@ -292,9 +292,9 @@ namespace snn
         {
             size_t n=1;
 
-            SIMDVector x1=vec;
+            SIMDVectorLite<Size> x1=vec;
 
-            SIMDVector sum=x1+1;
+            SIMDVectorLite<Size> sum=x1+1;
 
             while(n < 20)
             {

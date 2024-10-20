@@ -201,7 +201,7 @@ namespace snn
                 {
                     switch_probability = std::min<float>(REWARD_TO_SWITCH_PROBABILITY*this->reward,0.25f);
                 }
-                else
+                else if( this->last_reward < 0 )
                 {
                     if(this->Id == 1)
                     {

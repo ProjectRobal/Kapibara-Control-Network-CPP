@@ -29,6 +29,7 @@
 #include "activation/sigmoid.hpp"
 #include "activation/relu.hpp"
 #include "activation/softmax.hpp"
+#include "activation/silu.hpp"
 
 
 #include "simd_vector_lite.hpp"
@@ -208,10 +209,10 @@ int main(int argc,char** argv)
     start = std::chrono::system_clock::now();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first = std::make_shared<snn::LayerKAC<4,64,40,snn::ReLu>>();
-    auto second =  std::make_shared<snn::LayerKAC<64,32,40,snn::ReLu>>();
+    auto first = std::make_shared<snn::LayerKAC<4,64,40,snn::SiLu>>();
+    auto second =  std::make_shared<snn::LayerKAC<64,32,40,snn::SiLu>>();
     // // auto third=snn::LayerKAC<512,256,20>();
-    auto forth = std::make_shared<snn::LayerKAC<32,2,40>>();
+    auto forth = std::make_shared<snn::LayerKAC<32,2,40,snn::SiLu>>();
 
     snn::Arbiter arbiter;
 
