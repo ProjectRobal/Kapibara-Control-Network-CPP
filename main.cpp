@@ -38,6 +38,8 @@
 
 #include "arbiter.hpp"
 
+#include "kapibara_sublayer.hpp"
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -208,17 +210,13 @@ int main(int argc,char** argv)
 
     start = std::chrono::system_clock::now();
 
+    auto layer0 = std::make_shared<KapiBara_SubLayer>();
+
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-    auto first = std::make_shared<snn::LayerKAC<4,64,40,snn::SiLu>>();
-    auto second =  std::make_shared<snn::LayerKAC<64,32,40,snn::SiLu>>();
-    // // auto third=snn::LayerKAC<512,256,20>();
-    auto forth = std::make_shared<snn::LayerKAC<32,2,40,snn::SiLu>>();
 
     snn::Arbiter arbiter;
 
-    arbiter.addLayer(first);
-    arbiter.addLayer(second);
-    arbiter.addLayer(forth);
+    arbiter.addLayer(layer0);
 
     if( arbiter.load() == 0 )
     {
@@ -283,10 +281,7 @@ int main(int argc,char** argv)
 
         // std::cout<<"From CartPole: "<<input<<std::endl;
 
-        snn::SIMDVectorLite output1 = first->fire(input);
-        snn::SIMDVectorLite output2 = second->fire(output1);
-
-        snn::SIMDVectorLite output3 = forth->fire(output2);
+        snn::SIMDVectorLite output3 = layer0->fire(input);
 
         // std::cout<<"To CartPole: "<<output3<<std::endl;
 

@@ -21,7 +21,7 @@ namespace snn
 
         virtual int8_t load(std::istream& in) = 0;
 
-        virtual int8_t save(std::ostream& in) const = 0;
+        virtual int8_t save(std::ostream& out) const = 0;
 
     };
 }
