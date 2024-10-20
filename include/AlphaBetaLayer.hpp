@@ -36,8 +36,8 @@ namespace snn
         LayerKAC<InputSize,HiddenStateSize,Populus,SiLu> input_layer;
 
         // estimate alpha and beta vectors, use initialization with positive value
-        LayerKAC<InputSize,HiddenStateSize,Populus,Linear,UniformInit<0.01L,0.99L>> alpha_layer;
-        LayerKAC<InputSize,HiddenStateSize,Populus,Linear,UniformInit<0.01L,0.99L>> beta_layer;
+        LayerKAC<InputSize,HiddenStateSize,Populus,Linear> alpha_layer;
+        LayerKAC<InputSize,HiddenStateSize,Populus,Linear> beta_layer;
 
         // translate hidden state to output size
         LayerKAC<HiddenStateSize,OutputSize,Populus,SiLu> output_layer;
@@ -71,9 +71,9 @@ namespace snn
 
             snn::SIMDVectorLite<HiddenStateSize> beta = this->beta_layer.fire(input);
 
-            snn::SIMDVectorLite<HiddenStateSize> ab = alpha+beta;
+            // snn::SIMDVectorLite<HiddenStateSize> ab = alpha+beta;
 
-            this->hidden_state = (alpha/ab) * this->hidden_state + (beta/ab)*resized;
+            this->hidden_state = alpha * this->hidden_state + beta *resized;
 
             snn::SIMDVectorLite<OutputSize> output = this->output_layer.fire(this->hidden_state); 
 

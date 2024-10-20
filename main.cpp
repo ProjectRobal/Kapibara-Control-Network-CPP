@@ -213,7 +213,7 @@ int main(int argc,char** argv)
 
     auto layer0 = std::make_shared<KapiBara_SubLayer>();
 
-    auto recurrent0 = std::make_shared<snn::AlphaBetaLayer<4,16,4,80>>();
+    auto recurrent0 = std::make_shared<snn::AlphaBetaLayer<4,256,4,80>>();
 
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
 
@@ -276,6 +276,8 @@ int main(int argc,char** argv)
         input[3] = cart_input[3];
 
         snn::SIMDVectorLite rnn = recurrent0->fire(input);
+
+        // std::cout<<"Recurrent out: " << rnn << std::endl;
 
         snn::SIMDVectorLite output = layer0->fire(rnn);
 
