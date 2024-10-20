@@ -28,7 +28,7 @@ namespace snn
 
         number init()
         {
-            return this->global(this->gen);
+            return this->uniform(this->gen);
         }
     };
 }

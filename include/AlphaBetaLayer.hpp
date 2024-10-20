@@ -8,6 +8,9 @@
 
 #include "activation/silu.hpp"
 #include "activation/exp.hpp"
+#include "activation/linear.hpp"
+
+#include "initializers/uniform.hpp"
 
 #include "config.hpp"
 
@@ -33,8 +36,8 @@ namespace snn
         LayerKAC<InputSize,HiddenStateSize,Populus,SiLu> input_layer;
 
         // estimate alpha and beta vectors, use initialization with positive value
-        LayerKAC<InputSize,HiddenStateSize,Populus> alpha_layer;
-        LayerKAC<InputSize,HiddenStateSize,Populus> beta_layer;
+        LayerKAC<InputSize,HiddenStateSize,Populus,Linear,UniformInit<0.01L,0.99L>> alpha_layer;
+        LayerKAC<InputSize,HiddenStateSize,Populus,Linear,UniformInit<0.01L,0.99L>> beta_layer;
 
         // translate hidden state to output size
         LayerKAC<HiddenStateSize,OutputSize,Populus,SiLu> output_layer;

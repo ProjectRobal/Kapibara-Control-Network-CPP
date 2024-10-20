@@ -59,7 +59,7 @@ namespace snn
 
         LayerKAC()
         {
-            this->blocks = new BlockKAC<inputSize,Populus>[N];
+            this->blocks = new BlockKAC<inputSize,Populus,weight_initializer>[N];
 
             this->id = LayerCounter::LayerIDCounter++ ;
 
