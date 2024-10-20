@@ -18,7 +18,6 @@
 #include "layer_kac.hpp"
  
 #include "initializers/gauss.hpp"
-#include "initializers/normalized_gauss.hpp"
 #include "initializers/constant.hpp"
 #include "initializers/uniform.hpp"
 #include "initializers/hu.hpp"
@@ -39,6 +38,8 @@
 #include "arbiter.hpp"
 
 #include "kapibara_sublayer.hpp"
+
+#include "AlphaBetaLayer.hpp"
 
 /*
 
@@ -212,11 +213,14 @@ int main(int argc,char** argv)
 
     auto layer0 = std::make_shared<KapiBara_SubLayer>();
 
+    auto recurrent0 = std::make_shared<snn::AlphaBetaLayer<4,16,4,80>>();
+
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
 
     snn::Arbiter arbiter;
 
     arbiter.addLayer(layer0);
+    arbiter.addLayer(recurrent0);
 
     if( arbiter.load() == 0 )
     {
@@ -246,6 +250,7 @@ int main(int argc,char** argv)
 
         if( cart_input[5] > 0.5f)
         {
+            recurrent0->reset();
 
             if(( cart_input[4] > best_reward ) || cart_input[4] >= 0 )
             {
@@ -270,22 +275,11 @@ int main(int argc,char** argv)
         input[2] = cart_input[2];
         input[3] = cart_input[3];
 
-        // I have to speed up it just a bit 
-        // network->applyReward(cart_input[4]);
-        
+        snn::SIMDVectorLite rnn = recurrent0->fire(input);
 
-        //std::cout<<"From CartPole: "<<cart_input<<std::endl;
+        snn::SIMDVectorLite output = layer0->fire(rnn);
 
-        //snn::SIMDVector output = network->fire(cart_input);
-
-
-        // std::cout<<"From CartPole: "<<input<<std::endl;
-
-        snn::SIMDVectorLite output3 = layer0->fire(input);
-
-        // std::cout<<"To CartPole: "<<output3<<std::endl;
-
-        send_fifo(output3);
+        send_fifo(output);
 
     }
 

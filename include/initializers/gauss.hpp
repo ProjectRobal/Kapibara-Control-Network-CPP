@@ -8,7 +8,8 @@
 
 namespace snn
 {
-    class GaussInit : public Initializer
+    template<number mean,number std>
+    class GaussInit
     {
 
         std::normal_distribution<number> gauss;
@@ -17,26 +18,18 @@ namespace snn
 
         public:
 
-        GaussInit(number mean,number std)
-        : gauss(mean,std)
+        GaussInit()
         {
-            std::random_device rd; 
+            std::random_device rd;
 
             this->gen = std::mt19937(rd());
 
+            this->global = std::normal_distribution<number>(mean,std);  
         }
 
-        void init(SIMDVector& vec,size_t N)
-        {            
-            for(size_t i=0;i<N;++i)
-            {
-                vec.append(this->gauss(gen));
-            }
-        }
-
-        void init(number& n)
+        number init()
         {
-            n=this->gauss(gen);
+            return this->global(this->gen);
         }
     };
 }

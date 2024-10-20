@@ -27,6 +27,7 @@
 
 #include "layer_counter.hpp"
 
+#include "initializers/hu.hpp"
 /*
 
 
@@ -35,12 +36,12 @@
 */
 namespace snn
 {    
-    template<size_t inputSize,size_t N,size_t Populus,class Activation = Linear>
+    template<size_t inputSize,size_t N,size_t Populus,class Activation = Linear,class weight_initializer = HuInit<inputSize>>
     class LayerKAC : public Layer
     { 
         const uint32_t LAYER_KAC_ID = 2148;
 
-        BlockKAC<inputSize,Populus>* blocks;
+        BlockKAC<inputSize,Populus,weight_initializer>* blocks;
 
         std::uniform_real_distribution<double> uniform;
 

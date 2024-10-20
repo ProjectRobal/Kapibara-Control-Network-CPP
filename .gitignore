@@ -5,6 +5,4 @@ python/lib
 python/lib64
 pyvenv.cfg
 checkpoint/*
-layer_0
-layer_1
-layer_2
+layer_*.layer

@@ -17,6 +17,8 @@
 
 #include "misc.hpp"
 
+#include "initializers/hu.hpp"
+
 namespace snn
 {
     class BlockCounter
@@ -31,7 +33,7 @@ namespace snn
         }
     };
 
-    template<size_t inputSize,size_t Populus>
+    template<size_t inputSize,size_t Populus,class weight_initializer=HuInit<inputSize>>
     class BlockKAC
     {   
         /*
@@ -42,7 +44,7 @@ namespace snn
 
         std::mt19937 gen; 
 
-        std::normal_distribution<number> global;
+        weight_initializer global;
 
         std::uniform_real_distribution<float> uniform;
 
@@ -89,9 +91,6 @@ namespace snn
 
             this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
 
-            number std = std::sqrt(2.f/inputSize);
-            this->global = std::normal_distribution<number>(0.f,std);  
-
             this->worker = SIMDVectorLite<inputSize>(0);
 
             this->Id = BlockCounter::BlockID;
@@ -120,7 +119,7 @@ namespace snn
 
                 for( weight_t& w : block.weights )
                 {
-                    w.weight = this->global(this->gen);
+                    w.weight = this->global.init();
                     w.reward = 0.f;
                 }
 
@@ -142,10 +141,10 @@ namespace snn
                     return victim.best_weight_buffer / static_cast<number>(victim.collected_b_weight);
                 }
 
-                return (victim.best_weight_buffer / static_cast<number>(victim.collected_b_weight)) + this->global(this->gen);
+                return (victim.best_weight_buffer / static_cast<number>(victim.collected_b_weight)) + this->global.init();
             }
 
-            return this->global(this->gen);
+            return this->global.init();
         }
 
         void selection(block_t& victim)

@@ -8,7 +8,8 @@
 
 namespace snn
 {
-    class UniformInit : public Initializer
+    template<number A,number B>
+    class UniformInit
     {
 
         std::uniform_real_distribution<number> uniform;
@@ -16,25 +17,18 @@ namespace snn
 
         public:
 
-        UniformInit(number a,number b)
-        : uniform(a,b)
+        UniformInit()
         {
             std::random_device rd; 
 
             this->gen = std::mt19937(rd());
+
+            this->uniform = std::uniform_real_distribution<number> (A,B);
         }
 
-        void init(SIMDVector& vec,size_t N)
+        number init()
         {
-            for(size_t i=0;i<N;++i)
-            {
-                vec.append(this->uniform(gen));
-            }
-        }
-
-        void init(number& n)
-        {
-            n=this->uniform(gen);
+            return this->global(this->gen);
         }
     };
 }

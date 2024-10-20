@@ -49,12 +49,35 @@ public:
 
     SIMD::reference operator[](size_t i);
 
+    template<size_t OutputSize>
+    SIMDVectorLite<OutputSize> split();
+
     size_t size() const
     {
         return Size;
     }
 
     void set(size_t i,number v);
+
+    void set_block(size_t i,const SIMD& block)
+    {
+        if(i>=VEC_COUNT)
+        {
+            return;
+        }
+
+        this->_vec[i] = block;
+    }
+
+    SIMD& get_block(size_t i)
+    {
+        if(i>=VEC_COUNT)
+        {
+            i = 0;
+        }
+
+        return this->_vec[i];
+    }
 
     void operator+=(number v);
 
@@ -141,6 +164,34 @@ SIMDVectorLite<Size>::SIMDVectorLite(number num)
         this->_vec[to_set][i] = num;
     }
 
+}
+
+template<size_t Size>
+template<size_t OutputSize>
+SIMDVectorLite<OutputSize> SIMDVectorLite<Size>::split()
+{
+    SIMDVectorLite<OutputSize> output;
+
+    size_t copy_from_last = OutputSize - (OutputSize/MAX_SIMD_VECTOR_SIZE) * MAX_SIMD_VECTOR_SIZE;
+
+    size_t blocks_to_copy = (OutputSize/MAX_SIMD_VECTOR_SIZE)+1;
+
+    if( copy_from_last > 0 )
+    {
+        blocks_to_copy--;
+    }
+
+    for(size_t i=0;i<blocks_to_copy;++i)
+    {
+        output.set_block(i,this->_vec[i]);
+    }
+
+    for(size_t i=0;i<copy_from_last;++i)
+    {
+        output.get_block(blocks_to_copy)[i] = this->_vec[blocks_to_copy][i];
+    }
+
+    return output;
 }
 
 template<size_t Size>

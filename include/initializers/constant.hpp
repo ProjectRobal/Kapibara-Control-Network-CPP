@@ -8,30 +8,14 @@
 
 namespace snn
 {
-    class ConstantInit : public Initializer
+    template<number Value>
+    class ConstantInit
     {
-
-        number value;
-
         public:
 
-        ConstantInit(number value)
+        number init()
         {
-            this->value = value;
-        }
-
-        void init(SIMDVector& vec,size_t N)
-        {
-
-            for(size_t i=0;i<N;++i)
-            {
-                vec.append(this->value);
-            }
-        }
-
-        void init(number& n)
-        {
-            n = this->value;
+            return Value;
         }
     };
 }
