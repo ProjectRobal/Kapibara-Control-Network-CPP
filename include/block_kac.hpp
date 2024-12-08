@@ -75,6 +75,8 @@ namespace snn
         long double reward;
         long double last_reward;
 
+        long double reward_integral;
+
         public:
 
         size_t Id;
@@ -84,6 +86,8 @@ namespace snn
             this->reward = 0.f;
 
             this->last_reward = 0.f;
+
+            this->reward_integral = 0.f;
 
             std::random_device rd;
 
@@ -187,7 +191,7 @@ namespace snn
             {
                 weight_t& w = _block.weights[_block.id];
 
-                w.reward = this->reward + 0.1*w.reward + 0*(this->reward - w.reward);
+                w.reward = this->reward;
 
                 if( this->reward >=0 )
                 {
@@ -249,10 +253,11 @@ namespace snn
             this->reward = 0;
         }
 
-
         void giveReward(long double reward) 
         {          
-            this->reward += ( reward + REWARD_DIFFERENCE_GAIN*(reward - this->last_reward) );
+            // this->reward += ( reward + REWARD_DIFFERENCE_GAIN*(reward - this->last_reward) );
+
+            this->reward += reward;
 
             this->last_reward = reward;
         }

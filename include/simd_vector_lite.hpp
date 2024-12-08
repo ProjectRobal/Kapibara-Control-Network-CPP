@@ -562,3 +562,27 @@ std::ostream& operator<<(std::ostream& out,const snn::SIMDVectorLite<Size>& vec)
 
     return out;
 }
+
+template<size_t Size>
+snn::SIMDVectorLite<Size> operator+(float num,const snn::SIMDVectorLite<Size>& vec)
+{
+    return vec+num;
+}
+
+template<size_t Size>
+snn::SIMDVectorLite<Size> operator-(float num,const snn::SIMDVectorLite<Size>& vec)
+{
+    return (vec*-1.f)+num;
+}
+
+template<size_t Size>
+snn::SIMDVectorLite<Size> operator*(float num,const snn::SIMDVectorLite<Size>& vec)
+{
+    return vec*num;
+}
+
+template<size_t Size>
+snn::SIMDVectorLite<Size> operator/(float num,const snn::SIMDVectorLite<Size>& vec)
+{
+    return vec*num/(vec*vec);
+}

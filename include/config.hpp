@@ -33,3 +33,13 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 #define REWARD_TO_SWITCH_PROBABILITY -0.0005f
 
 #define REWARD_DIFFERENCE_GAIN 0 // 10
+
+// Reward PID:
+
+#define PID_DELTA 0.1f
+
+#define P_REWARD 1.f
+
+#define I_REWARD 0.01f
+
+#define D_REWARD 0.001f
