@@ -233,7 +233,7 @@ int main(int argc,char** argv)
 
     auto recurrent2 = std::make_shared<snn::RResNet<32,128,20>>();
 
-    const size_t members_count = 32;
+    const size_t members_count = 64;
 
     auto decision = std::make_shared<snn::LayerKAC<32,members_count,20,snn::SoftMax>>();
 
@@ -245,20 +245,19 @@ int main(int argc,char** argv)
     arbiter.addLayer(recurrent2);
     arbiter.addLayer(decision);
 
+    std::vector<std::shared_ptr<KapiBara_SubLayer>> layers;
+
 
     for( size_t i = 0; i < members_count; ++i )
     {
 
-        auto sub_layer0 = std::make_shared<snn::LayerKAC<32,256,20,snn::ReLu>>();
-
-        auto sub_layer1 = std::make_shared<snn::LayerKAC<256,64,20,snn::ReLu>>();
+        auto layer = std::make_shared<KapiBara_SubLayer>();
 
         // auto sub_layer2 = std::make_shared<snn::LayerKAC<128,64,20,snn::ReLu>>();
 
-        arbiter.addLayer(sub_layer0);
+        arbiter.addLayer(layer);
+        layers.push_back(layer);
         
-        arbiter.addLayer(sub_layer1);
-
     }
 
     arbiter.setup();
@@ -272,6 +271,8 @@ int main(int argc,char** argv)
         input[i] = uni.init();
     }
 
+    std::cout<<"Running network"<<std::endl;
+
     start = std::chrono::system_clock::now();
 
     auto output = encoder->fire(input);
@@ -283,6 +284,8 @@ int main(int argc,char** argv)
     auto output3 = recurrent2->fire(output2);
 
     auto picker = decision->fire(output3);
+
+    auto out = layers[0]->fire(output3);
 
     end = std::chrono::system_clock::now();
 
@@ -299,79 +302,79 @@ int main(int argc,char** argv)
 
     return 0;
 
-    auto layer0 = std::make_shared<KapiBara_SubLayer>();
+    // auto layer0 = std::make_shared<KapiBara_SubLayer>();
 
-    auto recurrent0 = std::make_shared<snn::RResNet<4,256,20>>();
+    // auto recurrent0 = std::make_shared<snn::RResNet<4,256,20>>();
 
     
 
-    arbiter.addLayer(layer0);
-    arbiter.addLayer(recurrent0);
+    // arbiter.addLayer(layer0);
+    // arbiter.addLayer(recurrent0);
 
-    if( arbiter.load() == 0 )
-    {
-        std::cout<<"Loaded networks"<<std::endl;
-    }
-    else
-    {
-        arbiter.setup();
-    }
-
-
-    end = std::chrono::system_clock::now();
-
-    std::chrono::duration<double> elapsed_initialization_seconds = end - start;
-
-    std::cout << "Finished initialization at " << elapsed_initialization_seconds.count() << std::endl;
-
-    std::cout<<"Starting network"<<std::endl;
-
-    long double best_reward = -9999999;
+    // if( arbiter.load() == 0 )
+    // {
+    //     std::cout<<"Loaded networks"<<std::endl;
+    // }
+    // else
+    // {
+    //     arbiter.setup();
+    // }
 
 
-    while(true)
-    {
+    // end = std::chrono::system_clock::now();
 
-        snn::SIMDVectorLite<6> cart_input = read_fifo_static();
+    // std::chrono::duration<double> elapsed_initialization_seconds = end - start;
 
-        if( cart_input[5] > 0.5f)
-        {
-            recurrent0->reset();
+    // std::cout << "Finished initialization at " << elapsed_initialization_seconds.count() << std::endl;
 
-            if(( cart_input[4] > best_reward ) || cart_input[4] >= 0 )
-            {
-                best_reward = cart_input[4];
+    // std::cout<<"Starting network"<<std::endl;
 
-                std::cout<<"New best reward: "<<best_reward<<std::endl;
-
-                arbiter.save();
-            }
+    // long double best_reward = -9999999;
 
 
-            arbiter.applyReward(cart_input[4]);
+    // while(true)
+    // {
 
-            arbiter.shuttle();
+    //     snn::SIMDVectorLite<6> cart_input = read_fifo_static();
 
-        }
+    //     if( cart_input[5] > 0.5f)
+    //     {
+    //         recurrent0->reset();
 
-        snn::SIMDVectorLite<4> input;
+    //         if(( cart_input[4] > best_reward ) || cart_input[4] >= 0 )
+    //         {
+    //             best_reward = cart_input[4];
 
-        input[0] = cart_input[0];
-        input[1] = cart_input[1];
-        input[2] = cart_input[2];
-        input[3] = cart_input[3];
+    //             std::cout<<"New best reward: "<<best_reward<<std::endl;
 
-        snn::SIMDVectorLite rnn = recurrent0->fire(input);
+    //             arbiter.save();
+    //         }
 
-        // std::cout<<"Recurrent out: " << rnn << std::endl;
 
-        snn::SIMDVectorLite output = layer0->fire(rnn);
+    //         arbiter.applyReward(cart_input[4]);
 
-        send_fifo(output);
+    //         arbiter.shuttle();
 
-    }
+    //     }
 
-    return 0;
+    //     snn::SIMDVectorLite<4> input;
+
+    //     input[0] = cart_input[0];
+    //     input[1] = cart_input[1];
+    //     input[2] = cart_input[2];
+    //     input[3] = cart_input[3];
+
+    //     snn::SIMDVectorLite rnn = recurrent0->fire(input);
+
+    //     // std::cout<<"Recurrent out: " << rnn << std::endl;
+
+    //     snn::SIMDVectorLite output = layer0->fire(rnn);
+
+    //     send_fifo(output);
+
+    // }
+
+    // return 0;
 
 }
 
