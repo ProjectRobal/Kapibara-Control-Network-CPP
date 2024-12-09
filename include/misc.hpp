@@ -9,7 +9,7 @@
 
 #include "config.hpp"
 
-#define SERIALIZED_NUMBER_SIZE 2*sizeof(int64_t)
+#define SERIALIZED_NUMBER_SIZE (2*sizeof(int64_t))
 
 namespace snn
 {

@@ -15,6 +15,8 @@
 
 #include "config.hpp"
 
+#include "misc.hpp"
+
 /*
     An recurrent network layer. Inspired by S7 S-SSM model and ResNet.
 
@@ -43,6 +45,8 @@ namespace snn
     template<size_t InputSize,size_t HiddenStateSize,size_t Populus>
     class RResNet : public Layer
     {
+
+        const uint32_t RRES_NET_ID = 2149;
         
         // generate a row of B matrix 
         LayerKAC<InputSize,InputSize,Populus> b_matrix;
@@ -56,11 +60,23 @@ namespace snn
         // output layer
         LayerKAC<HiddenStateSize,InputSize,Populus,snn::ReLu> analyzer;
 
+        size_t id;
+
+        struct metadata
+        {
+            uint32_t id;
+            size_t input_size;
+            size_t hidden_state_size;
+            size_t population_size;
+        };
+
         public:
 
         RResNet()
         : hidden_state(0)
-        {}
+        {
+            this->id = LayerCounter::LayerIDCounter++ ;
+        }
 
         void setup()
         {
@@ -113,34 +129,75 @@ namespace snn
 
         int8_t load()
         {
-            if( (this->b_matrix.load() != 0 ) || (this->analyzer.load() != 0) || (this->delta.load() != 0))
+
+            std::string filename = "layer_"+std::to_string(this->id)+".layer";
+
+            std::ifstream file;
+
+            file.open(filename,std::ios::in);
+
+            if( !file.good() )
             {
-                return -1;
+                return -2;
             }
 
-            return 0;
+            int8_t ret = this->load(file);
+
+            file.close();
+
+            return ret;
         }
 
         int8_t save() const
         {
 
-            if( (this->b_matrix.save() != 0 ) || (this->analyzer.save() != 0) || (this->delta.save() != 0))
-            {
-                return -1;
-            }
-            
+            std::string filename = "layer_"+std::to_string(this->id)+".layer";
 
-            return 0;
+            std::ofstream file;
+
+            file.open(filename,std::ios::out);
+
+            if(!file.good())
+            {
+                return -2;
+            }
+
+            int8_t ret = this->save(file);
+
+            file.close();
+
+            return ret;
         }
 
         int8_t load(std::istream& in)
         {
 
+            RResNet::metadata _metadata = {0};
+
+            in.read((char*)&_metadata,sizeof(_metadata));
+
+            if( (_metadata.id != RResNet::RRES_NET_ID) || (_metadata.input_size != InputSize) || (_metadata.population_size != Populus) )
+            {
+                return -2;
+            }
+
             if( (this->b_matrix.load(in) != 0 ) || (this->analyzer.load(in) != 0) || (this->delta.load(in) != 0))
             {
                 return -1;
             }
+
+            char num_buff[SERIALIZED_NUMBER_SIZE] = {0};
             
+            // save hidden state 
+            for(size_t i=0;i<HiddenStateSize;++i)
+            {
+                in.read(num_buff,SERIALIZED_NUMBER_SIZE);
+                
+                number num = deserialize_number<number>(num_buff);
+
+                this->hidden_state[i] = num;
+
+            }
 
             return 0;
         }
@@ -148,10 +205,37 @@ namespace snn
         int8_t save(std::ostream& out) const
         {
             
+            RResNet::metadata _metadata = {
+                .id = RResNet::RRES_NET_ID,
+                .input_size = InputSize,
+                .hidden_state_size = HiddenStateSize,
+                .population_size = Populus
+            };
+
+            out.write((char*)&_metadata,sizeof(_metadata));
+
+            if( out.fail() )
+            {
+                return -3;
+            }
+
             if( (this->b_matrix.save(out) != 0 ) || (this->analyzer.save(out) != 0) || (this->delta.save(out) != 0))
             {
                 return -1;
             }
+
+            // save hidden state 
+            for(size_t i=0;i<HiddenStateSize;++i)
+            {
+
+                char* buff = serialize_number<number>(this->hidden_state[i]);
+
+                out.write(buff,SERIALIZED_NUMBER_SIZE);
+
+                delete buff;
+
+            }
+
 
             return 0;
         }
