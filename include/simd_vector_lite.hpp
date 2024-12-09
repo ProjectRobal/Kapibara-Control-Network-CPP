@@ -357,7 +357,7 @@ SIMDVectorLite<Size> SIMDVectorLite<Size>::operator/(number v) const
     
     for(size_t i=0;i<VEC_COUNT;++i)
     {
-        output._vec[i] = this->_vec[i] * v;
+        output._vec[i] = this->_vec[i] / v;
     }
 
     return output;

@@ -99,7 +99,7 @@ namespace snn
 
             this->Id = BlockCounter::BlockID;
 
-            std::cout<<this->Id<<std::endl;
+            // std::cout<<this->Id<<std::endl;
 
             BlockCounter::BlockID++;
 
@@ -109,7 +109,7 @@ namespace snn
         {
             // create file if not exits
 
-            std::cout<<this->Id<<std::endl;
+            // std::cout<<this->Id<<std::endl;
 
             size_t i=0;
 

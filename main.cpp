@@ -200,6 +200,20 @@ size_t snn::BlockCounter::BlockID = 0;
 
 size_t snn::LayerCounter::LayerIDCounter = 0;
 
+/*
+
+    KapiBara input variables:
+
+    quanterion - 4 values
+    speed from encoders - 2 values
+    spectogram 16x16 - 256 values
+    2d points array from camera, compressed to 16x16 - 256 values
+
+    Total 518 values
+
+
+*/
+
 int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
@@ -211,13 +225,85 @@ int main(int argc,char** argv)
 
     start = std::chrono::system_clock::now();
 
-    auto layer0 = std::make_shared<KapiBara_SubLayer>();
+    auto encoder = std::make_shared<snn::LayerKAC<518,64,20>>();
 
-    auto recurrent0 = std::make_shared<snn::RResNet<4,256,4>>();
+    auto recurrent1 = std::make_shared<snn::RResNet<64,256,20>>();
 
-    // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
+    auto layer1 = std::make_shared<snn::LayerKAC<64,32,20,snn::ReLu>>();
+
+    auto recurrent2 = std::make_shared<snn::RResNet<32,128,20>>();
+
+    const size_t members_count = 32;
+
+    auto decision = std::make_shared<snn::LayerKAC<32,members_count,20,snn::SoftMax>>();
 
     snn::Arbiter arbiter;
+    
+    arbiter.addLayer(encoder);
+    arbiter.addLayer(recurrent1);
+    arbiter.addLayer(layer1);
+    arbiter.addLayer(recurrent2);
+    arbiter.addLayer(decision);
+
+
+    for( size_t i = 0; i < members_count; ++i )
+    {
+
+        auto sub_layer0 = std::make_shared<snn::LayerKAC<32,256,20,snn::ReLu>>();
+
+        auto sub_layer1 = std::make_shared<snn::LayerKAC<256,64,20,snn::ReLu>>();
+
+        // auto sub_layer2 = std::make_shared<snn::LayerKAC<128,64,20,snn::ReLu>>();
+
+        arbiter.addLayer(sub_layer0);
+        
+        arbiter.addLayer(sub_layer1);
+
+    }
+
+    arbiter.setup();
+
+    snn::SIMDVectorLite<518> input;
+
+    snn::UniformInit<0.l,1.l> uni;
+
+    for(size_t i=0;i<518;++i)
+    {
+        input[i] = uni.init();
+    }
+
+    start = std::chrono::system_clock::now();
+
+    auto output = encoder->fire(input);
+
+    auto output1 = recurrent1->fire(output);
+
+    auto output2 = layer1->fire(output1);
+
+    auto output3 = recurrent2->fire(output2);
+
+    auto picker = decision->fire(output3);
+
+    end = std::chrono::system_clock::now();
+
+    std::cout<<"Time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
+
+    std::cout<<"Output: "<<picker<<std::endl;
+
+    
+    // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
+
+    char x;
+
+    std::cin>>x;
+
+    return 0;
+
+    auto layer0 = std::make_shared<KapiBara_SubLayer>();
+
+    auto recurrent0 = std::make_shared<snn::RResNet<4,256,20>>();
+
+    
 
     arbiter.addLayer(layer0);
     arbiter.addLayer(recurrent0);

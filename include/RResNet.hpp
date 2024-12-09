@@ -80,7 +80,9 @@ namespace snn
 
         void setup()
         {
-            
+            this->analyzer.setup();
+            this->delta.setup();
+            this->b_matrix.setup();    
         }
 
         void reset()
