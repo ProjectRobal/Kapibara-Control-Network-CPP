@@ -43,3 +43,6 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 #define I_REWARD 0.01f
 
 #define D_REWARD 0.001f
+
+
+#define USED_THREADS 4

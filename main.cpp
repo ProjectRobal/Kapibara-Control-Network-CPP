@@ -208,6 +208,7 @@ size_t snn::LayerCounter::LayerIDCounter = 0;
     speed from encoders - 2 values
     spectogram 16x16 - 256 values
     2d points array from camera, compressed to 16x16 - 256 values
+    face embeddings - 64 values when more than two faces are spotted average thier embeddings
 
     Total 518 values
 
@@ -225,7 +226,7 @@ int main(int argc,char** argv)
 
     start = std::chrono::system_clock::now();
 
-    auto encoder = std::make_shared<snn::LayerKAC<518,64,20>>();
+    auto encoder = std::make_shared<snn::LayerKAC<582,64,20>>();
 
     auto recurrent1 = std::make_shared<snn::RResNet<64,256,20>>();
 
@@ -252,7 +253,7 @@ int main(int argc,char** argv)
     {
 
         auto layer = std::make_shared<KapiBara_SubLayer>();
-
+ 
         // auto sub_layer2 = std::make_shared<snn::LayerKAC<128,64,20,snn::ReLu>>();
 
         arbiter.addLayer(layer);
@@ -262,43 +263,52 @@ int main(int argc,char** argv)
 
     arbiter.setup();
 
-    snn::SIMDVectorLite<518> input;
+    snn::SIMDVectorLite<582> input;
 
     snn::UniformInit<0.l,1.l> uni;
 
-    for(size_t i=0;i<518;++i)
+    for(size_t i=0;i<input.size();++i)
     {
         input[i] = uni.init();
     }
 
     std::cout<<"Running network"<<std::endl;
 
-    start = std::chrono::system_clock::now();
+    while(true)
+    {
 
-    auto output = encoder->fire(input);
+        start = std::chrono::system_clock::now();
 
-    auto output1 = recurrent1->fire(output);
+        auto output = encoder->fire(input);
 
-    auto output2 = layer1->fire(output1);
+        // output = output / output.size();
 
-    auto output3 = recurrent2->fire(output2);
+        auto output1 = recurrent1->fire(output);
 
-    auto picker = decision->fire(output3);
+        auto output2 = layer1->fire(output1);
 
-    auto out = layers[0]->fire(output3);
+        // output2 = output2 / output2.size();
 
-    end = std::chrono::system_clock::now();
+        auto output3 = recurrent2->fire(output2);
 
-    std::cout<<"Time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
+        auto picker = decision->fire(output3);
 
-    std::cout<<"Output: "<<picker<<std::endl;
+        auto out = layers[0]->fire(output3);
+
+        end = std::chrono::system_clock::now();
+
+        std::cout<<"Time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
+
+        std::cout<<"Output: "<<picker<<std::endl;
+
+        char x;
+
+        std::cin>>x;
+
+    }
 
     
     // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-
-    char x;
-
-    std::cin>>x;
 
     return 0;
 

@@ -5,6 +5,8 @@
 #include <fstream>
 #include <algorithm>
 #include <string>
+#include <thread>
+#include <deque>
 
 #include "block_kac.hpp"
 #include "initializer.hpp"
@@ -97,17 +99,78 @@ namespace snn
             }   
         }
 
+        static void fire_parraler(BlockKAC<inputSize,Populus,weight_initializer>* blocks,const SIMDVectorLite<inputSize>& input,SIMDVectorLite<N> &output,size_t start,size_t end)
+        {
+            for(;start<end;++start)
+            {
+                output[start] = blocks[start].fire(input); 
+            }
+        }
+
         SIMDVectorLite<N> fire(const SIMDVectorLite<inputSize>& input)
         {
             SIMDVectorLite<N> output(0);
 
+            std::thread threads[USED_THREADS];
 
-            for(size_t i=0;i<N;++i)
+            size_t min = 0;
+
+            size_t worker_count = USED_THREADS;
+
+            if( worker_count > N )
             {
-                number v = this->blocks[i].fire(input);
-                output[i] = v;
-
+                worker_count = N;   
             }
+
+            const size_t step = N/worker_count;
+
+            size_t max = step; 
+
+
+            for(size_t i=0;i<worker_count;++i)
+            {
+                threads[i] = std::thread(fire_parraler,this->blocks,std::cref(input),std::ref(output),min,max);
+
+                min = max;
+                
+                max = ( 1 - ( i/(worker_count-1) ) )*( max + step ) + ( i/(worker_count-1) )*N;
+            }
+
+            for(size_t i=0;i<worker_count;++i)
+            {
+                threads[i].join();
+            }
+
+
+            // for(size_t i=0;i<N;++i)
+            // {
+            //     number v = this->blocks[i].fire(input);
+            //     output[i] = v;
+
+            //     // if(used_thread<4)
+            //     // {
+            //     //     threads[ i%4 ] = std::thread(fire_parraler,this->blocks,std::cref(input),std::ref(output),i);
+            //     //     used_thread++;
+            //     // }
+            //     // else
+            //     // {
+            //     //     for(auto& thread : threads)
+            //     //     {
+            //     //         thread.join();
+            //     //     }
+
+            //     //     used_thread = 0;
+            //     // }
+
+            // }
+
+            // for(size_t i=0; i< 4; i++)
+            // {
+            //     if(threads[i].joinable())
+            //     {
+            //         threads[i].join();
+            //     }
+            // }
 
             Activation::activate(output);
 
