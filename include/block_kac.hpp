@@ -143,45 +143,60 @@ namespace snn
             {
                 std::cout<<"Choose workers"<<std::endl;
             }
+            
+            if( this->reward == 0.0 )
+            {
+                return;
+            }
+
             size_t iter=0;
+
+            float switch_probability = 0.0;
+
+            switch_probability = std::min<float>(REWARD_TO_SWITCH_PROBABILITY*abs(this->reward),0.25f);
+
             for(block_t& _block : this->block)
             {
-                float switch_probability = 0.0;
-
-                if( this->reward < 0 )
-                {
-                    switch_probability = std::min<float>(REWARD_TO_SWITCH_PROBABILITY*this->reward,0.25f);
-                }
-                else if( this->last_reward < 0 )
-                {
-                    if(this->Id == 1)
-                    {
-                        std::cout<<"New best weight found! "<<std::endl;
-                    }
-                    
-                }
-
                 if( this->uniform(this->gen) < switch_probability )
                 {
-                    if(this->Id==1)
+
+                    if( this->reward < 0.0 )
                     {
-                        std::cout<<"Swap occured"<<std::endl;
-                        std::cout<<"with probability "<<switch_probability<<std::endl;
+
+                        if(this->Id==1)
+                        {
+                            std::cout<<"Swap occured"<<std::endl;
+                            std::cout<<"with probability "<<switch_probability<<std::endl;
+                        }
+
+                        SIMDVectorLite<Populus> error = _block.weights[_block.id] - _block.weights;
+
+                        // for(size_t i=0;i<Populus;++i)
+                        // {
+                        //     number error = _block.weights[_block.id] - _block.weights[i];
+
+                        //     _block.weights[i] -= 0.5*error;
+                        // }
+
+                        _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
+
+
+                        this->worker[iter] = _block.weights[_block.id];
+                        
                     }
+                    else if( this->reward > 0.0 )
+                    {
+                        if(this->Id == 1)
+                        {
+                            std::cout<<"Positive feedback! "<<std::endl;
+                        }
+                        
+                        // move some weights towards better solutions
+                        SIMDVectorLite<Populus> error = _block.weights[_block.id] - _block.weights;
 
-                    SIMDVectorLite<Populus> error = _block.weights[_block.id] - _block.weights;
+                        _block.weights += 0.5*error;
 
-                    // for(size_t i=0;i<Populus;++i)
-                    // {
-                    //     number error = _block.weights[_block.id] - _block.weights[i];
-
-                    //     _block.weights[i] -= 0.5*error;
-                    // }
-
-                    _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
-
-
-                    this->worker[iter] = _block.weights[_block.id];
+                    }
 
                 }
 

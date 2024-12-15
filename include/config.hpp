@@ -30,7 +30,7 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 
 #define MUTATION_PROBABILITY 0.25f
 
-#define REWARD_TO_SWITCH_PROBABILITY -0.0005f
+#define REWARD_TO_SWITCH_PROBABILITY 0.0005f
 
 #define REWARD_DIFFERENCE_GAIN 0 // 10
 
