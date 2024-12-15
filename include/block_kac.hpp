@@ -19,6 +19,8 @@
 
 #include "initializers/hu.hpp"
 
+#include <simd_vector_lite.hpp>
+
 namespace snn
 {
     class BlockCounter
@@ -48,24 +50,12 @@ namespace snn
 
         std::uniform_real_distribution<float> uniform;
 
-
-        // weight from population with rewward
-        typedef struct weight
-        {
-            long double weight;
-            long double reward;
-            
-        } weight_t;
  
         // there will be inputsize amount of block
         typedef struct block
         {
             uint32_t id;
-            uint16_t swap_count;
-            weight_t weights[Populus];
-            long double best_weight_buffer;
-            uint16_t collected_b_weight;
-            long double worse_reward;
+            SIMDVectorLite<Populus> weights;
 
         } block_t;
 
@@ -116,20 +106,15 @@ namespace snn
             for(block_t& block : this->block)
             {
                 block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-1)));
-                block.swap_count = 0;
-                block.best_weight_buffer = 0;
-                block.collected_b_weight = 0;
-                block.worse_reward = 0;
 
-                for( weight_t& w : block.weights )
+                for( size_t w=0; w < Populus ; ++w )
                 {
-                    w.weight = this->global.init();
-                    w.reward = 0.f;
+                    block.weights[w] = this->global.init();
                 }
 
                 // this->worker.set(i,block.weights[block.id].weight);
 
-                this->worker[i] = block.weights[block.id].weight;
+                this->worker[i] = block.weights[block.id];
 
                 ++i;
             }
@@ -151,35 +136,7 @@ namespace snn
             return this->global.init();
         }
 
-        void selection(block_t& victim)
-        {
-            victim.id = 0;
-
-            qsort(victim.weights,Populus,sizeof(weight_t),[](const void* a,const void* b)->int{
-                return ((weight_t*)b)->reward - ((weight_t*)a)->reward;
-            });
-
-            if( this->Id == 1 )
-            {
-                std::cout<<"Sorted: "<<std::endl;
-                std::cout<<"first: "<<victim.weights[0].reward<<" last: "<<victim.weights[Populus-1].reward<<std::endl;
-            }
-
-            float prob = 0.5f / Populus;
-
-            for(size_t i=0;i<Populus;++i)
-            {
-                if( prob*(i+1) > this->uniform(this->gen) )
-                {
-                    victim.weights[i].weight = this->give_new_weight(victim);
-                }
-
-                victim.weights[i].reward = 0.f;
-            }
-
-            victim.worse_reward = 0.f;
-        }
-
+        
         void chooseWorkers()
         {
             if(this->Id==1)
@@ -189,18 +146,9 @@ namespace snn
             size_t iter=0;
             for(block_t& _block : this->block)
             {
-                weight_t& w = _block.weights[_block.id];
+                float switch_probability = 0.0;
 
-                w.reward = this->reward;
-
-                if( this->reward >=0 )
-                {
-                    w.reward = this->reward;
-                }
-
-                float switch_probability = 0.01;
-
-                if( w.reward < 0 )
+                if( this->reward < 0 )
                 {
                     switch_probability = std::min<float>(REWARD_TO_SWITCH_PROBABILITY*this->reward,0.25f);
                 }
@@ -210,40 +158,31 @@ namespace snn
                     {
                         std::cout<<"New best weight found! "<<std::endl;
                     }
-                    _block.best_weight_buffer += w.weight;
-                    _block.collected_b_weight ++ ;
-
-                    if( _block.collected_b_weight > Populus )
-                    {
-                        _block.best_weight_buffer = _block.best_weight_buffer / static_cast<number>(_block.collected_b_weight);
-
-                        _block.collected_b_weight = 1;
-                    }
+                    
                 }
 
                 if( this->uniform(this->gen) < switch_probability )
                 {
                     if(this->Id==1)
                     {
-                        std::cout<<"Swap occured!"<<std::endl;
-                        std::cout<<"Swap count: "<<_block.swap_count+1<<std::endl;
+                        std::cout<<"Swap occured"<<std::endl;
                         std::cout<<"with probability "<<switch_probability<<std::endl;
                     }
+
+                    SIMDVectorLite<Populus> error = _block.weights[_block.id] - _block.weights;
+
+                    // for(size_t i=0;i<Populus;++i)
+                    // {
+                    //     number error = _block.weights[_block.id] - _block.weights[i];
+
+                    //     _block.weights[i] -= 0.5*error;
+                    // }
+
                     _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
 
-                    this->worker[iter] = _block.weights[_block.id].weight;
 
-                    _block.swap_count++;
+                    this->worker[iter] = _block.weights[_block.id];
 
-                    if( _block.swap_count >= Populus*2 )
-                    {
-                        if(this->Id==1)
-                        {
-                            std::cout<<"Selection started!"<<std::endl;
-                        }
-                        this->selection(_block);
-                        _block.swap_count = 0;
-                    }
                 }
 
                 iter++;
@@ -273,7 +212,21 @@ namespace snn
         {
             for(size_t i=0;i<inputSize;++i)
             {
-                out.write((char*)&this->block[i],sizeof(block_t));
+                char buffer[sizeof(size_t)];
+
+                memcpy(buffer,(char*)&this->block[i].id,sizeof(size_t));
+
+                out.write(buffer,sizeof(size_t));
+
+                for(size_t w=0;w<Populus;++w)
+                {
+                    char *num_buffer = serialize_number(this->block[i].weights[w]);   
+
+                    out.write(num_buffer,SERIALIZED_NUMBER_SIZE);
+
+                    delete [] num_buffer;
+                }
+
             }
         }
 
@@ -281,9 +234,20 @@ namespace snn
         {
             for(size_t i=0;i<inputSize;++i)
             {
-                in.read((char*)&this->block[i],sizeof(block_t));
+                in.read((char*)&this->block[i].id,sizeof(size_t));
 
-                this->worker[i] = this->block[i].weights[this->block[i].id].weight;
+                char num_buffer[SERIALIZED_NUMBER_SIZE];
+
+                for(size_t w=0;w<Populus;++w)
+                {
+                    in.read(num_buffer,SERIALIZED_NUMBER_SIZE);
+
+                    number num = deserialize_number<number>(num_buffer);
+
+                    this->block[i].weights[w] = num;
+                }
+
+                this->worker[i] = this->block[i].weights[this->block[i].id];
             }   
         }
         
