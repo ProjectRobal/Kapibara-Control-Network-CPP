@@ -1,7 +1,5 @@
 #pragma once
 
-#include "activation.hpp"
-
 namespace snn
 {
     class ReLu

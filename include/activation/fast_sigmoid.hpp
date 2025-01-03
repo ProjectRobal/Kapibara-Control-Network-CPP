@@ -2,8 +2,6 @@
 
 #include "misc.hpp"
 
-#include "activation.hpp"
-
 namespace snn
 {
     class FastSigmoid

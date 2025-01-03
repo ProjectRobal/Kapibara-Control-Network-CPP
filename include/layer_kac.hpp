@@ -16,12 +16,9 @@
 
 #include "config.hpp"
 
-#include "activation.hpp"
 #include "activation/linear.hpp"
 
 #include "layer.hpp"
-
-#include "layer_utils.hpp"
 
 #include <filesystem>
 
