@@ -4,7 +4,7 @@ namespace snn
 {
     SIMD SIMDVector::get_partially_filled_simd(size_t N,number value,number else_number) const
     {
-        return SIMD([N,value,else_number](int i){ 
+        return SIMD([N,value,else_number](size_t i){ 
             
             if(i<N)
             {

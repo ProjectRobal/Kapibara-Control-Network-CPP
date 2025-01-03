@@ -69,9 +69,6 @@ namespace snn
 
         // now since each sub block gets the same reward we will just them a pointer to it.
         long double reward;
-        long double last_reward;
-
-        long double reward_integral;
 
         public:
 
@@ -80,10 +77,6 @@ namespace snn
         BlockKAC()
         {
             this->reward = 0.f;
-
-            this->last_reward = 0.f;
-
-            this->reward_integral = 0.f;
 
             std::random_device rd;
 
@@ -149,6 +142,25 @@ namespace snn
             }
             size_t iter=0;
 
+            if( this->reward == 0 )
+            {
+                return;
+            }
+
+            if( this->reward > 0 )
+            {
+
+                for(block_t& _block : this->block)
+                {
+                    number w = _block.weights[_block.id];
+
+                    _block.weights += ( _block.weights - w )*POSITIVE_P;
+
+                }
+                
+                return;
+            }
+
             float switch_probability = 0.01;
 
             if( this->reward < 0 )
@@ -183,11 +195,7 @@ namespace snn
 
         void giveReward(long double reward) 
         {          
-            // this->reward += ( reward + REWARD_DIFFERENCE_GAIN*(reward - this->last_reward) );
-
             this->reward += reward;
-
-            this->last_reward = reward;
         }
 
         number fire(const SIMDVectorLite<inputSize>& input)
