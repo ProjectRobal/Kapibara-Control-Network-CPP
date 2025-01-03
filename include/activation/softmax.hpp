@@ -21,6 +21,24 @@ namespace snn
         template<size_t Size>
         static inline void activate(SIMDVectorLite<Size>& vec)
         {
+            number max = vec[0];
+            number min = vec[0];
+
+            for(size_t i=0;i<vec.size();++i)
+            {
+                if(vec[i]>max)
+                {
+                    max = vec[i];
+                }
+
+                if(vec[i]<min)
+                {
+                    min = vec[i];
+                }
+            }
+
+            vec = (vec - min)/(max - min);
+
             SIMDVectorLite<Size> v=exp(vec);
 
             number sum = v.reduce();
