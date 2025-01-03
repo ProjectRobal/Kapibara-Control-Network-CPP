@@ -134,12 +134,40 @@ namespace snn
             return this->global.init();
         }
 
+        static void parralel_swap(block_t blocks[inputSize],SIMDVectorLite<inputSize>& worker,std::uniform_real_distribution<float>& uniform,std::mt19937& gen,size_t start,size_t end,float prob)
+        {
+            size_t step = static_cast<size_t>(prob*((end-start) + 1)) + 1;
+
+            start += static_cast<size_t>(std::round(uniform(gen)*step));
+
+            while(start<end)
+            {
+
+                
+                    // if(this->Id==1)
+                    // {
+                    //     std::cout<<"Swap occured!"<<std::endl;
+                    //     std::cout<<"Swap count: "<<_block.swap_count+1<<std::endl;
+                    //     std::cout<<"with probability "<<switch_probability<<std::endl;
+                    // }                    _block.swap_count++;
+
+                    blocks[start].id = ( static_cast<uint32_t>(std::round(uniform(gen)*(Populus-2))) + blocks[start].id ) % ( Populus - 1 );
+
+                    worker[start] = blocks[start].weights[blocks[start].id];
+
+                
+
+                start+=step;
+
+            }
+        }
+
         void chooseWorkers()
         {
-            if(this->Id==1)
-            {
-                std::cout<<"Choose workers"<<std::endl;
-            }
+            // if(this->Id==1)
+            // {
+            //     std::cout<<"Choose workers"<<std::endl;
+            // }
             size_t iter=0;
 
             if( this->reward == 0 )
@@ -149,42 +177,43 @@ namespace snn
 
             if( this->reward > 0 )
             {
-
+                // weight swarming is kinda slow :(
                 for(block_t& _block : this->block)
                 {
                     number w = _block.weights[_block.id];
 
-                    _block.weights += ( _block.weights - w )*POSITIVE_P;
+                    _block.weights -= w;
 
                 }
                 
                 return;
             }
 
-            float switch_probability = 0.01;
+            float switch_probability = std::max<float>(1.0 - REWARD_TO_SWITCH_PROBABILITY*this->reward,1.0 - MAX_SWITCH_PROBABILITY);
 
-            if( this->reward < 0 )
+            size_t step = static_cast<size_t>(switch_probability*inputSize) + 1;
+
+            size_t i = static_cast<size_t>(std::round(this->uniform(this->gen)*step));
+
+            for(;i<inputSize;i+=step)
             {
-                switch_probability = std::min<float>(REWARD_TO_SWITCH_PROBABILITY*this->reward,0.25f);
-            }
 
-            for(block_t& _block : this->block)
-            {
+                block_t& _block = this->block[i];
 
-                if( this->uniform(this->gen) < switch_probability )
-                {
-                    if(this->Id==1)
-                    {
-                        std::cout<<"Swap occured!"<<std::endl;
-                        std::cout<<"Swap count: "<<_block.swap_count+1<<std::endl;
-                        std::cout<<"with probability "<<switch_probability<<std::endl;
-                    }
+                // if( this->uniform(this->gen) < switch_probability )
+                // {
+                    // if(this->Id==1)
+                    // {
+                    //     std::cout<<"Swap occured!"<<std::endl;
+                    //     std::cout<<"Swap count: "<<_block.swap_count+1<<std::endl;
+                    //     std::cout<<"with probability "<<switch_probability<<std::endl;
+                    // }                    _block.swap_count++;
+
                     _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
 
                     this->worker[iter] = _block.weights[_block.id];
 
-                    _block.swap_count++;
-                }
+                // }
 
                 iter++;
 

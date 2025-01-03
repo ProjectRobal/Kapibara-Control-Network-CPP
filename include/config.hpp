@@ -31,6 +31,8 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 #define MUTATION_PROBABILITY 0.25f
 
 
+// A maximum weight switch probablity
+#define MAX_SWITCH_PROBABILITY 0.25f
 
 // A probability at which weights are switched
 #define REWARD_TO_SWITCH_PROBABILITY -0.0005f

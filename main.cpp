@@ -301,9 +301,19 @@ int main(int argc,char** argv)
 
         std::cout<<"Output: "<<picker<<std::endl;
 
-        char x;
+        float x;
 
         std::cin>>x;
+
+        arbiter.applyReward(x);
+
+        start = std::chrono::system_clock::now();
+
+        arbiter.shuttle();
+
+        end = std::chrono::system_clock::now();
+
+        std::cout<<"Shuttle time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
 
     }
 
