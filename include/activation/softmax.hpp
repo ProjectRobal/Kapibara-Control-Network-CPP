@@ -39,11 +39,11 @@ namespace snn
 
             vec = (vec - min)/(max - min);
 
-            SIMDVectorLite<Size> v=exp(vec);
+            // SIMDVectorLite<Size> v=exp(vec);
 
-            number sum = v.reduce();
+            number sum = vec.reduce();
 
-            vec = v / sum;
+            vec = vec / sum;
         }
 
         static inline void inverse(SIMDVector& vec)
