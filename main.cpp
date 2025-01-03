@@ -265,7 +265,7 @@ int main(int argc,char** argv)
 
     snn::SIMDVectorLite<582> input;
 
-    snn::UniformInit<0.l,1.l> uni;
+    snn::UniformInit<0.f,1.f> uni;
 
     for(size_t i=0;i<input.size();++i)
     {

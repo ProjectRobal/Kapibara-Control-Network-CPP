@@ -4,7 +4,7 @@
 #include <experimental/simd>
 
 // specific number types used by neurons
-typedef long double number;
+typedef float number;
 
 #define MAX_SIMD_VECTOR_SIZE std::experimental::simd_abi::max_fixed_size<number>
 

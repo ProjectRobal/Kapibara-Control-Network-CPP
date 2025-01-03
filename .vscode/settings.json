@@ -71,6 +71,13 @@
         "filesystem": "cpp",
         "typeindex": "cpp",
         "*.inc": "cpp",
-        "hash_map": "cpp"
+        "hash_map": "cpp",
+        "charconv": "cpp",
+        "condition_variable": "cpp",
+        "mutex": "cpp",
+        "format": "cpp",
+        "__nullptr": "cpp",
+        "ios": "cpp",
+        "locale": "cpp"
     }
 }
