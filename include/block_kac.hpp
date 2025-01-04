@@ -63,10 +63,13 @@ namespace snn
             uint32_t id;
             uint16_t swap_count;
             SIMDVectorLite<Populus> weights;
+            SIMDVectorLite<Populus> rewards;
             // number best_weight;
         } block_t;
 
         SIMDVectorLite<inputSize> best_weights;
+
+        SIMDVectorLite<inputSize> curr_rewards;
 
         block_t block[inputSize];
 
@@ -88,6 +91,8 @@ namespace snn
             this->uniform = std::uniform_real_distribution<float>(0.f,1.f);
 
             this->worker = SIMDVectorLite<inputSize>(0);
+
+            this->curr_rewards = SIMDVectorLite<inputSize>(0);
 
             this->Id = BlockCounter::BlockID;
 
@@ -113,6 +118,7 @@ namespace snn
                 for(size_t w=0;w<Populus;w++)
                 {
                     block.weights[w] = this->global.init();
+                    block.rewards[w] = 0.f;
                 }
 
                 this->worker[i] = block.weights[block.id];
@@ -223,7 +229,26 @@ namespace snn
 
                     _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
 
+                    _block.rewards[_block.id] = 0.5f*(this->curr_rewards[i]/inputSize) + 0.5f*_block.rewards[_block.id];
+
                     this->worker[i] = _block.weights[_block.id]*0.5f + this->best_weights[i]*0.5f;
+
+                    _block.swap_count++;
+
+                    // if( _block.swap_count >= 1 )
+                    // {
+                    //     // do crossover
+                    //     // sorting takes some time
+                    //     quicksort_mask<Populus>(_block.weights,0,Populus-1,_block.rewards);
+
+                    //     for(size_t i=0;i<Populus/2;i++)
+                    //     {
+                    //         _block.weights[i] = this->global.init();
+                    //     }
+
+                    //     _block.rewards *= 0;
+
+                    // }
 
                 // }
 
@@ -232,11 +257,15 @@ namespace snn
             }
 
             this->reward = 0;
+
+            this->curr_rewards *= 0.0;
         }
 
         void giveReward(long double reward) 
         {          
             this->reward += reward;
+
+            this->curr_rewards += static_cast<float>(reward);
         }
 
         number fire(const SIMDVectorLite<inputSize>& input)

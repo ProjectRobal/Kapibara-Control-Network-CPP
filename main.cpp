@@ -340,8 +340,23 @@ int main(int argc,char** argv)
     //     arbiter.setup();
     // }
 
+    // snn::Arbiter arbiter;
 
-    // end = std::chrono::system_clock::now();
+    // auto layer0 = std::make_shared<snn::LayerKAC<4,64,20,snn::ReLu>>();
+
+    // auto layer1 = std::make_shared<snn::LayerKAC<64,32,20,snn::ReLu>>();
+
+    // auto layer2 = std::make_shared<snn::LayerKAC<32,2,20,snn::Linear>>();
+
+    // arbiter.addLayer(layer0);
+    // arbiter.addLayer(layer1);
+    // arbiter.addLayer(layer2);
+
+    // arbiter.setup();
+
+    // auto start = std::chrono::system_clock::now();
+
+    // auto end = std::chrono::system_clock::now();
 
     // std::chrono::duration<double> elapsed_initialization_seconds = end - start;
 
@@ -359,7 +374,6 @@ int main(int argc,char** argv)
 
     //     if( cart_input[5] > 0.5f)
     //     {
-    //         recurrent0->reset();
 
     //         if(( cart_input[4] > best_reward ) || cart_input[4] >= 0 )
     //         {
@@ -384,13 +398,15 @@ int main(int argc,char** argv)
     //     input[2] = cart_input[2];
     //     input[3] = cart_input[3];
 
-    //     snn::SIMDVectorLite rnn = recurrent0->fire(input);
+    //     // snn::SIMDVectorLite rnn = recurrent0->fire(input);
+
+    //     auto output0 = layer0->fire(input);
+    //     auto output1 = layer1->fire(output0);
+    //     auto output2 = layer2->fire(output1);
 
     //     // std::cout<<"Recurrent out: " << rnn << std::endl;
 
-    //     snn::SIMDVectorLite output = layer0->fire(rnn);
-
-    //     send_fifo(output);
+    //     send_fifo(output2);
 
     // }
 
