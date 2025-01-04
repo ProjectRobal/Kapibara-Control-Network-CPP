@@ -63,7 +63,10 @@ namespace snn
             uint32_t id;
             uint16_t swap_count;
             SIMDVectorLite<Populus> weights;
+            // number best_weight;
         } block_t;
+
+        SIMDVectorLite<inputSize> best_weights;
 
         block_t block[inputSize];
 
@@ -177,14 +180,23 @@ namespace snn
 
             if( this->reward > 0 )
             {
-                // weight swarming is kinda slow :(
-                for(block_t& _block : this->block)
-                {
-                    number w = _block.weights[_block.id];
+                // iter = static_cast<size_t>(std::round(this->uniform(this->gen)*(inputSize/4 + 1)));
 
-                    _block.weights -= w;
+                // we only update network partially
 
-                }
+                this->best_weights = this->worker;
+
+                // while( iter < inputSize )
+                // {
+                //     number w = this->block[iter].weights[this->block[iter].id];
+
+                //     // this->block[iter].best_weight = w;
+
+                    
+
+                //     iter ++;
+
+                // }
                 
                 return;
             }
@@ -211,7 +223,7 @@ namespace snn
 
                     _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
 
-                    this->worker[iter] = _block.weights[_block.id];
+                    this->worker[i] = _block.weights[_block.id]*0.5f + this->best_weights[i]*0.5f;
 
                 // }
 
