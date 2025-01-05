@@ -48,15 +48,6 @@ namespace snn
 
         std::uniform_real_distribution<float> uniform;
 
-
-        // weight from population with rewward
-        typedef struct weight
-        {
-            float weight;
-            float reward;
-            
-        } weight_t;
- 
         // there will be inputsize amount of block
         typedef struct block
         {
@@ -76,6 +67,8 @@ namespace snn
         // now since each sub block gets the same reward we will just them a pointer to it.
         long double reward;
 
+        size_t collectd_weights;
+
         public:
 
         size_t Id;
@@ -94,7 +87,11 @@ namespace snn
 
             this->curr_rewards = SIMDVectorLite<inputSize>(0);
 
+            this->best_weights = SIMDVectorLite<inputSize>(0);
+
             this->Id = BlockCounter::BlockID;
+
+            this->collectd_weights = 0;
 
             // std::cout<<this->Id<<std::endl;
 
@@ -190,67 +187,61 @@ namespace snn
 
                 // we only update network partially
 
-                this->best_weights = this->worker;
+                this->best_weights*= this->collectd_weights;
 
-                // while( iter < inputSize )
-                // {
-                //     number w = this->block[iter].weights[this->block[iter].id];
+                this->best_weights += this->worker;
 
-                //     // this->block[iter].best_weight = w;
+                this->collectd_weights++;
 
-                    
+                this->best_weights /= this->collectd_weights;
 
-                //     iter ++;
+                if( this->collectd_weights == 10 )
+                {
 
-                // }
+                    this->best_weights /= this->collectd_weights;
+
+                    this->collectd_weights = 1;
+                }
                 
                 return;
             }
 
-            float switch_probability = std::max<float>(1.0 - REWARD_TO_SWITCH_PROBABILITY*this->reward,1.0 - MAX_SWITCH_PROBABILITY);
+            float switch_probability = std::min<float>(REWARD_TO_SWITCH_PROBABILITY*this->reward,MAX_SWITCH_PROBABILITY);
 
-            size_t step = static_cast<size_t>(switch_probability*inputSize) + 1;
+            // size_t step = inputSize/(static_cast<size_t>(switch_probability*inputSize) + 1);
 
-            size_t i = static_cast<size_t>(std::round(this->uniform(this->gen)*step));
+            size_t step = static_cast<size_t>(1.0/switch_probability);
+
+            size_t start = std::min(step,inputSize-1);
+
+            size_t i = static_cast<size_t>(std::round(this->uniform(this->gen)*start));
+
+            uint32_t block_step = static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-1)));
+
+            if(this->Id == 1)
+            {
+                std::cout<<"Step: "<<step<<std::endl;
+                std::cout<<"I: "<<i<<std::endl;
+            }
+
 
             for(;i<inputSize;i+=step)
             {
 
                 block_t& _block = this->block[i];
 
-                // if( this->uniform(this->gen) < switch_probability )
-                // {
-                    // if(this->Id==1)
-                    // {
-                    //     std::cout<<"Swap occured!"<<std::endl;
-                    //     std::cout<<"Swap count: "<<_block.swap_count+1<<std::endl;
-                    //     std::cout<<"with probability "<<switch_probability<<std::endl;
-                    // }                    _block.swap_count++;
+                // _block.rewards[_block.id] += (this->curr_rewards[i]/inputSize);
 
-                    _block.id = ( static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-2))) + _block.id ) % ( Populus - 1 );
+                _block.id += (block_step+i);
 
-                    _block.rewards[_block.id] = 0.5f*(this->curr_rewards[i]/inputSize) + 0.5f*_block.rewards[_block.id];
+                // _block.id ++;
 
-                    this->worker[i] = _block.weights[_block.id]*0.5f + this->best_weights[i]*0.5f;
+                _block.id = _block.id % Populus;
 
-                    _block.swap_count++;
+                this->worker[i] = _block.weights[_block.id];
 
-                    // if( _block.swap_count >= 1 )
-                    // {
-                    //     // do crossover
-                    //     // sorting takes some time
-                    //     quicksort_mask<Populus>(_block.weights,0,Populus-1,_block.rewards);
-
-                    //     for(size_t i=0;i<Populus/2;i++)
-                    //     {
-                    //         _block.weights[i] = this->global.init();
-                    //     }
-
-                    //     _block.rewards *= 0;
-
-                    // }
-
-                // }
+                _block.swap_count++;
+                
 
                 iter++;
 
