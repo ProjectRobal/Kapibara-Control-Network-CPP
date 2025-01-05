@@ -69,19 +69,13 @@ namespace snn
 
         void shuttle()
         {
-            
 
-            size_t step = this->layers.size()/USED_THREADS;
-            
-            if( step == 0 )
+            for(std::shared_ptr<Layer> layer : this->layers)
             {
-                for(std::shared_ptr<Layer> layer : this->layers)
-                {
-                    layer->shuttle();
-                }
-
-                return;
+                layer->shuttle();
             }
+
+            return;
 
             std::thread workers[USED_THREADS];
 

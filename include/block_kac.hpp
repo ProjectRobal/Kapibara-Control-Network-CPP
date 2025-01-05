@@ -216,7 +216,7 @@ namespace snn
 
             size_t i = static_cast<size_t>(std::round(this->uniform(this->gen)*start));
 
-            uint32_t block_step = static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-1)));
+            uint32_t block_step = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
 
             if(this->Id == 1)
             {
@@ -241,7 +241,6 @@ namespace snn
                 this->worker[i] = _block.weights[_block.id];
 
                 _block.swap_count++;
-                
 
                 iter++;
 
