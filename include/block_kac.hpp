@@ -230,7 +230,7 @@ namespace snn
 
                 block_t& _block = this->block[i];
 
-                // _block.rewards[_block.id] += (this->curr_rewards[i]/inputSize);
+                _block.rewards[_block.id] += (this->curr_rewards[i]/inputSize);
 
                 _block.id += (block_step+i);
 
