@@ -211,20 +211,20 @@ namespace snn
 
             // size_t mutation_counter = static_cast<size_t>(std::round(this->uniform(this->gen)*9.f))+1;
 
-            size_t mutation_counter = 5;
+            size_t mutation_counter = 2 + static_cast<size_t>(std::round(this->uniform(this->gen)*5));
 
-            size_t mutat_counter = mutation_counter;
+            size_t mutat_counter = 0;
 
             for(;i<inputSize;i+=step)
             {
 
                 block_t& _block = this->block[i];
 
+                // think about it
                 if( mutat_counter == 0 )
                 {
-                    number mutation = this->global.init()/10.f; 
-                    
-                    if( (mutat_counter == 0 || mutat_counter == 2 || mutat_counter == 4) && this->best_weights[i]!=0.f )
+
+                    if( (mutat_counter%2 == 0) && this->best_weights[i]!=0.f )
                     {
 
                         _block.weights[_block.id] = 0.5f*_block.weights[_block.id] + 0.5f*this->best_weights[i];
@@ -232,10 +232,14 @@ namespace snn
                     }
                     else
                     {
-                        _block.weights[_block.id] += mutation;
+                        number mutation_power = std::min<number>(1.f,this->reward*-0.002f);
+
+                        number mutation = this->global.init()/10.f; 
+                        
+                        _block.weights[_block.id] += mutation*mutation_power;
                     }
 
-                    mutat_counter = mutation_counter;
+                mutat_counter = mutation_counter;
                     
                 }
 
