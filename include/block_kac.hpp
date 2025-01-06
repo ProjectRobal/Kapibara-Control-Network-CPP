@@ -52,15 +52,10 @@ namespace snn
         typedef struct block
         {
             uint32_t id;
-            uint16_t swap_count;
-            SIMDVectorLite<Populus> weights;
-            SIMDVectorLite<Populus> rewards;
-            // number best_weight;
+            number weights[Populus];
         } block_t;
 
         SIMDVectorLite<inputSize> best_weights;
-
-        SIMDVectorLite<inputSize> curr_rewards;
 
         block_t block[inputSize];
 
@@ -85,8 +80,6 @@ namespace snn
 
             this->worker = SIMDVectorLite<inputSize>(0);
 
-            this->curr_rewards = SIMDVectorLite<inputSize>(0);
-
             this->best_weights = SIMDVectorLite<inputSize>(0);
 
             this->Id = BlockCounter::BlockID;
@@ -110,12 +103,10 @@ namespace snn
             for(block_t& block : this->block)
             {
                 block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-1)));
-                block.swap_count = 0;
 
                 for(size_t w=0;w<Populus;w++)
                 {
                     block.weights[w] = this->global.init();
-                    block.rewards[w] = 0.f;
                 }
 
                 this->worker[i] = block.weights[block.id];
@@ -218,44 +209,54 @@ namespace snn
 
             uint32_t block_step = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
 
-            if(this->Id == 1)
-            {
-                std::cout<<"Step: "<<step<<std::endl;
-                std::cout<<"I: "<<i<<std::endl;
-            }
+            // size_t mutation_counter = static_cast<size_t>(std::round(this->uniform(this->gen)*9.f))+1;
 
+            size_t mutation_counter = 5;
+
+            size_t mutat_counter = mutation_counter;
 
             for(;i<inputSize;i+=step)
             {
 
                 block_t& _block = this->block[i];
 
-                _block.rewards[_block.id] += (this->curr_rewards[i]/inputSize);
+                if( mutat_counter == 0 )
+                {
+                    number mutation = this->global.init()/10.f; 
+                    
+                    if( mutat_counter == 0 || mutat_counter == 2 || mutat_counter == 4 )
+                    {
+
+                        _block.weights[_block.id] = 0.5f*_block.weights[_block.id] + 0.5f*this->best_weights[i];
+
+                    }
+                    else
+                    {
+                        _block.weights[_block.id] += mutation;
+                    }
+
+                    mutat_counter = mutation_counter;
+                    
+                }
+
+                mutat_counter -- ;
 
                 _block.id += (block_step+i);
-
-                // _block.id ++;
 
                 _block.id = _block.id % Populus;
 
                 this->worker[i] = _block.weights[_block.id];
-
-                _block.swap_count++;
 
                 iter++;
 
             }
 
             this->reward = 0;
-
-            this->curr_rewards *= 0.0;
         }
 
         void giveReward(long double reward) 
         {          
             this->reward += reward;
-
-            this->curr_rewards += static_cast<float>(reward);
         }
 
         number fire(const SIMDVectorLite<inputSize>& input)
@@ -267,20 +268,50 @@ namespace snn
 
         void dump(std::ostream& out) const
         {
-            // for(size_t i=0;i<inputSize;++i)
-            // {
-            //     out.write((char*)&this->block[i],sizeof(block_t));
-            // }
+            // save best weights
+
+            out.write((const char*)&this->collectd_weights,sizeof(size_t));
+
+            for(size_t i=0;i<inputSize;++i)
+            {
+                char* buff = serialize_number<number>(this->best_weights[i]);
+
+                out.write(buff,SERIALIZED_NUMBER_SIZE);
+
+                delete [] buff;
+            }
+
+            // save blocks
+            for(size_t i=0;i<inputSize;++i)
+            {
+                out.write((char*)&this->block[i],sizeof(block_t));
+            }
         }
 
         void load(std::istream& in)
         {
-            // for(size_t i=0;i<inputSize;++i)
-            // {
-            //     in.read((char*)&this->block[i],sizeof(block_t));
+            // load best weights
+            in.read((char*)&this->collectd_weights,sizeof(size_t));
 
-            //     this->worker[i] = this->block[i].weights[this->block[i].id].weight;
-            // }   
+            char buff[SERIALIZED_NUMBER_SIZE];
+
+            for(size_t i=0;i<inputSize;++i)
+            {
+                in.read(buff,SERIALIZED_NUMBER_SIZE);
+
+                number num = deserialize_number<number>(buff);
+
+                this->best_weights[i] = num;
+            }
+
+
+            // load blocks
+            for(size_t i=0;i<inputSize;++i)
+            {
+                in.read((char*)&this->block[i],sizeof(block_t));
+
+                this->worker[i] = this->block[i].weights[this->block[i].id];
+            }   
         }
         
     };

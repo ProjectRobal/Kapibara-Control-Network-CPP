@@ -70,12 +70,12 @@ namespace snn
         void shuttle()
         {
 
-            for(std::shared_ptr<Layer> layer : this->layers)
-            {
-                layer->shuttle();
-            }
+            // for(std::shared_ptr<Layer> layer : this->layers)
+            // {
+            //     layer->shuttle();
+            // }
 
-            return;
+            // return;
 
             std::thread workers[USED_THREADS];
 
@@ -94,14 +94,11 @@ namespace snn
 
             _mux.unlock();
 
-            
-
             for(auto& worker : workers)
             {
                 worker.join();   
             }
 
-            std::cout<<"Free slot: "<<free_slot<<std::endl;
         }
 
         void applyReward(long double reward)
