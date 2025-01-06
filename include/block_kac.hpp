@@ -224,7 +224,7 @@ namespace snn
                 {
                     number mutation = this->global.init()/10.f; 
                     
-                    if( mutat_counter == 0 || mutat_counter == 2 || mutat_counter == 4 )
+                    if( (mutat_counter == 0 || mutat_counter == 2 || mutat_counter == 4) && this->best_weights[i]!=0.f )
                     {
 
                         _block.weights[_block.id] = 0.5f*_block.weights[_block.id] + 0.5f*this->best_weights[i];
