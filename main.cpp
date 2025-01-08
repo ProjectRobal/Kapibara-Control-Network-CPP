@@ -261,7 +261,27 @@ int main(int argc,char** argv)
         
     }
 
-    arbiter.setup();
+    int ret = arbiter.load("network.kac");
+
+    if(ret!=0)
+    {
+        std::cout<<"Failed to load network! with code: "<<ret<<" trying to load backup!"<<std::endl;
+
+        ret = arbiter.load_backup("network.kac");
+    }
+
+    if(ret!=0)
+    {
+        std::cout<<"Failed to load network! with code: "<<ret<<std::endl;
+        arbiter.setup();
+
+        std::cout<<"Arbiter save: "<<static_cast<int32_t>(arbiter.save("network.kac"))<<std::endl;
+
+    }
+    else 
+    {
+        std::cout<<"Network loaded!"<<std::endl;
+    }
 
     snn::SIMDVectorLite<582> input;
 

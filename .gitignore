@@ -6,3 +6,6 @@ python/lib64
 pyvenv.cfg
 checkpoint/*
 layer_*.layer
+network.kac
+network.kac.bak
+*.sha256

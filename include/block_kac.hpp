@@ -302,11 +302,8 @@ namespace snn
                 delete [] buff;
             }
 
-            // save blocks
-            for(size_t i=0;i<inputSize;++i)
-            {
-                out.write((char*)&this->block[i],sizeof(block_t));
-            }
+            out.write((char*)&this->block,sizeof(block_t)*inputSize);
+
         }
 
         void load(std::istream& in)

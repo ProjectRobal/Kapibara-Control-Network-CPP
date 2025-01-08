@@ -234,7 +234,7 @@ namespace snn
 
                 out.write(buff,SERIALIZED_NUMBER_SIZE);
 
-                delete buff;
+                delete [] buff;
 
             }
 
