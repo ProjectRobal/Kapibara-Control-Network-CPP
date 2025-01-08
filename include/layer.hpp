@@ -1,161 +1,27 @@
 #pragma once
 
-#include <vector>
-#include <functional>
-#include <fstream>
-
-#include "block.hpp"
-#include "neuron.hpp"
-#include "initializer.hpp"
-#include "mutation.hpp"
-#include "crossover.hpp"
-
-#include "simd_vector.hpp"
-
-#include "config.hpp"
-
-#include "activation.hpp"
-#include "activation/linear.hpp"
-
-#include <layer_utils.hpp>
+#include <iostream>
+#include <cstdint>
 
 namespace snn
 {
-    #define STATICLAYERID 1
-
-    template<class NeuronT,size_t Working,size_t Populus>
     class Layer
-    { 
-        std::vector<Block<NeuronT,Working,Populus>> blocks;
-        std::shared_ptr<Initializer> init;
-        std::shared_ptr<Activation> activation_func;
-
+    {
         public:
 
-        Layer()
-        {
-            this->activation_func=std::make_shared<Linear>();
-        }
+        virtual void setup() = 0;
 
-        Layer(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
-        {
-            this->setup(N,init,_crossing,_mutate);
-        }
+        virtual void applyReward(long double reward) = 0;
 
-        void setInitializer(std::shared_ptr<Initializer> init)
-        {
-            this->init=init;
-        }
+        virtual void shuttle() = 0;
 
-        void setActivationFunction(std::shared_ptr<Activation> active)
-        {
-            this->activation_func=active;
-        }
+        virtual int8_t load() = 0;
 
-        void setup(size_t N,std::shared_ptr<Initializer> init,std::shared_ptr<Crossover> _crossing,std::shared_ptr<Mutation> _mutate)
-        {
-            blocks.clear();
+        virtual int8_t save() const = 0;
 
-            this->init=init;
+        virtual int8_t load(std::istream& in) = 0;
 
-            for(size_t i=0;i<N;++i)
-            {
-                blocks.push_back(Block<NeuronT,Working,Populus>(_crossing,_mutate));
-                blocks.back().setup(init);
-            }
-        }
+        virtual int8_t save(std::ostream& out) const = 0;
 
-        void applyReward(long double reward)
-        {
-            reward/=this->blocks.size();
-
-            for(auto& block : this->blocks)
-            {
-                block.giveReward(reward);
-            }
-        }
-
-        void shuttle()
-        {
-            
-            for(auto& block : this->blocks)
-            {
-                
-                block.chooseWorkers();
-
-            }   
-        }
-
-        SIMDVector fire(const SIMDVector& input)
-        {
-            SIMDVector output;
-            output.reserve(this->blocks[0].outputSize());
-
-            for(auto& block : this->blocks)
-            {
-                
-                output+=block.fire(input);
-
-                if(block.readyToMate())
-                {
-                    block.maiting(this->init);
-                }
-
-            }
-
-            output/=this->blocks.size();
-
-            this->activation_func->activate(output);
-
-            return output;
-        }
-
-        void save(std::ofstream& file)
-        {
-            LayerHeader header;
-
-            header.id=STATICLAYERID;
-            header.input_size=blocks[0].inputSize();
-            header.output_size=blocks[0].outputSize();
-
-            file.write((char*)&header,sizeof(header));
-
-            for(const auto& block : this->blocks)
-            {
-                block.save(file);
-            }
-        }
-
-        bool load(std::ifstream& file)
-        {
-            LayerHeader header={0};
-
-            file.read((char*)&header,sizeof(header));
-
-            if(strcmp("KAC",header.header)!=0)
-            {
-                std::cerr<<"Invalid header!"<<std::endl;
-                return false;
-            }
-
-            if(header.id != STATICLAYERID)
-            {
-                std::cerr<<"Invalid layer format!"<<std::endl;
-                return false;
-            }
-
-            for(auto& block : this->blocks)
-            {
-                if(!block.load(file))
-                {
-                    std::cerr<<"Block corrupted"<<std::endl;
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-    };  
-    
-} // namespace snn
+    };
+}

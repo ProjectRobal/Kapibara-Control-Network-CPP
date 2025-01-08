@@ -1,0 +1,9 @@
+syntax="proto3";
+
+message CartPole
+{
+    uint32 wait=1;
+    repeated double inputs=4;
+    repeated double outputs=6;
+    double reward=7;
+};
