@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 
 project(Kolejka)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -g -Wall -ffast-math -std=c++20 -Wl,-z,stack-size=16777216")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -g -Wall -ffast-math -O3 -std=c++20 -Wl,-z,stack-size=16777216")
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include/")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/sources/")

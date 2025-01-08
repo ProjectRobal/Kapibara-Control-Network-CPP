@@ -206,46 +206,10 @@ namespace snn
 
             uint32_t block_step = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
 
-            bool best_switch = false;
-
             for(;i<inputSize;i+=step)
             {
 
                 block_t& _block = this->block[i];
-
-                // think about it
-
-                // if(_block.swap_count > Populus/2)
-                // {
-
-                //     if( best_switch && this->best_weights[i]!=0.f )
-                //     {
-
-                //         _block.weights[_block.id] = 0.5f*_block.weights[_block.id] + 0.5f*this->best_weights[i];
-
-                //     }
-                //     else
-                //     {
-                //         // maybe it should depends on cumulative reward?
-                //         number mutation_power = std::max(1.f - std::exp(this->curr_rewards[i]*0.0002f), 0.f);
-
-                //         number mutation = this->global.init()/10.f; 
-                        
-                //         _block.weights[_block.id] += mutation*mutation_power;
-
-                //         this->curr_rewards[i] = 0.f;
-                //     }
-
-                //     best_switch = !best_switch;
-
-                // }
-
-                // mutat_counter -- ;
-
-                // if( mutat_counter == 0 )
-                // {
-                //     mutat_counter = 32;
-                // }
 
                 _block.weights[_block.id].reward = this->curr_rewards[i];
 
@@ -268,8 +232,17 @@ namespace snn
 
                     size_t w=0;
 
+                    size_t nudge = this->uniform(this->gen) > 0.5 ? 1 : 0;
+
                     for(;w<Populus/2;++w)
                     {
+                        if( this->best_weights[i] != 0 && (w+nudge) % 2 == 0 )
+                        {
+
+                            number new_best = 0.5f*_block.weights[_block.id].weight + 0.5f*this->best_weights[i];
+                            _block.weights[w].weight = new_best;
+
+                        }
 
                         number mutation_power = std::max(1.f - std::exp(this->curr_rewards[i]*0.0002f), 0.f);
 
@@ -359,6 +332,7 @@ namespace snn
                 in.read((char*)&this->block[i],sizeof(block_t));
 
                 this->worker[i] = this->block[i].weights[this->block[i].id].weight;
+                this->curr_rewards[i] = this->block[i].weights[this->block[i].id].reward;
             }   
         }
         
