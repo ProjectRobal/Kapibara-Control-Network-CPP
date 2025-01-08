@@ -48,14 +48,26 @@ namespace snn
 
         std::uniform_real_distribution<float> uniform;
 
+        typedef struct weight
+        {
+            number weight;
+            number reward;
+        } weight_t;
+
         // there will be inputsize amount of block
         typedef struct block
         {
             uint32_t id;
-            number weights[Populus];
+            uint32_t swap_count;
+            // number rewards[Populus];
+            // number weights[Populus];
+
+            weight_t weights[Populus];
         } block_t;
 
         SIMDVectorLite<inputSize> best_weights;
+
+        SIMDVectorLite<inputSize> curr_rewards;
 
         block_t block[inputSize];
 
@@ -82,6 +94,8 @@ namespace snn
 
             this->best_weights = SIMDVectorLite<inputSize>(0);
 
+            this->curr_rewards = SIMDVectorLite<inputSize>(0);
+
             this->Id = BlockCounter::BlockID;
 
             this->collectd_weights = 0;
@@ -103,13 +117,15 @@ namespace snn
             for(block_t& block : this->block)
             {
                 block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-1)));
+                block.swap_count = 0;
 
                 for(size_t w=0;w<Populus;w++)
                 {
-                    block.weights[w] = this->global.init();
+                    block.weights[w].weight = this->global.init();
+                    block.weights[w].reward = 0.f;
                 }
 
-                this->worker[i] = block.weights[block.id];
+                this->worker[i] = block.weights[block.id].weight;
 
                 ++i;
             }
@@ -131,33 +147,14 @@ namespace snn
             return this->global.init();
         }
 
-        static void parralel_swap(block_t blocks[inputSize],SIMDVectorLite<inputSize>& worker,std::uniform_real_distribution<float>& uniform,std::mt19937& gen,size_t start,size_t end,float prob)
+        static int compare_weights(const void *p1, const void *p2)
         {
-            size_t step = static_cast<size_t>(prob*((end-start) + 1)) + 1;
+            const weight_t *w1 = (const weight_t*)p1;
+            const weight_t *w2 = (const weight_t*)p2;
 
-            start += static_cast<size_t>(std::round(uniform(gen)*step));
-
-            while(start<end)
-            {
-
-                
-                    // if(this->Id==1)
-                    // {
-                    //     std::cout<<"Swap occured!"<<std::endl;
-                    //     std::cout<<"Swap count: "<<_block.swap_count+1<<std::endl;
-                    //     std::cout<<"with probability "<<switch_probability<<std::endl;
-                    // }                    _block.swap_count++;
-
-                    blocks[start].id = ( static_cast<uint32_t>(std::round(uniform(gen)*(Populus-2))) + blocks[start].id ) % ( Populus - 1 );
-
-                    worker[start] = blocks[start].weights[blocks[start].id];
-
-                
-
-                start+=step;
-
-            }
+            return w1->reward > w2->reward;
         }
+
 
         void chooseWorkers()
         {
@@ -209,11 +206,7 @@ namespace snn
 
             uint32_t block_step = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
 
-            // size_t mutation_counter = static_cast<size_t>(std::round(this->uniform(this->gen)*9.f))+1;
-
-            size_t mutation_counter = 2 + static_cast<size_t>(std::round(this->uniform(this->gen)*5));
-
-            size_t mutat_counter = 0;
+            bool best_switch = false;
 
             for(;i<inputSize;i+=step)
             {
@@ -221,35 +214,85 @@ namespace snn
                 block_t& _block = this->block[i];
 
                 // think about it
-                if( mutat_counter == 0 )
-                {
 
-                    if( (mutat_counter%2 == 0) && this->best_weights[i]!=0.f )
-                    {
+                // if(_block.swap_count > Populus/2)
+                // {
 
-                        _block.weights[_block.id] = 0.5f*_block.weights[_block.id] + 0.5f*this->best_weights[i];
+                //     if( best_switch && this->best_weights[i]!=0.f )
+                //     {
 
-                    }
-                    else
-                    {
-                        number mutation_power = std::min<number>(1.f,this->reward*-0.002f);
+                //         _block.weights[_block.id] = 0.5f*_block.weights[_block.id] + 0.5f*this->best_weights[i];
 
-                        number mutation = this->global.init()/10.f; 
+                //     }
+                //     else
+                //     {
+                //         // maybe it should depends on cumulative reward?
+                //         number mutation_power = std::max(1.f - std::exp(this->curr_rewards[i]*0.0002f), 0.f);
+
+                //         number mutation = this->global.init()/10.f; 
                         
-                        _block.weights[_block.id] += mutation*mutation_power;
-                    }
+                //         _block.weights[_block.id] += mutation*mutation_power;
 
-                mutat_counter = mutation_counter;
-                    
-                }
+                //         this->curr_rewards[i] = 0.f;
+                //     }
 
-                mutat_counter -- ;
+                //     best_switch = !best_switch;
+
+                // }
+
+                // mutat_counter -- ;
+
+                // if( mutat_counter == 0 )
+                // {
+                //     mutat_counter = 32;
+                // }
+
+                _block.weights[_block.id].reward = this->curr_rewards[i];
 
                 _block.id += (block_step+i);
 
                 _block.id = _block.id % Populus;
 
-                this->worker[i] = _block.weights[_block.id];
+                this->worker[i] = _block.weights[_block.id].weight;
+
+                this->curr_rewards[i] = _block.weights[_block.id].reward;
+
+                _block.swap_count++;
+
+
+                // sort weights based on thier rewards
+
+                if( _block.swap_count >= Populus*4 )
+                {
+                    qsort(_block.weights,Populus,sizeof(weight_t),compare_weights);
+
+                    size_t w=0;
+
+                    for(;w<Populus/2;++w)
+                    {
+
+                        number mutation_power = std::max(1.f - std::exp(this->curr_rewards[i]*0.0002f), 0.f);
+
+                        number mutation = this->global.init()/10.f; 
+
+                        _block.weights[w].weight += mutation*mutation_power;
+                        _block.weights[w].reward = 0;
+
+                    }
+
+                    for(;w<Populus;++w)
+                    {
+                        _block.weights[w].reward = 0;
+                    }
+
+                    // if(this->Id == 1)
+                    // {
+                    //     std::cout<<"Sorted, first element reward: "<<_block.weights[0].reward<<std::endl;
+                    // }
+
+                    _block.swap_count = 0;
+
+                }
 
                 iter++;
 
@@ -261,6 +304,7 @@ namespace snn
         void giveReward(long double reward) 
         {          
             this->reward += reward;
+            this->curr_rewards += reward/Populus;
         }
 
         number fire(const SIMDVectorLite<inputSize>& input)
@@ -314,7 +358,7 @@ namespace snn
             {
                 in.read((char*)&this->block[i],sizeof(block_t));
 
-                this->worker[i] = this->block[i].weights[this->block[i].id];
+                this->worker[i] = this->block[i].weights[this->block[i].id].weight;
             }   
         }
         

@@ -217,7 +217,7 @@ size_t snn::LayerCounter::LayerIDCounter = 0;
 
 int main(int argc,char** argv)
 {
-    std::cout<<"Starting..."<<std::endl;
+    // std::cout<<"Starting..."<<std::endl;
 
     // std::chrono::time_point<std::chrono::system_clock> start, end;
 
@@ -346,7 +346,7 @@ int main(int argc,char** argv)
 
     auto layer1 = std::make_shared<snn::LayerKAC<64,32,20,snn::ReLu>>();
 
-    auto layer2 = std::make_shared<snn::LayerKAC<32,2,20,snn::SoftMax>>();
+    auto layer2 = std::make_shared<snn::LayerKAC<32,2,20,snn::Linear>>();
 
     arbiter.addLayer(layer0);
     arbiter.addLayer(layer1);

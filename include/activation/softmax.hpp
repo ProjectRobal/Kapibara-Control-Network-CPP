@@ -19,6 +19,7 @@ namespace snn
         }
 
         template<size_t Size>
+        // think about it!
         static inline void activate(SIMDVectorLite<Size>& vec)
         {
             number max = vec[0];
