@@ -12,6 +12,9 @@
 
 #include "initializers/hu.hpp"
 
+#include "layer_counter.hpp"
+
+
 
 namespace snn
 {
@@ -26,13 +29,27 @@ namespace snn
 
         std::deque<snn::SIMDVectorLite<InputSize>> last_actions;
 
+        // mask that clear positions in vector
         snn::SIMDVectorLite<InputSize*2 + ActionCount*2> clear_mask;
+
+        // mask that clear everything except first position
+        snn::SIMDVectorLite<InputSize*2 + ActionCount*2> clear_mask_action_only;
+
+
+
 
         BlockKAC<InputSize,PopulationSize,HuInit<InputSize>> W1;
 
         BlockKAC<InputSize,PopulationSize,HuInit<InputSize>> W2;
 
+        size_t id;
+
         public:
+
+        Attention()
+        {
+            this->id = LayerCounter::LayerIDCounter++ ;
+        }
 
         snn::SIMDVectorLite<InputSize> process(const snn::SIMDVectorLite<InputSize>& input)
         {   
@@ -57,6 +74,8 @@ namespace snn
 
             size_t action_pos = 0;
 
+            snn::SIMDVectorLite<InputSize> act_w1(0);
+
             // calculate attention for each pair
             for(const auto& action : this->last_actions)
             {
@@ -64,28 +83,30 @@ namespace snn
                 {
                     pair[i] = action[i];
                 }
+
+                pair = pair * this->clear_mask_action_only;
+
+                pair[action_pos + InputSize] = 1;
                 
                 size_t action1_pos = 0;
+
+                act_w1 = this->W1.mult(action);
 
                 for(const auto& action1 : this->last_actions)
                 {
                     for(size_t j=0;j<InputSize;++j)
                     {
-                        pair[j+InputSize] = action1[j];
+                        pair[j+InputSize+ActionCount] = action1[j];
                     }
 
                     pair = pair * this->clear_mask;
 
-                    pair[action_pos + InputSize] = 1;
-
                     pair[action1_pos + InputSize*2 + ActionCount] = 1;
 
 
-                    snn::SIMDVectorLite<InputSize> out = this->W1.mult(action) + this->W2.mult(action1);
-
                     number score_out = std::exp(this->attention.fire(pair)[0]);
 
-                    output += score_out*out;
+                    output += score_out*( act_w1 + this->W2.mult(action1) );
 
                     score_sum += score_out;
                     
@@ -106,8 +127,10 @@ namespace snn
         {
             this->clear_mask = snn::SIMDVectorLite<InputSize*2 + ActionCount*2>(0);
 
+            this->clear_mask_action_only = snn::SIMDVectorLite<InputSize*2 + ActionCount*2>(0);
+
             // we are going to use that mask to clear information of position encoding
-            for(size_t i=0;i<InputSize;++i)
+            for(size_t i=0;i<InputSize+ActionCount;++i)
             {
                 this->clear_mask[i] = 1;
             }
@@ -116,6 +139,14 @@ namespace snn
             {
                 this->clear_mask[i+ActionCount+InputSize] = 1;
             }
+
+
+            // that mask clear everything except first part with action
+            for(size_t i=0;i<InputSize;++i)
+            {
+                this->clear_mask_action_only[i] = 1;
+            }
+
 
             conv.setup();
             attention.setup();
@@ -161,6 +192,23 @@ namespace snn
                 return ret;
             }
 
+            std::string filename = "layer_vecs_"+std::to_string(this->id)+".layer";
+
+            std::ifstream file;
+
+            file.open(filename,std::ios::in);
+
+            if(!file.good())
+            {
+                return -3;
+            }
+
+            W1.load(file);
+            W2.load(file);
+
+            file.close();
+
+
             return 0;
 
         }
@@ -182,6 +230,22 @@ namespace snn
             {
                 return ret;
             }
+
+            std::string filename = "layer_vecs_"+std::to_string(this->id)+".layer";
+
+            std::ofstream file;
+
+            file.open(filename,std::ios::out);
+
+            if(!file.good())
+            {
+                return -3;
+            }
+
+            W1.dump(file);
+            W2.dump(file);
+
+            file.close();
 
             return 0;
         }
