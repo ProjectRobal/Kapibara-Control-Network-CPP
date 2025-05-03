@@ -41,6 +41,8 @@
 
 #include "RResNet.hpp"
 
+#include "attention.hpp"
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -215,73 +217,16 @@ size_t snn::LayerCounter::LayerIDCounter = 0;
 
 */
 
+
+
 int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
-    // we can compress FFT data from 512 to 24 therotically
-    const size_t inputSize = 38;
-
-    start = std::chrono::system_clock::now();
-
-    auto encoder = std::make_shared<snn::LayerKAC<582,64,20>>();
-
-    auto recurrent1 = std::make_shared<snn::RResNet<64,256,20>>();
-
-    auto layer1 = std::make_shared<snn::LayerKAC<64,32,20,snn::ReLu>>();
-
-    auto recurrent2 = std::make_shared<snn::RResNet<32,128,20>>();
-
-    const size_t members_count = 64;
-
-    auto decision = std::make_shared<snn::LayerKAC<32,members_count,20,snn::SoftMax>>();
-
     snn::Arbiter arbiter;
-    
-    arbiter.addLayer(encoder);
-    arbiter.addLayer(recurrent1);
-    arbiter.addLayer(layer1);
-    arbiter.addLayer(recurrent2);
-    arbiter.addLayer(decision);
 
-    std::vector<std::shared_ptr<KapiBara_SubLayer>> layers;
-
-
-    for( size_t i = 0; i < members_count; ++i )
-    {
-
-        auto layer = std::make_shared<KapiBara_SubLayer>();
- 
-        // auto sub_layer2 = std::make_shared<snn::LayerKAC<128,64,20,snn::ReLu>>();
-
-        arbiter.addLayer(layer);
-        layers.push_back(layer);
-        
-    }
-
-    int ret = arbiter.load("network.kac");
-
-    if(ret!=0)
-    {
-        std::cout<<"Failed to load network! with code: "<<ret<<" trying to load backup!"<<std::endl;
-
-        ret = arbiter.load_backup("network.kac");
-    }
-
-    if(ret!=0)
-    {
-        std::cout<<"Failed to load network! with code: "<<ret<<std::endl;
-        arbiter.setup();
-
-        std::cout<<"Arbiter save: "<<static_cast<int32_t>(arbiter.save("network.kac"))<<std::endl;
-
-    }
-    else 
-    {
-        std::cout<<"Network loaded!"<<std::endl;
-    }
 
     snn::SIMDVectorLite<582> input;
 
@@ -294,53 +239,136 @@ int main(int argc,char** argv)
 
     std::cout<<"Running network"<<std::endl;
 
-    while(true)
+    std::shared_ptr<snn::Attention<582,256,64,20>> attention = std::make_shared<snn::Attention<582,256,64,20>>();
+
+    attention->setup();
+
+    auto output1_ = attention->process(input);
+    auto output2_ = attention->process(input);
+    auto output3_ = attention->process(input);
+    auto output4_ = attention->process(input);
+
+    start = std::chrono::system_clock::now();
+
+
+    auto output = attention->process(input);
+    
+
+    end = std::chrono::system_clock::now();
+
+    auto pairwaise_time = static_cast<std::chrono::duration<double>>(end - start).count();
+
+    std::cout<<"Pairwaise time: "<<pairwaise_time<<std::endl;
+
+    std::cout<<output[0]<<std::endl;
+
+
+    std::shared_ptr<snn::LayerKAC<256,4096,20>> layer1 = std::make_shared<snn::LayerKAC<256,4096,20>>();
+
+    std::shared_ptr<snn::LayerKAC<4096,2048,20,snn::ReLu>> layer2 = std::make_shared<snn::LayerKAC<4096,2048,20,snn::ReLu>>();
+
+    std::shared_ptr<snn::LayerKAC<2048,512,20,snn::ReLu>> layer3 = std::make_shared<snn::LayerKAC<2048,512,20,snn::ReLu>>();
+
+    std::shared_ptr<snn::LayerKAC<512,256,20,snn::ReLu>> layer4 = std::make_shared<snn::LayerKAC<512,256,20,snn::ReLu>>();
+
+    std::shared_ptr<snn::LayerKAC<256,64,20>> layer5 = std::make_shared<snn::LayerKAC<256,64,20>>();
+
+    layer1->setup();
+    layer2->setup();
+    layer3->setup();
+    layer4->setup();
+    layer5->setup();
+
+
+    start = std::chrono::system_clock::now();
+
+    auto output1 = layer1->fire(output);
+    auto output2 = layer2->fire(output1);
+    auto output3 = layer3->fire(output2);
+    auto output4 = layer4->fire(output3);
+    auto output5 = layer5->fire(output4);
+
+    for(size_t i=0;i<64;++i)
     {
-
-        start = std::chrono::system_clock::now();
-
-        auto output = encoder->fire(input);
-
-        // output = output / output.size();
-
-        auto output1 = recurrent1->fire(output);
-
-        auto output2 = layer1->fire(output1);
-
-        // output2 = output2 / output2.size();
-
-        auto output3 = recurrent2->fire(output2);
-
-        auto picker = decision->fire(output3);
-
-        auto out = layers[0]->fire(output3);
-
-        end = std::chrono::system_clock::now();
-
-        std::cout<<"Time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
-
-        std::cout<<"Output: "<<picker<<std::endl;
-
-        float x;
-
-        std::cin>>x;
-
-        arbiter.applyReward(x);
-
-        start = std::chrono::system_clock::now();
-
-        arbiter.shuttle();
-
-        end = std::chrono::system_clock::now();
-
-        std::cout<<"Shuttle time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
-
+        output5[i] = std::exp(output5[i]);
     }
 
+    output5 = output5 / output5.reduce();
+
+    end = std::chrono::system_clock::now();
+
+    std::cout<<"Time: "<<(static_cast<std::chrono::duration<double>>(end - start)).count()+pairwaise_time<<std::endl;
+
+    std::cout<<output5<<std::endl;
+
+    arbiter.addLayer(attention);
+
+    arbiter.addLayer(layer1);
+    arbiter.addLayer(layer2);
+    arbiter.addLayer(layer3);
+    arbiter.addLayer(layer4);
+    arbiter.addLayer(layer5);
     
-    // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
+
+    arbiter.applyReward(0);
+
+    start = std::chrono::system_clock::now();
+
+    arbiter.shuttle();
+
+    end = std::chrono::system_clock::now();
+
+    std::cout<<"Time: "<<(static_cast<std::chrono::duration<double>>(end - start)).count()<<std::endl;
 
     return 0;
+
+    // while(true)
+    // {
+
+    //     start = std::chrono::system_clock::now();
+
+    //     auto output = encoder->fire(input);
+
+    //     // output = output / output.size();
+
+    //     auto output1 = recurrent1->fire(output);
+
+    //     auto output2 = layer1->fire(output1);
+
+    //     // output2 = output2 / output2.size();
+
+    //     auto output3 = recurrent2->fire(output2);
+
+    //     auto picker = decision->fire(output3);
+
+    //     auto out = layers[0]->fire(output3);
+
+    //     end = std::chrono::system_clock::now();
+
+    //     std::cout<<"Time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
+
+    //     std::cout<<"Output: "<<picker<<std::endl;
+
+    //     float x;
+
+    //     std::cin>>x;
+
+    //     arbiter.applyReward(x);
+
+    //     start = std::chrono::system_clock::now();
+
+    //     arbiter.shuttle();
+
+    //     end = std::chrono::system_clock::now();
+
+    //     std::cout<<"Shuttle time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
+
+    // }
+
+    
+    // // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
+
+    // return 0;
 
     // auto layer0 = std::make_shared<KapiBara_SubLayer>();
 

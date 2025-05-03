@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.pl": "prolog",
         "array": "cpp",
         "atomic": "cpp",
         "bit": "cpp",
@@ -80,6 +81,10 @@
         "ios": "cpp",
         "locale": "cpp",
         "__locale": "cpp",
-        "__threading_support": "cpp"
+        "__threading_support": "cpp",
+        "__hash_table": "cpp",
+        "__split_buffer": "cpp",
+        "cfenv": "cpp",
+        "stdfloat": "cpp"
     }
 }
