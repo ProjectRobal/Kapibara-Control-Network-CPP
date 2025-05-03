@@ -239,7 +239,7 @@ int main(int argc,char** argv)
 
     std::cout<<"Running network"<<std::endl;
 
-    const size_t action_count = 16;
+    const size_t action_count = 20;
 
     std::shared_ptr<snn::Attention<582,action_count,20>> attention = std::make_shared<snn::Attention<582,action_count,20>>();
 

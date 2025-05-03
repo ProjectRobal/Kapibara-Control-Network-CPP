@@ -13,6 +13,7 @@
 #include "initializers/hu.hpp"
 
 #include "layer_counter.hpp"
+#include "activation/exp.hpp"
 
 
 
@@ -21,8 +22,8 @@ namespace snn
     template<size_t InputSize,size_t ActionCount,size_t PopulationSize = 20>
     class Attention : public Layer
     {
-
-        snn::LayerKAC<InputSize,2,PopulationSize> conv;
+        // it will be used to decide how much information to pass to hidden state
+        snn::LayerKAC<InputSize*2,2,PopulationSize,Exp> conv;
 
         // add information about position
         snn::LayerKAC<InputSize*2 + ActionCount*2,1,PopulationSize> attention;
@@ -36,6 +37,7 @@ namespace snn
         snn::SIMDVectorLite<InputSize*2 + ActionCount*2> clear_mask_action_only;
 
 
+        snn::SIMDVectorLite<InputSize> hidden_state;
 
 
         BlockKAC<InputSize,PopulationSize,HuInit<InputSize>> W1;
@@ -116,11 +118,26 @@ namespace snn
                 action_pos++;
             }
 
-
+            // I have added it to give some long term recurency
             snn::SIMDVectorLite<InputSize> calculated_attention = output/score_sum;
 
+            snn::SIMDVectorLite<InputSize*2> to_conv;
 
-            return calculated_attention;
+            for(size_t i=0;i<InputSize;++i)
+            {
+                to_conv[i] = calculated_attention[i];
+                to_conv[InputSize+i] = hidden_state[i];
+            }
+
+            snn::SIMDVectorLite<2>  conv_output = this->conv.fire(to_conv); 
+
+            number mean_conv_output = conv_output.reduce();
+
+            conv_output /= mean_conv_output;
+
+            hidden_state = hidden_state*conv_output[1] + calculated_attention*conv_output[0];
+
+            return hidden_state;
         }
 
         void setup()
@@ -128,6 +145,8 @@ namespace snn
             this->clear_mask = snn::SIMDVectorLite<InputSize*2 + ActionCount*2>(0);
 
             this->clear_mask_action_only = snn::SIMDVectorLite<InputSize*2 + ActionCount*2>(0);
+
+            this->hidden_state = snn::SIMDVectorLite<InputSize>(0);
 
             // we are going to use that mask to clear information of position encoding
             for(size_t i=0;i<InputSize+ActionCount;++i)
