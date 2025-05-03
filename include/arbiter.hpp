@@ -234,7 +234,6 @@ bool Arbiter::calculate_sha256_for_file(const std::string& filename,char* hash) 
 
 bool Arbiter::create_sha256_file(const std::string& filename) const
 {
-    char buff[32768];
 
     // SHA256 hash 
     char hash[SHA256_DIGEST_LENGTH];

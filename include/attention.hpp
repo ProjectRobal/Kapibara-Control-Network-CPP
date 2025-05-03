@@ -8,97 +8,120 @@
 #include "simd_vector_lite.hpp"
 #include "layer.hpp"
 #include "layer_kac.hpp"
+#include "block_kac.hpp"
+
+#include "initializers/hu.hpp"
+
 
 namespace snn
 {
-    template<size_t InputSize,size_t OutputSize,size_t ActionCount,size_t PopulationSize = 20>
+    template<size_t InputSize,size_t ActionCount,size_t PopulationSize = 20>
     class Attention : public Layer
     {
 
-        snn::LayerKAC<InputSize*2,OutputSize,PopulationSize> conv;
+        snn::LayerKAC<InputSize,2,PopulationSize> conv;
 
-        snn::LayerKAC<InputSize*2,1,PopulationSize> attention;
+        // add information about position
+        snn::LayerKAC<InputSize*2 + ActionCount*2,1,PopulationSize> attention;
 
         std::deque<snn::SIMDVectorLite<InputSize>> last_actions;
 
-        std::deque<snn::SIMDVectorLite<OutputSize>> cached_attention;
+        snn::SIMDVectorLite<InputSize*2 + ActionCount*2> clear_mask;
 
-        std::deque<number> scores;
+        BlockKAC<InputSize,PopulationSize,HuInit<InputSize>> W1;
+
+        BlockKAC<InputSize,PopulationSize,HuInit<InputSize>> W2;
 
         public:
 
-        snn::SIMDVectorLite<OutputSize> process(const snn::SIMDVectorLite<InputSize>& input)
+        snn::SIMDVectorLite<InputSize> process(const snn::SIMDVectorLite<InputSize>& input)
         {   
             // push current input to buffer
-            this->last_actions.pop_back();
+            // this->last_actions.pop_back()
+
             this->last_actions.push_front(input);
 
-            this->cached_attention.pop_back();
-            this->scores.pop_back();
-
-            number score = 0;
-
-
-            snn::SIMDVectorLite<InputSize*2> pair;
-
-            for(size_t i=0;i<InputSize;++i)
+            if(this->last_actions.size()>ActionCount)
             {
-                pair[i] = input[i];
+                this->last_actions.pop_back();
             }
 
-            snn::SIMDVectorLite<OutputSize> output;
+
+            snn::SIMDVectorLite<InputSize*2 + ActionCount*2> pair(0);
+
+
+            snn::SIMDVectorLite<InputSize> output(0);
+
+
+            number score_sum = 0;
+
+            size_t action_pos = 0;
 
             // calculate attention for each pair
             for(const auto& action : this->last_actions)
             {
-                for(size_t j=0;j<InputSize;++j)
+                for(size_t i=0;i<InputSize;++i)
                 {
-                    pair[j+InputSize] = action[j];
+                    pair[i] = action[i];
+                }
+                
+                size_t action1_pos = 0;
+
+                for(const auto& action1 : this->last_actions)
+                {
+                    for(size_t j=0;j<InputSize;++j)
+                    {
+                        pair[j+InputSize] = action1[j];
+                    }
+
+                    pair = pair * this->clear_mask;
+
+                    pair[action_pos + InputSize] = 1;
+
+                    pair[action1_pos + InputSize*2 + ActionCount] = 1;
+
+
+                    snn::SIMDVectorLite<InputSize> out = this->W1.mult(action) + this->W2.mult(action1);
+
+                    number score_out = std::exp(this->attention.fire(pair)[0]);
+
+                    output += score_out*out;
+
+                    score_sum += score_out;
+                    
+                    action1_pos++;
                 }
 
-                number assigned_score = std::exp(this->attention.fire(pair)[0]);
-
-                output += conv.fire(pair)*assigned_score;
-
-                score += assigned_score;
+                action_pos++;
             }
 
-            this->cached_attention.push_back(output);
-            this->scores.push_back(score);
 
-            snn::SIMDVectorLite<OutputSize> calculated_attention;
+            snn::SIMDVectorLite<InputSize> calculated_attention = output/score_sum;
 
-            number sumed_score = 0;
-            
-            for(size_t i=0;i<ActionCount;++i)
-            {
-                calculated_attention += this->cached_attention[i];
-                sumed_score += this->scores[i];
-            }
-
-            calculated_attention = calculated_attention / sumed_score;
 
             return calculated_attention;
         }
 
         void setup()
         {
+            this->clear_mask = snn::SIMDVectorLite<InputSize*2 + ActionCount*2>(0);
+
+            // we are going to use that mask to clear information of position encoding
+            for(size_t i=0;i<InputSize;++i)
+            {
+                this->clear_mask[i] = 1;
+            }
+
+            for(size_t i=0;i<InputSize;++i)
+            {
+                this->clear_mask[i+ActionCount+InputSize] = 1;
+            }
+
             conv.setup();
             attention.setup();
 
-
-            for(size_t i=0;i<ActionCount;++i)
-            {
-                snn::SIMDVectorLite<582> action;
-
-                this->last_actions.push_back(action);
-
-                snn::SIMDVectorLite<256> cache;
-
-                this->cached_attention.push_back(cache);
-
-                this->scores.push_back(0);
-            }
+            W1.setup();
+            W2.setup();
 
         }
 
@@ -106,12 +129,18 @@ namespace snn
         {
             conv.applyReward(reward);
             attention.applyReward(reward);
+
+            W1.giveReward(reward);
+            W2.giveReward(reward);
         }
 
         void shuttle()
         {
             conv.shuttle();
             attention.shuttle();
+
+            W1.chooseWorkers();
+            W2.chooseWorkers();
         }
 
         int8_t load()
@@ -175,6 +204,9 @@ namespace snn
                 return ret;
             }
 
+            W1.load(in);
+            W2.load(in);
+
             return 0;
         }
 
@@ -195,6 +227,9 @@ namespace snn
             {
                 return ret;
             }
+
+            W1.dump(out);
+            W2.dump(out);
 
             return 0;
         }

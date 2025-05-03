@@ -239,14 +239,16 @@ int main(int argc,char** argv)
 
     std::cout<<"Running network"<<std::endl;
 
-    std::shared_ptr<snn::Attention<582,256,64,20>> attention = std::make_shared<snn::Attention<582,256,64,20>>();
+    const size_t action_count = 16;
+
+    std::shared_ptr<snn::Attention<582,action_count,20>> attention = std::make_shared<snn::Attention<582,action_count,20>>();
 
     attention->setup();
 
-    auto output1_ = attention->process(input);
-    auto output2_ = attention->process(input);
-    auto output3_ = attention->process(input);
-    auto output4_ = attention->process(input);
+    for(size_t i=0;i<action_count;i++)
+    {
+        auto output1_ = attention->process(input);
+    }
 
     start = std::chrono::system_clock::now();
 
@@ -263,7 +265,7 @@ int main(int argc,char** argv)
     std::cout<<output[0]<<std::endl;
 
 
-    std::shared_ptr<snn::LayerKAC<256,4096,20>> layer1 = std::make_shared<snn::LayerKAC<256,4096,20>>();
+    std::shared_ptr<snn::LayerKAC<582,4096,20>> layer1 = std::make_shared<snn::LayerKAC<582,4096,20>>();
 
     std::shared_ptr<snn::LayerKAC<4096,2048,20,snn::ReLu>> layer2 = std::make_shared<snn::LayerKAC<4096,2048,20,snn::ReLu>>();
 
