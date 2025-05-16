@@ -76,12 +76,16 @@ namespace snn
 
         size_t collectd_weights;
 
+        number last_value;
+
         public:
 
         size_t Id;
 
         BlockKAC()
         {
+            this->last_value = 0.f;
+
             this->reward = 0.f;
 
             std::random_device rd;
@@ -173,6 +177,8 @@ namespace snn
             { 
                 return;
             }
+
+
 
             float switch_probability = std::min<float>(REWARD_TO_SWITCH_PROBABILITY*this->reward,MAX_SWITCH_PROBABILITY);
 
@@ -294,7 +300,8 @@ namespace snn
 
         number fire(const SIMDVectorLite<inputSize>& input)
         {
-            return ( this->worker*input ).reduce() + this->block[inputSize].weights[this->block[inputSize].id].weight;// + this->bias;
+            this->last_value = ( this->worker*input ).reduce() + this->block[inputSize].weights[this->block[inputSize].id].weight;
+            return this->last_value;// + this->bias;
         }
         
         SIMDVectorLite<inputSize> mult(const SIMDVectorLite<inputSize>& input)

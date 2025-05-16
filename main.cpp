@@ -457,14 +457,16 @@ int main(int argc,char** argv)
 
     std::cout<<"Running network"<<std::endl;
 
+    const size_t population_size = 200;
 
-    std::shared_ptr<snn::LayerKAC<256,512,20>> layer1 = std::make_shared<snn::LayerKAC<256,512,20>>();
 
-    std::shared_ptr<snn::LayerKAC<512,256,20,snn::ReLu>> layer2 = std::make_shared<snn::LayerKAC<512,256,20,snn::ReLu>>();
+    std::shared_ptr<snn::LayerKAC<256,512,population_size,snn::Linear>> layer1 = std::make_shared<snn::LayerKAC<256,512,population_size,snn::Linear>>();
 
-    std::shared_ptr<snn::LayerKAC<256,64,20,snn::ReLu>> layer3 = std::make_shared<snn::LayerKAC<256,64,20,snn::ReLu>>();
+    std::shared_ptr<snn::LayerKAC<512,256,population_size,snn::ReLu>> layer2 = std::make_shared<snn::LayerKAC<512,256,population_size,snn::ReLu>>();
 
-    std::shared_ptr<snn::LayerKAC<64,10,20,snn::SoftMax>> layer4 = std::make_shared<snn::LayerKAC<64,10,20,snn::SoftMax>>();
+    std::shared_ptr<snn::LayerKAC<256,64,population_size,snn::ReLu>> layer3 = std::make_shared<snn::LayerKAC<256,64,population_size,snn::ReLu>>();
+
+    std::shared_ptr<snn::LayerKAC<64,10,population_size,snn::SoftMax>> layer4 = std::make_shared<snn::LayerKAC<64,10,population_size,snn::SoftMax>>();
 
     layer1->setup();
     layer2->setup();
@@ -501,7 +503,7 @@ int main(int argc,char** argv)
 
             error += err;
 
-            arbiter.applyReward(err*100.f);
+            arbiter.applyReward(err*1000.f);
 
             arbiter.shuttle();
         }
