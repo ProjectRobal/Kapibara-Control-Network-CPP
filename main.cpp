@@ -218,6 +218,21 @@ size_t snn::LayerCounter::LayerIDCounter = 0;
 */
 
 
+template<size_t N>
+long double cross_entropy_loss(const snn::SIMDVectorLite<N>& p1,const snn::SIMDVectorLite<N>& p2)
+{
+    number loss = 0.f;
+
+    for(size_t i=0;i<N;++i)
+    {
+        number v = -p1[i]*std::log(p2[i]+0.000000001f);
+
+        loss += v;
+    }
+
+    return loss;
+}
+
 
 int main(int argc,char** argv)
 {
@@ -227,8 +242,211 @@ int main(int argc,char** argv)
 
     snn::Arbiter arbiter;
 
+    // identify digist on 16x16 image
 
-    snn::SIMDVectorLite<582> input;
+    snn::SIMDVectorLite<256> input;
+
+    snn::SIMDVectorLite<256> inputs[10];
+
+    inputs[0] = snn::SIMDVectorLite<256>(
+    {
+    0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,
+    0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+    1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,
+    1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+    1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+    1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+    1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+    1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,
+    0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,
+    0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0
+    });
+
+    inputs[1] = snn::SIMDVectorLite<256>(
+    {
+    0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,1,1,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,1,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,
+    0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,
+    0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0
+    });
+
+    inputs[2] = snn::SIMDVectorLite<256>(
+    {
+    0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,
+    0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+    0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+    0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0,
+    0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0
+    });
+
+    inputs[3] = snn::SIMDVectorLite<256>(
+    {
+    0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0,
+    0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+    0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+    0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+    0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+    0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+    0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0
+    });
+
+    inputs[4] = snn::SIMDVectorLite<256>(
+    {
+    0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,
+    0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,
+    0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,
+    0,0,0,0,0,0,0,0,1,1,1,0,1,1,0,0,
+    0,0,0,0,0,0,0,1,1,1,0,0,1,1,0,0,
+    0,0,0,0,0,0,1,1,1,0,0,0,1,1,0,0,
+    0,0,0,0,0,1,1,1,0,0,0,0,1,1,0,0,
+    0,0,0,0,1,1,1,0,0,0,0,0,1,1,0,0,
+    0,0,0,1,1,1,0,0,0,0,0,0,1,1,0,0,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0
+    });
+
+    inputs[5] = snn::SIMDVectorLite<256>(
+    {
+    0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,
+    0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,
+    0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0
+    });
+
+    inputs[6] = snn::SIMDVectorLite<256>(
+    {
+    0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,
+    0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,1,1,0,0,1,1,1,1,1,1,1,0,0,0,0,
+    0,1,1,0,1,1,0,0,0,0,0,0,1,1,0,0,
+    1,1,0,0,1,0,0,0,0,0,0,0,0,1,1,0,
+    1,1,0,0,1,0,0,0,0,0,0,0,0,1,1,0,
+    1,1,0,0,1,0,0,0,0,0,0,0,0,1,1,0,
+    1,1,0,0,1,0,0,0,0,0,0,0,0,1,1,0,
+    0,1,1,0,1,1,0,0,0,0,0,0,1,1,0,0,
+    0,0,1,1,0,1,1,1,1,1,1,1,1,0,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0
+    });
+
+    inputs[7] = snn::SIMDVectorLite<256>(
+    {
+    0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,
+    0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+    0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0
+    });
+
+    inputs[8] = snn::SIMDVectorLite<256>(
+    {
+    0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,
+    0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,
+    0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    });
+
+    inputs[9] = snn::SIMDVectorLite<256>(
+    {
+    0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,
+    0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,
+    0,0,1,1,0,0,0,0,0,0,0,0,1,1,0,0,
+    0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,
+    0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,
+    1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,
+    1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,
+    1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,
+    0,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,
+    0,0,1,1,0,0,0,0,0,0,0,1,1,1,0,0,
+    0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,
+    0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0
+    });
 
     snn::UniformInit<0.f,1.f> uni;
 
@@ -239,228 +457,69 @@ int main(int argc,char** argv)
 
     std::cout<<"Running network"<<std::endl;
 
-    const size_t action_count = 20;
 
-    std::shared_ptr<snn::Attention<582,action_count,20>> attention = std::make_shared<snn::Attention<582,action_count,20>>();
+    std::shared_ptr<snn::LayerKAC<256,512,20>> layer1 = std::make_shared<snn::LayerKAC<256,512,20>>();
 
-    attention->setup();
+    std::shared_ptr<snn::LayerKAC<512,256,20,snn::ReLu>> layer2 = std::make_shared<snn::LayerKAC<512,256,20,snn::ReLu>>();
 
-    for(size_t i=0;i<action_count;i++)
-    {
-        auto output1_ = attention->process(input);
-    }
+    std::shared_ptr<snn::LayerKAC<256,64,20,snn::ReLu>> layer3 = std::make_shared<snn::LayerKAC<256,64,20,snn::ReLu>>();
 
-    start = std::chrono::system_clock::now();
-
-
-    auto output = attention->process(input);
-    
-
-    end = std::chrono::system_clock::now();
-
-    auto pairwaise_time = static_cast<std::chrono::duration<double>>(end - start).count();
-
-    std::cout<<"Pairwaise time: "<<pairwaise_time<<std::endl;
-
-    std::cout<<output[0]<<std::endl;
-
-
-    std::shared_ptr<snn::LayerKAC<582,4096,20>> layer1 = std::make_shared<snn::LayerKAC<582,4096,20>>();
-
-    std::shared_ptr<snn::LayerKAC<4096,2048,20,snn::ReLu>> layer2 = std::make_shared<snn::LayerKAC<4096,2048,20,snn::ReLu>>();
-
-    std::shared_ptr<snn::LayerKAC<2048,512,20,snn::ReLu>> layer3 = std::make_shared<snn::LayerKAC<2048,512,20,snn::ReLu>>();
-
-    std::shared_ptr<snn::LayerKAC<512,256,20,snn::ReLu>> layer4 = std::make_shared<snn::LayerKAC<512,256,20,snn::ReLu>>();
-
-    std::shared_ptr<snn::LayerKAC<256,64,20>> layer5 = std::make_shared<snn::LayerKAC<256,64,20>>();
+    std::shared_ptr<snn::LayerKAC<64,10,20,snn::SoftMax>> layer4 = std::make_shared<snn::LayerKAC<64,10,20,snn::SoftMax>>();
 
     layer1->setup();
     layer2->setup();
     layer3->setup();
     layer4->setup();
-    layer5->setup();
-
-
-    start = std::chrono::system_clock::now();
-
-    auto output1 = layer1->fire(output);
-    auto output2 = layer2->fire(output1);
-    auto output3 = layer3->fire(output2);
-    auto output4 = layer4->fire(output3);
-    auto output5 = layer5->fire(output4);
-
-    for(size_t i=0;i<64;++i)
-    {
-        output5[i] = std::exp(output5[i]);
-    }
-
-    output5 = output5 / output5.reduce();
-
-    end = std::chrono::system_clock::now();
-
-    std::cout<<"Time: "<<(static_cast<std::chrono::duration<double>>(end - start)).count()+pairwaise_time<<std::endl;
-
-    std::cout<<output5<<std::endl;
-
-    arbiter.addLayer(attention);
 
     arbiter.addLayer(layer1);
     arbiter.addLayer(layer2);
     arbiter.addLayer(layer3);
     arbiter.addLayer(layer4);
-    arbiter.addLayer(layer5);
+
+
+    const size_t iterations = 1000000;
+
+    for(size_t i=0;i<iterations;++i)
+    {
+        // std::cout<<i<<std::endl;
+
+        number error = 0;
+
+        for(size_t j=0;j<1;++j)
+        {
+            
+            auto output1 = layer1->fire(inputs[j]);
+            auto output2 = layer2->fire(output1);
+            auto output3 = layer3->fire(output2);
+            auto output = layer4->fire(output3);
+
+            snn::SIMDVectorLite<10> label(0);
+
+            label[j] = 1.f;
+
+            number err = -cross_entropy_loss<10>(label,output);
+
+            error += err;
+
+            arbiter.applyReward(err*100.f);
+
+            arbiter.shuttle();
+        }
+
+        std::cout<<"Step: "<<i<<" error: "<<error<<std::endl;
+
+        // std::cout<<input[0]<<std::endl;
+    }
+    {
+
+    }
     
 
     arbiter.applyReward(0);
 
-    start = std::chrono::system_clock::now();
-
     arbiter.shuttle();
 
-    end = std::chrono::system_clock::now();
-
-    std::cout<<"Time: "<<(static_cast<std::chrono::duration<double>>(end - start)).count()<<std::endl;
 
     return 0;
-
-    // while(true)
-    // {
-
-    //     start = std::chrono::system_clock::now();
-
-    //     auto output = encoder->fire(input);
-
-    //     // output = output / output.size();
-
-    //     auto output1 = recurrent1->fire(output);
-
-    //     auto output2 = layer1->fire(output1);
-
-    //     // output2 = output2 / output2.size();
-
-    //     auto output3 = recurrent2->fire(output2);
-
-    //     auto picker = decision->fire(output3);
-
-    //     auto out = layers[0]->fire(output3);
-
-    //     end = std::chrono::system_clock::now();
-
-    //     std::cout<<"Time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
-
-    //     std::cout<<"Output: "<<picker<<std::endl;
-
-    //     float x;
-
-    //     std::cin>>x;
-
-    //     arbiter.applyReward(x);
-
-    //     start = std::chrono::system_clock::now();
-
-    //     arbiter.shuttle();
-
-    //     end = std::chrono::system_clock::now();
-
-    //     std::cout<<"Shuttle time: "<<static_cast<std::chrono::duration<double>>(end - start).count()<<std::endl;
-
-    // }
-
-    
-    // // the network will be split into layer that will be split into block an additional network will choose what block should be active in each step.
-
-    // return 0;
-
-    // auto layer0 = std::make_shared<KapiBara_SubLayer>();
-
-    // auto recurrent0 = std::make_shared<snn::RResNet<4,256,20>>();
-
-    
-
-    // arbiter.addLayer(layer0);
-    // arbiter.addLayer(recurrent0);
-
-    // if( arbiter.load() == 0 )
-    // {
-    //     std::cout<<"Loaded networks"<<std::endl;
-    // }
-    // else
-    // {
-    //     arbiter.setup();
-    // }
-
-    // snn::Arbiter arbiter;
-
-    // auto layer0 = std::make_shared<snn::LayerKAC<4,64,20,snn::ReLu>>();
-
-    // auto layer1 = std::make_shared<snn::LayerKAC<64,32,20,snn::ReLu>>();
-
-    // auto layer2 = std::make_shared<snn::LayerKAC<32,2,20,snn::Linear>>();
-
-    // arbiter.addLayer(layer0);
-    // arbiter.addLayer(layer1);
-    // arbiter.addLayer(layer2);
-
-    // arbiter.setup();
-
-    // auto start = std::chrono::system_clock::now();
-
-    // auto end = std::chrono::system_clock::now();
-
-    // std::chrono::duration<double> elapsed_initialization_seconds = end - start;
-
-    // std::cout << "Finished initialization at " << elapsed_initialization_seconds.count() << std::endl;
-
-    // std::cout<<"Starting network"<<std::endl;
-
-    // long double best_reward = -9999999;
-
-
-    // while(true)
-    // {
-
-    //     snn::SIMDVectorLite<6> cart_input = read_fifo_static();
-
-    //     if( cart_input[5] > 0.5f)
-    //     {
-
-    //         if(( cart_input[4] > best_reward ) || cart_input[4] >= 0 )
-    //         {
-    //             best_reward = cart_input[4];
-
-    //             std::cout<<"New best reward: "<<best_reward<<std::endl;
-
-    //             arbiter.save();
-    //         }
-
-
-    //         arbiter.applyReward(cart_input[4]);
-
-    //         arbiter.shuttle();
-
-    //     }
-
-    //     snn::SIMDVectorLite<4> input;
-
-    //     input[0] = cart_input[0];
-    //     input[1] = cart_input[1];
-    //     input[2] = cart_input[2];
-    //     input[3] = cart_input[3];
-
-    //     // snn::SIMDVectorLite rnn = recurrent0->fire(input);
-
-    //     auto output0 = layer0->fire(input);
-    //     auto output1 = layer1->fire(output0);
-    //     auto output2 = layer2->fire(output1);
-
-    //     // std::cout<<"Recurrent out: " << rnn << std::endl;
-
-    //     send_fifo(output2);
-
-    // }
-
-    // return 0;
-
 }
 

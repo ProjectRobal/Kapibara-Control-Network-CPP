@@ -43,6 +43,8 @@ public:
 
     SIMDVectorLite(number nm);
 
+    SIMDVectorLite(const std::array<number,Size>& arr);
+
     number reduce();
 
     number operator[](size_t i) const;
@@ -164,6 +166,15 @@ SIMDVectorLite<Size>::SIMDVectorLite(number num)
         this->_vec[to_set][i] = num;
     }
 
+}
+
+template<size_t Size>
+SIMDVectorLite<Size>::SIMDVectorLite(const std::array<number,Size>& arr)
+{
+    for(size_t i=0;i<Size;++i)
+    {
+        this->set(i,arr[i]);
+    }
 }
 
 template<size_t Size>
