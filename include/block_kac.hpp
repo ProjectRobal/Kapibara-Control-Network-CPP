@@ -123,6 +123,7 @@ namespace snn
                 block.id = static_cast<uint32_t>(std::round(this->uniform(this->gen)*(Populus-1)));
                 block.swap_count = 0;
 
+
                 for(size_t w=0;w<Populus;w++)
                 {
                     block.weights[w].weight = this->global.init();
@@ -195,6 +196,7 @@ namespace snn
             for(;i<inputSize+1;i+=step)
             {
 
+
                 block_t& _block = this->block[i];
 
                 _block.weights[_block.id].reward = this->curr_rewards[i];
@@ -224,7 +226,8 @@ namespace snn
 
                     // if( this->Id == 0 )
                     // {
-                    //     std::cout<<_block.weights[0].reward<<", "<<_block.weights[1].reward<<", "<<_block.weights[2].reward<<std::endl;
+                        
+                    //     std::cout<<"Block: "<<i<<_block.weights[0].reward<<", "<<_block.weights[1].reward<<", "<<_block.weights[2].reward<<std::endl;
                     // }
 
 

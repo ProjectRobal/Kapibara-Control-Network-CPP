@@ -27,6 +27,7 @@
 #include "layer_counter.hpp"
 
 #include "initializers/hu.hpp"
+#include "initializers/gauss.hpp"
 /*
 
 
@@ -35,7 +36,7 @@
 */
 namespace snn
 {    
-    template<size_t inputSize,size_t N,size_t Populus,class Activation = Linear,class weight_initializer = HuInit<inputSize>>
+    template<size_t inputSize,size_t N,size_t Populus,class Activation = Linear,class weight_initializer = GaussInit<0.f,0.01f>>
     class LayerKAC : public Layer
     { 
         const uint32_t LAYER_KAC_ID = 2148;

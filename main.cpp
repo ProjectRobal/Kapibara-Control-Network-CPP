@@ -457,7 +457,7 @@ int main(int argc,char** argv)
 
     std::cout<<"Running network"<<std::endl;
 
-    const size_t population_size = 200;
+    const size_t population_size = 20;
 
 
     std::shared_ptr<snn::LayerKAC<256,512,population_size,snn::Linear>> layer1 = std::make_shared<snn::LayerKAC<256,512,population_size,snn::Linear>>();
