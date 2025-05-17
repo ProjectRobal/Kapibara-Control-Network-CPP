@@ -217,6 +217,22 @@ size_t snn::LayerCounter::LayerIDCounter = 0;
 
 */
 
+template<size_t N>
+size_t max_id(const snn::SIMDVectorLite<N>& p)
+{
+    size_t max_i = 0;
+
+    for( size_t i=1 ; i <N ; ++i )
+    {
+        if( p[i] > p[max_i] )
+        {
+            max_i = i;
+        }
+    }
+
+    return max_i;
+}
+
 
 template<size_t N>
 long double cross_entropy_loss(const snn::SIMDVectorLite<N>& p1,const snn::SIMDVectorLite<N>& p2)
@@ -479,7 +495,9 @@ int main(int argc,char** argv)
     arbiter.addLayer(layer4);
 
 
-    const size_t iterations = 1000000;
+    const size_t iterations = 5;
+
+    long double best_reward = -999999;
 
     for(size_t i=0;i<iterations;++i)
     {
@@ -487,7 +505,7 @@ int main(int argc,char** argv)
 
         number error = 0;
 
-        for(size_t j=0;j<1;++j)
+        for(size_t j=0;j<10;++j)
         {
             
             auto output1 = layer1->fire(inputs[j]);
@@ -495,20 +513,38 @@ int main(int argc,char** argv)
             auto output3 = layer3->fire(output2);
             auto output = layer4->fire(output3);
 
-            snn::SIMDVectorLite<10> label(0);
-
-            label[j] = 1.f;
-
-            number err = -cross_entropy_loss<10>(label,output);
-
-            error += err;
-
-            arbiter.applyReward(err*1000.f);
-
-            arbiter.shuttle();
+            std::cout<<"Output: "<<output<<std::endl;
+            std::cout<<"Max out id: "<<max_id(output)<<std::endl;
         }
 
-        std::cout<<"Step: "<<i<<" error: "<<error<<std::endl;
+        auto output1 = layer1->fire(inputs[0]);
+        auto output2 = layer2->fire(output1);
+        auto output3 = layer3->fire(output2);
+        auto output = layer4->fire(output3);
+
+        snn::SIMDVectorLite<10> label(0);
+
+        label[0] = 1.f;
+
+        number err = -cross_entropy_loss<10>(label,output);
+
+        error += err;
+
+        arbiter.applyReward(err*1.f);
+
+        arbiter.shuttle();
+
+        std::cout<<"Output E: "<<output<<std::endl;
+        std::cout<<"Max out id: "<<max_id(output)<<std::endl;
+        std::cout<<std::endl;
+
+        // if( error > best_reward )
+        // {
+        //     std::cout<<"Step: "<<i<<std::endl;
+
+        //     best_reward = error;
+        //     std::cout<<"Best reward: "<<best_reward<<std::endl;
+        // }
 
         // std::cout<<input[0]<<std::endl;
     }

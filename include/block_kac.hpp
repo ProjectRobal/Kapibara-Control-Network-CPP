@@ -193,7 +193,19 @@ namespace snn
 
             uint32_t block_step = static_cast<uint32_t>(std::round(this->uniform(this->gen)*Populus));
 
-            for(;i<inputSize+1;i+=step)
+
+            block_t& bias = this->block[inputSize];
+
+            bias.weights[bias.id].reward = this->curr_rewards[i];
+
+            bias.id += (block_step+i);
+
+            bias.id = bias.id % Populus;
+
+            bias.swap_count++;
+
+
+            for(;i<inputSize;i+=step)
             {
 
 
@@ -291,6 +303,68 @@ namespace snn
                 iter++;
 
             }
+
+            if( bias.swap_count >= Populus*4 )
+                {
+                    
+                    qsort(bias.weights,Populus,sizeof(weight_t),compare_weights);
+
+                    // if( this->Id == 0 )
+                    // {
+                        
+                    //     std::cout<<"Block: "<<i<<_block.weights[0].reward<<", "<<_block.weights[1].reward<<", "<<_block.weights[2].reward<<std::endl;
+                    // }
+
+
+                    // calculate weighted average of the weights, first half of the best population
+
+                    number best_weight = 0;
+
+                    const size_t best_population_count = Populus/2;
+
+                    const float best_population_discount = 1.f/(static_cast<float>(best_population_count));
+
+                    number sum = 0;
+
+                    for(size_t w=0;w<best_population_count;++w)
+                    {
+                        number exped = 1/std::pow(2,w+1);
+
+                        best_weight += ( bias.weights[w].weight * exped );
+
+                        sum += exped;
+
+                        bias.weights[w].reward = 0;
+                    }
+
+                    best_weight /= sum;
+
+
+                    bias.weights[best_population_count].weight = best_weight;
+
+                    bias.weights[best_population_count].reward = 0;
+
+
+                    for(size_t w=best_population_count+1;w<Populus;++w)
+                    {
+
+                        number mutation = this->global.init();
+
+                        bias.weights[w].weight = best_weight+mutation;
+
+                        bias.weights[w].reward = 0;
+                    }
+
+                    // if(this->Id == 1)
+                    // {
+                    //     std::cout<<"Sorted, first element reward: "<<_block.weights[0].reward<<std::endl;
+                    // }
+
+                    bias.swap_count = 0;
+
+                    bias.id = best_population_count;
+
+                }
 
             this->reward = 0;
         }
