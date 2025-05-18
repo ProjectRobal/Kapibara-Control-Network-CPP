@@ -28,6 +28,7 @@
 
 #include "initializers/hu.hpp"
 #include "initializers/gauss.hpp"
+#include "initializers/uniform.hpp"
 /*
 
 
@@ -36,16 +37,22 @@
 */
 namespace snn
 {    
-    template<size_t inputSize,size_t N,class Activation = Linear,class weight_initializer = GaussInit<0.f,0.01f>>
+    template<size_t inputSize,size_t N,class Activation = Linear,class weight_initializer = UniformInit<-0.01f,0.01f>>
     class LayerHebbian : public Layer
     { 
         const uint32_t LAYER_HEBBIAN_ID = 2158;
 
         snn::SIMDVectorLite<inputSize> blocks[N];
 
+        number biases[N];
+
         weight_initializer global;
 
         std::uniform_real_distribution<double> uniform;
+
+        snn::SIMDVectorLite<inputSize> past_dw;
+
+        size_t iter;
 
         size_t id;
 
@@ -67,6 +74,8 @@ namespace snn
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
 
             this->learning_value = 0.01f;
+
+            this->iter = 0;
         }
 
         void setup()
@@ -79,6 +88,9 @@ namespace snn
                 {
                     this->blocks[i][j] = this->global.init();
                 }
+
+                this->biases[i] = this->global.init();
+
                 // this->blocks.back().chooseWorkers();
             }
         }
@@ -98,24 +110,25 @@ namespace snn
             // reward/=this->blocks.size();
         }
 
-        void applyLearning(const snn::SIMDVectorLite<N>& post_activations)
+        void applyLearning(const snn::SIMDVectorLite<N>& post_activations,const snn::SIMDVectorLite<inputSize>& pre_activations)
         {
+            UniformInit<0.f,1.f> uniform;
+
             for(size_t i=0;i<N;++i)
             {
+
+                if( uniform.init() > 0.2 )
+                {
+                    continue;
+                }
+
                 number p = post_activations[i];
 
-                snn::SIMDVectorLite<inputSize> dw = 0.001f*p*this->blocks[i];
+                snn::SIMDVectorLite<inputSize> dw = this->learning_value*p*pre_activations ;
 
                 this->blocks[i] += dw;
 
-                snn::SIMDVectorLite<inputSize> compare_high = this->blocks[i] > 1.f;
-
-                snn::SIMDVectorLite<inputSize> compare_low = this->blocks[i] < -1.f;
-
-                this->blocks[i] -= (dw*compare_high);
-
-                this->blocks[i] -= (dw*compare_low);
-
+                this->iter++;
             }
         }
 
@@ -125,11 +138,11 @@ namespace snn
             
         }
 
-        static void fire_parraler(snn::SIMDVectorLite<inputSize> * blocks,const SIMDVectorLite<inputSize>& input,SIMDVectorLite<N> &output,size_t start,size_t end)
+        static void fire_parraler(snn::SIMDVectorLite<inputSize> * blocks,number *biases,const SIMDVectorLite<inputSize>& input,SIMDVectorLite<N> &output,size_t start,size_t end)
         {
             for(;start<end;++start)
             {
-                output[start] = (blocks[start]*input).reduce();
+                output[start] = (blocks[start]*input).reduce()+biases[start];
             }
         }
 
@@ -155,7 +168,7 @@ namespace snn
 
             for(size_t i=0;i<worker_count;++i)
             {
-                threads[i] = std::thread(fire_parraler,this->blocks,std::cref(input),std::ref(output),min,max);
+                threads[i] = std::thread(fire_parraler,this->blocks,this->biases,std::cref(input),std::ref(output),min,max);
 
                 min = max;
                 
@@ -198,7 +211,7 @@ namespace snn
             //     }
             // }
 
-            Activation::activate(output);
+            // Activation::activate(output);
 
             return output;
         }
