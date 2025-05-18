@@ -478,13 +478,13 @@ int main(int argc,char** argv)
     const size_t population_size = 20;
 
 
-    std::shared_ptr<snn::LayerKAC<256,512,population_size,snn::Linear>> layer1 = std::make_shared<snn::LayerKAC<256,512,population_size,snn::Linear>>();
+    std::shared_ptr<snn::LayerHebbian<256,512,snn::Linear>> layer1 = std::make_shared<snn::LayerHebbian<256,512,snn::Linear>>();
 
-    std::shared_ptr<snn::LayerKAC<512,256,population_size,snn::ReLu>> layer2 = std::make_shared<snn::LayerKAC<512,256,population_size,snn::ReLu>>();
+    std::shared_ptr<snn::LayerHebbian<512,256,snn::ReLu>> layer2 = std::make_shared<snn::LayerHebbian<512,256,snn::ReLu>>();
 
-    std::shared_ptr<snn::LayerKAC<256,64,population_size,snn::ReLu>> layer3 = std::make_shared<snn::LayerKAC<256,64,population_size,snn::ReLu>>();
+    std::shared_ptr<snn::LayerHebbian<256,64,snn::ReLu>> layer3 = std::make_shared<snn::LayerHebbian<256,64,snn::ReLu>>();
 
-    std::shared_ptr<snn::LayerKAC<64,10,population_size,snn::SoftMax>> layer4 = std::make_shared<snn::LayerKAC<64,10,population_size,snn::SoftMax>>();
+    std::shared_ptr<snn::LayerHebbian<64,10,snn::SoftMax>> layer4 = std::make_shared<snn::LayerHebbian<64,10,snn::SoftMax>>();
 
     layer1->setup();
     layer2->setup();
@@ -497,9 +497,11 @@ int main(int argc,char** argv)
     arbiter.addLayer(layer4);
 
 
-    const size_t iterations = 5;
+    const size_t iterations = 100000;
 
     long double best_reward = -999999;
+
+    snn::SIMDVectorLite<10> first_output;
 
     for(size_t i=0;i<iterations;++i)
     {
@@ -507,22 +509,33 @@ int main(int argc,char** argv)
 
         number error = 0;
 
-        for(size_t j=0;j<10;++j)
-        {
+        // for(size_t j=0;j<10;++j)
+        // {
             
-            auto output1 = layer1->fire(inputs[j]);
-            auto output2 = layer2->fire(output1);
-            auto output3 = layer3->fire(output2);
-            auto output = layer4->fire(output3);
+        //     auto output1 = layer1->fire(inputs[j]);
+        //     auto output2 = layer2->fire(output1);
+        //     auto output3 = layer3->fire(output2);
+        //     auto output = layer4->fire(output3);
 
-            std::cout<<"Output: "<<output<<std::endl;
-            std::cout<<"Max out id: "<<max_id(output)<<std::endl;
-        }
+        //     std::cout<<"Output: "<<output<<std::endl;
+        //     std::cout<<"Max out id: "<<max_id(output)<<std::endl;
+        // }
 
         auto output1 = layer1->fire(inputs[0]);
+
+        layer1->applyLearning(output1);
+
         auto output2 = layer2->fire(output1);
+
+        layer2->applyLearning(output2);
+
         auto output3 = layer3->fire(output2);
+
+        layer3->applyLearning(output3);
+
         auto output = layer4->fire(output3);
+
+        layer4->applyLearning(output);
 
         snn::SIMDVectorLite<10> label(0);
 
@@ -532,13 +545,19 @@ int main(int argc,char** argv)
 
         error += err;
 
-        arbiter.applyReward(err*0.0000001f);
+        arbiter.applyReward(err);
 
         arbiter.shuttle();
 
         std::cout<<"Output E: "<<output<<std::endl;
+        std::cout<<"Reward: "<<err<<std::endl;
         std::cout<<"Max out id: "<<max_id(output)<<std::endl;
         std::cout<<std::endl;
+
+        if( i == 0 )
+        {
+            first_output = output;
+        }
 
         // if( error > best_reward )
         // {
@@ -550,14 +569,8 @@ int main(int argc,char** argv)
 
         // std::cout<<input[0]<<std::endl;
     }
-    {
-
-    }
     
-
-    arbiter.applyReward(0);
-
-    arbiter.shuttle();
+    std::cout<<"First output: "<<first_output<<std::endl;
 
 
     return 0;

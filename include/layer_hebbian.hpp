@@ -49,6 +49,8 @@ namespace snn
 
         size_t id;
 
+        number learning_value;
+
         struct metadata
         {
             uint32_t id;
@@ -63,6 +65,8 @@ namespace snn
             this->id = LayerCounter::LayerIDCounter++ ;
 
             this->uniform=std::uniform_real_distribution<double>(0.f,1.f);
+
+            this->learning_value = 0.01f;
         }
 
         void setup()
@@ -73,7 +77,7 @@ namespace snn
                 // this->blocks[i]= BlockKAC<inputSize,Populus>();
                 for(size_t j=0;j<inputSize;++j)
                 {
-                    this->blocks[j] = this->global.init();
+                    this->blocks[i][j] = this->global.init();
                 }
                 // this->blocks.back().chooseWorkers();
             }
@@ -81,8 +85,38 @@ namespace snn
 
         void applyReward(long double reward)
         {
+            // if( reward < 0 )
+            // {
+            //     this->learning_value = -0.01f;
+            // }
+            // else
+            // {
+            //     this->learning_value = 0.01f;
+            // }
 
+            // this->learning_value = ( 1.f / ( std::exp(-reward) + 1.f ) - 0.5f )*0.1f;
             // reward/=this->blocks.size();
+        }
+
+        void applyLearning(const snn::SIMDVectorLite<N>& post_activations)
+        {
+            for(size_t i=0;i<N;++i)
+            {
+                number p = post_activations[i];
+
+                snn::SIMDVectorLite<inputSize> dw = 0.001f*p*this->blocks[i];
+
+                this->blocks[i] += dw;
+
+                snn::SIMDVectorLite<inputSize> compare_high = this->blocks[i] > 1.f;
+
+                snn::SIMDVectorLite<inputSize> compare_low = this->blocks[i] < -1.f;
+
+                this->blocks[i] -= (dw*compare_high);
+
+                this->blocks[i] -= (dw*compare_low);
+
+            }
         }
 
         void shuttle()
