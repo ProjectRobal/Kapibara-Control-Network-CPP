@@ -43,6 +43,8 @@
 
 #include "attention.hpp"
 
+#include "layer_hebbian.hpp"
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -530,7 +532,7 @@ int main(int argc,char** argv)
 
         error += err;
 
-        arbiter.applyReward(err*1.f);
+        arbiter.applyReward(err*0.0000001f);
 
         arbiter.shuttle();
 
