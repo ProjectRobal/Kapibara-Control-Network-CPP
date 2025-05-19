@@ -526,27 +526,27 @@ int main(int argc,char** argv)
 
         auto output1 = layer1->fire(inputs[j]);
 
-        layer1->applyLearning(output1,inputs[j]);
-
         snn::ReLu::activate(output1);
+
+        layer1->applyLearning(output1,inputs[j]);
 
         auto output2 = layer2->fire(output1);
 
-        layer2->applyLearning(output2,output1);
-
         snn::ReLu::activate(output2);
+
+        layer2->applyLearning(output2,output1);
 
         auto output3 = layer3->fire(output2);
 
-        layer3->applyLearning(output3,output2);
-
         snn::ReLu::activate(output3);
 
-        auto output = layer4->fire(output3);
+        layer3->applyLearning(output3,output2);
 
-        layer4->applyLearning(output,output3);
+        auto output = layer4->fire(output3);
         
         snn::SoftMax::activate(output);
+
+        layer4->applyLearning(output,output3);
 
         snn::SIMDVectorLite<10> label(0);
 

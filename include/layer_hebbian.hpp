@@ -128,6 +128,11 @@ namespace snn
 
                 this->blocks[i] += dw;
 
+                // snn::SIMDVectorLite<inputSize> compare_high = this->blocks[i] > 10.f;
+                // snn::SIMDVectorLite<inputSize> compare_low = this->blocks[i] < -10.f;
+
+                // this->blocks[i] -= ( dw*compare_high + dw*compare_low );
+
                 this->iter++;
             }
         }
