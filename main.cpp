@@ -497,7 +497,7 @@ int main(int argc,char** argv)
     arbiter.addLayer(layer4);
 
 
-    const size_t iterations = 100;
+    const size_t iterations = 25;
 
     long double best_reward = -999999;
 
@@ -521,32 +521,33 @@ int main(int argc,char** argv)
         //     std::cout<<"Max out id: "<<max_id(output)<<std::endl;
         // }
 
-        for(size_t j=0;j<1;++j)
+        for(size_t j=0;j<10;++j)
         {
 
         auto output1 = layer1->fire(inputs[j]);
 
-        snn::ReLu::activate(output1);
-
         layer1->applyLearning(output1,inputs[j]);
+
+
+        snn::ReLu::activate(output1);
 
         auto output2 = layer2->fire(output1);
 
-        snn::ReLu::activate(output2);
-
         layer2->applyLearning(output2,output1);
+
+        snn::ReLu::activate(output2);
 
         auto output3 = layer3->fire(output2);
 
-        snn::ReLu::activate(output3);
-
         layer3->applyLearning(output3,output2);
 
+        snn::ReLu::activate(output3);
+
         auto output = layer4->fire(output3);
-        
-        snn::SoftMax::activate(output);
 
         layer4->applyLearning(output,output3);
+        
+        snn::SoftMax::activate(output);
 
         snn::SIMDVectorLite<10> label(0);
 

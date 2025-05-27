@@ -124,9 +124,11 @@ namespace snn
 
                 number p = post_activations[i];
 
-                snn::SIMDVectorLite<inputSize> dw = this->learning_value*p*pre_activations ;
+                snn::SIMDVectorLite<inputSize> dw = this->learning_value*p*(pre_activations - this->blocks[i]*p);
 
                 this->blocks[i] += dw;
+
+                // this->biases[N] += this->learning_value*post_activations[i];
 
                 // snn::SIMDVectorLite<inputSize> compare_high = this->blocks[i] > 10.f;
                 // snn::SIMDVectorLite<inputSize> compare_low = this->blocks[i] < -10.f;
@@ -147,7 +149,7 @@ namespace snn
         {
             for(;start<end;++start)
             {
-                output[start] = (blocks[start]*input).reduce()+biases[start];
+                output[start] = (blocks[start]*input).reduce();//+biases[start];
             }
         }
 
