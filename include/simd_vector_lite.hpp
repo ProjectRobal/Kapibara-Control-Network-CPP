@@ -128,6 +128,8 @@ public:
 
     SIMDVectorLite operator<(const SIMDVectorLite<Size>& v) const;
 
+    snn::SIMDVectorLite<Size> exp();
+
     // template<size_t Size1>
     // friend std::ostream& operator<<(std::ostream& out,const snn::SIMDVectorLite<Size1>& vec);
 
@@ -147,7 +149,7 @@ SIMDVectorLite<Size>::SIMDVectorLite()
 template<size_t Size>
 SIMDVectorLite<Size>::SIMDVectorLite(number num)
 {
-    size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE;
+    constexpr size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE ;
 
     size_t to_set = VEC_COUNT;
 
@@ -260,7 +262,7 @@ void SIMDVectorLite<Size>::set(size_t i,number v)
 template<size_t Size>
 void SIMDVectorLite<Size>::operator+=(number v)
 {
-    size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE;
+    constexpr size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE - 1;
     
     for(size_t i=0;i<VEC_COUNT;++i)
     {
@@ -274,7 +276,7 @@ void SIMDVectorLite<Size>::operator+=(number v)
 template<size_t Size>
 void SIMDVectorLite<Size>::operator-=(number v)
 {
-    size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE;
+    constexpr size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE - 1;
     
     for(size_t i=0;i<VEC_COUNT;++i)
     {
@@ -312,7 +314,7 @@ SIMDVectorLite<Size> SIMDVectorLite<Size>::operator+(number v) const
 {
     SIMDVectorLite<Size> output;
 
-    size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE;
+    constexpr size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE - 1;
     
     for(size_t i=0;i<VEC_COUNT;++i)
     {
@@ -330,7 +332,7 @@ SIMDVectorLite<Size> SIMDVectorLite<Size>::operator-(number v) const
 {
     SIMDVectorLite<Size> output;
 
-    size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE;
+    constexpr size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE - 1; 
     
     for(size_t i=0;i<VEC_COUNT;++i)
     {
@@ -561,6 +563,24 @@ SIMDVectorLite<Size>::~SIMDVectorLite()
 {
 }
 
+template<size_t Size>
+snn::SIMDVectorLite<Size> snn::SIMDVectorLite<Size>::exp()
+{
+
+    snn::SIMDVectorLite<Size> output(0.f);
+
+    constexpr size_t element_left = Size - static_cast<size_t>(Size/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE - 1;
+
+    for(size_t i=0;i<VEC_COUNT;++i)
+    {
+        output._vec[i] = std::experimental::exp(this->_vec[i]);
+    }
+
+    output.zeros_last_element(MAX_SIMD_VECTOR_SIZE-element_left);
+
+    return output;
+}
+
 }
 
 template<size_t Size>
@@ -597,3 +617,4 @@ snn::SIMDVectorLite<Size> operator/(float num,const snn::SIMDVectorLite<Size>& v
 {
     return vec*num/(vec*vec);
 }
+
