@@ -85,6 +85,10 @@
         "__hash_table": "cpp",
         "__split_buffer": "cpp",
         "cfenv": "cpp",
-        "stdfloat": "cpp"
+        "stdfloat": "cpp",
+        "__tree": "cpp",
+        "simd": "cpp",
+        "queue": "cpp",
+        "stack": "cpp"
     }
 }

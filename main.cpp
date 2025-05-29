@@ -265,8 +265,6 @@ int main(int argc,char** argv)
 
     snn::SIMDVectorLite<size> input;
 
-    snn::SIMDVectorLite<size> x1;
-
     snn::UniformInit<-1.f,1.f> rand;
 
     for(size_t i=0;i<size;++i)
@@ -274,7 +272,90 @@ int main(int argc,char** argv)
         input[i] = rand.init();
     }
 
+    input[0] = 2.f;
+
+    // those hold splines for activations functions. I am going to use splines:
+    // exp(-(x-x1)^2 * b)*a
+
+    // x shift of a functions
+    std::vector<snn::SIMDVectorLite<size>> splines_x;
+    // b parameters
+    std::vector<snn::SIMDVectorLite<size>> splines_b;
+    // a parameters
+    std::vector<snn::SIMDVectorLite<size>> splines_a;
+
+    snn::SIMDVectorLite<size> u;
+
+    u[0] = 1.f;
+
+    splines_x.push_back(u);
+
+    u[0] = 1.f;
+
+    splines_b.push_back(u);
+
+    u[0] = 2.f;
+
+    splines_a.push_back(u);
+
+    number out = 0.f;
+
+    for(size_t i=0;i<splines_x.size();++i)
+    {
+
+        snn::SIMDVectorLite<size> x_minus_x1 = input - splines_x[i];
+
+        x_minus_x1 = x_minus_x1*x_minus_x1;
+
+        snn::SIMDVectorLite<size> output = splines_b[i]*x_minus_x1*-1.f;
+
+        output = output.exp()*splines_a[i];
+
+        out += output.reduce();        
+
+    }
+
+    number target_out = 4.f;
     
+    std::cout<<"Output: "<<out<<std::endl;
+
+    number error = abs(out - target_out);
+
+    std::cout<<"Error: "<<error<<std::endl;
+
+
+    u[0] = input[0];
+
+    splines_x.push_back(u);
+
+    u[0] = 100.f;
+
+    splines_b.push_back(u);
+
+    u[0] = (target_out-2*out);
+
+    splines_a.push_back(u);
+
+    for(size_t i=0;i<splines_x.size();++i)
+    {
+
+        snn::SIMDVectorLite<size> x_minus_x1 = input - splines_x[i];
+
+        x_minus_x1 = x_minus_x1*x_minus_x1;
+
+        snn::SIMDVectorLite<size> output = splines_b[i]*x_minus_x1*-1.f;
+
+        output = output.exp()*splines_a[i];
+
+        out += output.reduce();        
+
+    }
+
+    std::cout<<"Output: "<<out<<std::endl;
+
+    error = abs(out - target_out);
+
+    std::cout<<"Error: "<<error<<std::endl;
 
     return 0;
 }
