@@ -45,6 +45,8 @@
 
 #include "layer_hebbian.hpp"
 
+#include "evo_kan_block.hpp"
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -276,6 +278,8 @@ int main(int argc,char** argv)
 
     // those hold splines for activations functions. I am going to use splines:
     // exp(-(x-x1)^2 * b)*a
+    // we can treat x1 and a as coordinates in 2D space:
+    // (x,y) = (x1,a)
 
     // x shift of a functions
     std::vector<snn::SIMDVectorLite<size>> splines_x;
@@ -356,6 +360,28 @@ int main(int argc,char** argv)
     error = abs(out - target_out);
 
     std::cout<<"Error: "<<error<<std::endl;
+
+    snn::EvoKAN<size,40> kan_block;
+
+    out = kan_block.fire(input);
+
+    std::cout<<"KAN output: "<<out<<std::endl;
+
+    error = abs(out - target_out);
+
+    std::cout<<"Error: "<<error<<std::endl;
+
+    kan_block.fit(input,out,target_out);
+
+    out = kan_block.fire(input);
+
+    std::cout<<"KAN output: "<<out<<std::endl;
+
+    error = abs(out - target_out);
+
+    std::cout<<"Error: "<<error<<std::endl;
+
+    kan_block.printInfo();
 
     return 0;
 }
