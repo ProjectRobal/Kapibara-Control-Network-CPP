@@ -281,89 +281,44 @@ int main(int argc,char** argv)
     // we can treat x1 and a as coordinates in 2D space:
     // (x,y) = (x1,a)
 
-    // x shift of a functions
-    std::vector<snn::SIMDVectorLite<size>> splines_x;
-    // b parameters
-    std::vector<snn::SIMDVectorLite<size>> splines_b;
-    // a parameters
-    std::vector<snn::SIMDVectorLite<size>> splines_a;
 
-    snn::SIMDVectorLite<size> u;
+    number target_out = 4;
+    number error = 0;
 
-    u[0] = 1.f;
+    snn::EvoKAN<size,40> kan_block;
 
-    splines_x.push_back(u);
+    auto out = kan_block.fire(input);
 
-    u[0] = 1.f;
-
-    splines_b.push_back(u);
-
-    u[0] = 2.f;
-
-    splines_a.push_back(u);
-
-    number out = 0.f;
-
-    for(size_t i=0;i<splines_x.size();++i)
-    {
-
-        snn::SIMDVectorLite<size> x_minus_x1 = input - splines_x[i];
-
-        x_minus_x1 = x_minus_x1*x_minus_x1;
-
-        snn::SIMDVectorLite<size> output = splines_b[i]*x_minus_x1*-1.f;
-
-        output = output.exp()*splines_a[i];
-
-        out += output.reduce();        
-
-    }
-
-    number target_out = 4.f;
-    
-    std::cout<<"Output: "<<out<<std::endl;
-
-    number error = abs(out - target_out);
-
-    std::cout<<"Error: "<<error<<std::endl;
-
-
-    u[0] = input[0];
-
-    splines_x.push_back(u);
-
-    u[0] = 100.f;
-
-    splines_b.push_back(u);
-
-    u[0] = (target_out-2*out);
-
-    splines_a.push_back(u);
-
-    for(size_t i=0;i<splines_x.size();++i)
-    {
-
-        snn::SIMDVectorLite<size> x_minus_x1 = input - splines_x[i];
-
-        x_minus_x1 = x_minus_x1*x_minus_x1;
-
-        snn::SIMDVectorLite<size> output = splines_b[i]*x_minus_x1*-1.f;
-
-        output = output.exp()*splines_a[i];
-
-        out += output.reduce();        
-
-    }
-
-    std::cout<<"Output: "<<out<<std::endl;
+    std::cout<<"KAN output: "<<out<<std::endl;
 
     error = abs(out - target_out);
 
     std::cout<<"Error: "<<error<<std::endl;
 
-    snn::EvoKAN<size,40> kan_block;
+    kan_block.fit(input,out,target_out);
 
     out = kan_block.fire(input);
+
+    std::cout<<"KAN output: "<<out<<std::endl;
+
+    error = abs(out - target_out);
+
+    std::cout<<"Error: "<<error<<std::endl;
+
+    kan_block.printInfo();
+
+    for(size_t i=0;i<size;++i)
+    {
+        input[i] = rand.init();
+    }
+
+    std::cout<<input<<std::endl;
+
+    target_out = 2.f;
+
+    out = kan_block.fire(input);
+
+    std::cout<<"Target output is "<<target_out<<std::endl;
 
     std::cout<<"KAN output: "<<out<<std::endl;
 
