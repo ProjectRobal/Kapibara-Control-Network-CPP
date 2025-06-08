@@ -169,7 +169,7 @@ namespace snn
                 number error = abs(output-target);
                 
                 // nudge closest points towards (x,target)
-                if( error <= 0.05f && this->nodes.size() > 0 )
+                if( error <= 0.01f && this->nodes.size() > 0 )
                 {
 
                     auto points = this->search(x); 

@@ -267,6 +267,8 @@ int main(int argc,char** argv)
 
     snn::SIMDVectorLite<size> input;
 
+    snn::SIMDVectorLite<size> last_input;
+
     snn::UniformInit<-1.f,1.f> rand;
 
     for(size_t i=0;i<size;++i)
@@ -312,6 +314,8 @@ int main(int argc,char** argv)
         input[i] = rand.init();
     }
 
+    last_input = input;
+
     std::cout<<input<<std::endl;
 
     target_out = 2.f;
@@ -329,6 +333,38 @@ int main(int argc,char** argv)
     kan_block.fit(input,out,target_out);
 
     out = kan_block.fire(input);
+
+    std::cout<<"KAN output: "<<out<<std::endl;
+
+    error = abs(out - target_out);
+
+    std::cout<<"Error: "<<error<<std::endl;
+
+    kan_block.printInfo();
+
+    std::cout<<"KAN output: "<<out<<std::endl;
+
+    error = abs(out - target_out);
+
+    std::cout<<"Error: "<<error<<std::endl;
+
+    kan_block.fit(input,out,target_out);
+
+    out = kan_block.fire(input);
+
+    std::cout<<"KAN output: "<<out<<std::endl;
+
+    error = abs(out - target_out);
+
+    std::cout<<"Error: "<<error<<std::endl;
+
+    kan_block.printInfo();
+
+    std::cout<<"Last input"<<std::endl;
+
+    target_out = 4;
+
+    out = kan_block.fire(last_input);
 
     std::cout<<"KAN output: "<<out<<std::endl;
 
