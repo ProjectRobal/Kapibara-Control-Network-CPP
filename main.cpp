@@ -279,7 +279,7 @@ int main(int argc,char** argv)
             inputs[o][i] = rand.init();
         }
 
-        outputs[o] = rand.init()*255.f;
+        outputs[o] = rand.init()*1024.f;
     }
 
     // those hold splines for activations functions. I am going to use splines:
