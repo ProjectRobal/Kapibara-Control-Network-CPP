@@ -90,7 +90,7 @@ namespace snn
             number min_x;
             number max_x;
 
-            std::pair<NodeRef,NodeRef> search( number x )
+            std::pair<NodeRef,NodeRef> search( number x ) const
             {
                 if( this->nodes.size() == 0 )
                 {
@@ -169,7 +169,7 @@ namespace snn
                 number error = abs(output-target);
                 
                 // nudge closest points towards (x,target)
-                if( error <= 0.2f )
+                if( error <= 0.05f && this->nodes.size() > 0 )
                 {
 
                     auto points = this->search(x); 
@@ -183,11 +183,11 @@ namespace snn
                     number dx_right = x - right->x0;
                     number dy_right = target - right->y0;
 
-                    left->x0 = left->x0 + dx_left*0.1f;
-                    left->y0 = left->y0 + dy_left*0.1f;
+                    left->x0 = left->x0 + dx_left*0.25f;
+                    left->y0 = left->y0 + dy_left*0.25f;
 
-                    right->x0 = right->x0 + dx_right*0.1f;
-                    right->y0 = right->y0 + dy_right*0.1f;
+                    right->x0 = right->x0 + dx_right*0.25f;
+                    right->y0 = right->y0 + dy_right*0.25f;
 
                     return;
                 }
@@ -203,23 +203,34 @@ namespace snn
                                       return a->x0 < b->x0;
                                   });
 
-                auto points = this->search(x); 
-                    
-                NodeRef left = points.first;
-                NodeRef right = points.second;
-
-                left->fit(right->x0,right->y0);
-
             }
 
-            SplineNodePromise get_node(size_t index) const
+            NodeRef get_node(number x) const
             {
-                if( index >= this->nodes.size() )
+                
+                auto nodes = this->search(x);
+
+                if( nodes.first == nullptr || nodes.second == nullptr )
                 {
-                    return SplineNodePromise();
+                    return nullptr;
                 }
 
-                return SplineNodePromise(this->nodes[index]);
+
+                NodeRef node = nodes.first;
+                NodeRef right = nodes.second;
+
+                if( node->x0 != right->x0 )
+                {
+
+                    node->fit(right->x0,right->y0);
+
+                }
+                else
+                {
+                    node->a = 0;
+                }
+
+                return node;
             }
 
             size_t length() const
@@ -245,50 +256,33 @@ namespace snn
         {
             number output = 0.f;
 
-            bool block_left = false;
+            snn::SIMDVectorLite<InputSize> x(0.f);
+            snn::SIMDVectorLite<InputSize> y(0.f);
+            snn::SIMDVectorLite<InputSize> a(0.f);
 
-            size_t iter = 0;
+            size_t index = 0;
+            
 
-
-            do
+            for(const Spline& spline : this->splines)
             {
+                auto node = spline.get_node(input[index]);
 
-                snn::SIMDVectorLite<InputSize> x(0.f);
-                snn::SIMDVectorLite<InputSize> y(0.f);
-                snn::SIMDVectorLite<InputSize> a(0.f);
-
-                size_t index = 0;
-                
-                block_left = false;
-
-                for(const Spline& spline : this->splines)
+                if( node )
                 {
-                    auto node = spline.get_node(iter);
+                    x[index] = node->x0;
+                    y[index] = node->y0;
+                    a[index] = node->a;
 
-                    if( node )
-                    {
-                        auto val = node.value();
-
-                        x[index] = val.x0;
-                        y[index] = val.y0;
-                        a[index] = val.a;
-
-                        block_left = true;
-                    }
-
-                    index ++;
                 }
 
-                snn::SIMDVectorLite<InputSize> x_x = input - x;
+                index ++;
+            }
 
-                x_x = a*(x_x*x_x) + y;
+            snn::SIMDVectorLite<InputSize> x_x = input - x;
 
-                output += x_x.reduce();
+            x_x = a*(x_x*x_x) + y;
 
-                iter++;
-
-            }while(block_left);
-
+            output += x_x.reduce();
 
             // generate fit select probablitiy for each node
 
