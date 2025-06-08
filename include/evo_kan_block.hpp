@@ -159,7 +159,7 @@ namespace snn
                 }
 
                 // when error is not so big find nearest node and nudge it b value to fit target
-                if( error <= 0.2f )
+                if( error <= 0.15f )
                 {
                     this->fit_stretch_node(x,output,target);
 
