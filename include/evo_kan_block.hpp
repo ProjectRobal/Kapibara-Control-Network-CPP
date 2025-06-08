@@ -265,7 +265,18 @@ namespace snn
         public:
 
         EvoKAN()
-        {}
+        {
+
+            for(size_t i=0;i<InputSize;++i)
+            {
+                this->active_values[i] = this->uniform_init.init();
+            }
+
+            number prob_mean = this->active_values.reduce();
+
+            this->active_values /= prob_mean;
+
+        }
 
         number fire(const snn::SIMDVectorLite<InputSize>& input)
         {
@@ -301,14 +312,7 @@ namespace snn
 
             // generate fit select probablitiy for each node
 
-            for(size_t i=0;i<InputSize;++i)
-            {
-                this->active_values[i] = 1.f;
-            }
-
-            number prob_mean = this->active_values.reduce();
-
-            this->active_values /= prob_mean;
+            
 
             return output;
         }
@@ -327,6 +331,16 @@ namespace snn
             // select node to fit
 
             size_t node_index = 0;
+
+            // number mean = input.reduce() / InputSize;
+
+            // this->active_values = input - mean;
+
+            // this->active_values = this->active_values*this->active_values;
+
+            // number mean_act = this->active_values.reduce();
+
+            // this->active_values /= mean_act;
             
 
             snn::SIMDVectorLite<InputSize> y_errors = this->active_values*target;
