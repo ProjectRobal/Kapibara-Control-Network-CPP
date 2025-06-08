@@ -276,10 +276,11 @@ int main(int argc,char** argv)
     {
         for(size_t i=0;i<size;++i)
         {
-            inputs[o][i] = rand.init();
+            inputs[o][i] = rand.init() + 0.0001f;
         }
 
         outputs[o] = rand.init()*1024.f;
+        outputs[o] = rand.init()*16.f;
     }
 
     // inputs[1] = inputs[0];
