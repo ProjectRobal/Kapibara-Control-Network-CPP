@@ -169,27 +169,32 @@ namespace snn
                 number error = abs(output-target);
                 
                 // nudge closest points towards (x,target)
-                if( error <= 0.01f && this->nodes.size() > 0 )
+                if( error <= 0.05f && this->nodes.size() > 0 )
                 {
 
                     auto points = this->search(x); 
+
+                    if( points.first != nullptr && points.second != nullptr )
+                    {
                     
-                    NodeRef left = points.first;
-                    NodeRef right = points.second;
+                        NodeRef left = points.first;
+                        NodeRef right = points.second;
 
-                    number dx_left = x - left->x0;
-                    number dy_left = target - left->y0;
+                        number dx_left = x - left->x0;
+                        number dy_left = target - left->y0;
 
-                    number dx_right = x - right->x0;
-                    number dy_right = target - right->y0;
+                        number dx_right = x - right->x0;
+                        number dy_right = target - right->y0;
 
-                    left->x0 = left->x0 + dx_left*0.25f;
-                    left->y0 = left->y0 + dy_left*0.25f;
+                        left->x0 = left->x0 + dx_left*0.25f;
+                        left->y0 = left->y0 + dy_left*0.25f;
 
-                    right->x0 = right->x0 + dx_right*0.25f;
-                    right->y0 = right->y0 + dy_right*0.25f;
+                        right->x0 = right->x0 + dx_right*0.25f;
+                        right->y0 = right->y0 + dy_right*0.25f;
 
-                    return;
+                        return;
+                    }
+
                 }
 
                 // add new point
