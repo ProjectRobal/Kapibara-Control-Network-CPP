@@ -167,12 +167,12 @@ namespace snn
             void fit(number x,number output,number target)
             {
                 number error = abs(output-target);
+
+                auto points = this->search(x); 
                 
                 // nudge closest points towards (x,target)
                 if( error <= 0.05f && this->nodes.size() > 0 )
                 {
-
-                    auto points = this->search(x); 
 
                     if( points.first != nullptr && points.second != nullptr )
                     {
@@ -196,6 +196,16 @@ namespace snn
                     }
 
                 }
+
+                if( points.first != nullptr && points.second != nullptr )
+                {
+                    if( points.first->x0 == x )
+                    {
+                        points.first->y0 = ( points.first->y0 + target )/2.f;
+                        return;
+                    }
+                }
+
 
                 // add new point
 
