@@ -26,32 +26,36 @@ namespace snn
         {
             number x0;
             number y0;
-            number b;
+            number a;
 
             SplineNode(number x,number y)
             {
                 this->x0 = x;
                 this->y0 = y;
-                this->b = 1000.f; // default stretch value
             }
 
-            SplineNode()
+            void fit(number x,number y)
             {
-                this->b = 0.f;
+                this->a = (y-this->y0)/((x-this->x0)*(x-this->x0));
             }
 
         };
+
+        typedef std::shared_ptr<SplineNode> NodeRef;
+
+        
+
 
         struct SplineNodePromise
         {
             private:
 
-            const SplineNode* node;
+            NodeRef node;
             bool valid;
 
             public:
 
-            SplineNodePromise(const SplineNode* _node)
+            SplineNodePromise(NodeRef _node)
             : node(_node)
             {
                 this->valid = true;
@@ -79,103 +83,132 @@ namespace snn
         {
             private:
 
-            std::vector<SplineNode> nodes;
+            std::vector<NodeRef> nodes;
 
             number biggest_y;
 
-            inline void fit_add_new_node(number x,number output,number target)
+            number min_x;
+            number max_x;
+
+            std::pair<NodeRef,NodeRef> search( number x )
             {
-                number dy = target - output;
-
-                SplineNode new_node(x,dy);
-
-                this->nodes.push_back(new_node);
-            }
-
-            inline void fit_move_towards_y(number x,number output,number target)
-            {
-                for( SplineNode& node : nodes )
+                if( this->nodes.size() == 0 )
                 {
-                    number error = abs( x - node.x0 );
+                    return std::pair(nullptr,nullptr);
+                }
 
-                    if( error <= 0.00001f )
+                if( this->nodes.size() == 1 )
+                {
+                    return std::pair(this->nodes[0],this->nodes[0]);
+                }
+
+                auto left = this->nodes.begin();
+                auto right = this->nodes.end()-1;
+
+                if( (*left)->x0 > x )
+                {
+                    return std::pair(nullptr,*left);
+                }
+
+                if( (*right)->x0 < x )
+                {
+                    return std::pair(*right,nullptr);
+                }
+
+                size_t length = (right - left) + 1;
+
+                while( length > 2 )
+                {
+
+                    auto center = left + (length/2);
+
+                    NodeRef node = *center;
+
+                    if( x == node->x0 )
                     {
-                        number dy = target - output;
+                        left = center;
+                        right = center+1;
 
-                        node.y0 = ( node.y0 + dy ) / 2.f;
-
+                        break;
                     }
-                }
 
-            }
-
-            inline void fit_stretch_node(number x,number output,number target)
-            {
-
-                number min_x_dist = abs( this->nodes[0].x0 - x );
-                size_t min_i = 0;
-
-                for( size_t i = 1; i < this->nodes.size() ; i++ )
-                {
-                    number x_dist = abs( this->nodes[i].x0 - x );
-
-                    if( x_dist < min_x_dist )
+                    if( x < node->x0 )
                     {
-                        min_i = i;
-                        min_x_dist = x_dist;
+                        right = center;
                     }
+                    else
+                    {
+                        left = center;
+                    }
+
+                    length = (right - left)+1;
+
                 }
 
-                SplineNode& node = this->nodes[min_i];
 
-                if( target >= node.y0 )
-                {
-
-                    this->fit_add_new_node(x,output,target);
-
-                    return;
-                }
-
-                node.b = std::log(target/node.y0)/( -( x - node.x0 )*( x - node.x0 ) );
+                return std::pair(*left,*right);
             }
 
             public:
 
+            static inline NodeRef make_node(number x,number y)
+            {
+                return std::make_shared<SplineNode>(x,y);
+            }
+
+
             Spline()
             {
                 this->biggest_y = 0;
+                this->min_x = 0;
+                this->max_x = 0;
             }
 
             void fit(number x,number output,number target)
             {
                 number error = abs(output-target);
-
-                // add a node when there is no node
-                if( this->nodes.size() == 0 )
+                
+                // nudge closest points towards (x,target)
+                if( error <= 0.2f )
                 {
-                    this->fit_add_new_node(x,output,target);
+
+                    auto points = this->search(x); 
+                    
+                    NodeRef left = points.first;
+                    NodeRef right = points.second;
+
+                    number dx_left = x - left->x0;
+                    number dy_left = target - left->y0;
+
+                    number dx_right = x - right->x0;
+                    number dy_right = target - right->y0;
+
+                    left->x0 = left->x0 + dx_left*0.1f;
+                    left->y0 = left->y0 + dy_left*0.1f;
+
+                    right->x0 = right->x0 + dx_right*0.1f;
+                    right->y0 = right->y0 + dy_right*0.1f;
 
                     return;
                 }
 
-                // when error is not so big find nearest node and nudge it b value to fit target
-                if( error <= 0.15f )
-                {
-                    this->fit_stretch_node(x,output,target);
+                // add new point
 
-                    return;
-                }
-                // when error is very close to zero, find node very close to target and move it's y towards target
-                else if( error < 0.00001f )
-                {   
-                    this->fit_move_towards_y(x,output,target);
+                NodeRef new_node = Spline::make_node(x,target);
 
-                    return;
-                }
+                this->nodes.push_back(new_node);
 
-                // add new node when error is too high
+                std::sort(this->nodes.begin(),this->nodes.end(),[](NodeRef a, NodeRef b)
+                                  {
+                                      return a->x0 < b->x0;
+                                  });
 
-                this->fit_add_new_node(x,output,target);
+                auto points = this->search(x); 
+                    
+                NodeRef left = points.first;
+                NodeRef right = points.second;
+
+                left->fit(right->x0,right->y0);
 
             }
 
@@ -186,7 +219,7 @@ namespace snn
                     return SplineNodePromise();
                 }
 
-                return SplineNodePromise(&this->nodes[index]);
+                return SplineNodePromise(this->nodes[index]);
             }
 
             size_t length() const
@@ -222,7 +255,7 @@ namespace snn
 
                 snn::SIMDVectorLite<InputSize> x(0.f);
                 snn::SIMDVectorLite<InputSize> y(0.f);
-                snn::SIMDVectorLite<InputSize> b(0.f);
+                snn::SIMDVectorLite<InputSize> a(0.f);
 
                 size_t index = 0;
                 
@@ -238,7 +271,7 @@ namespace snn
 
                         x[index] = val.x0;
                         y[index] = val.y0;
-                        b[index] = val.b;
+                        a[index] = val.a;
 
                         block_left = true;
                     }
@@ -248,7 +281,7 @@ namespace snn
 
                 snn::SIMDVectorLite<InputSize> x_x = input - x;
 
-                x_x = ((x_x * x_x)*b*-1.f).exp()*y;
+                x_x = a*(x_x*x_x) + y;
 
                 output += x_x.reduce();
 
