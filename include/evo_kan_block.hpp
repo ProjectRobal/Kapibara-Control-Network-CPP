@@ -186,11 +186,21 @@ namespace snn
                         number dx_right = x - right->x0;
                         number dy_right = target - right->y0;
 
-                        left->x0 = left->x0 + dx_left*0.25f;
-                        left->y0 = left->y0 + dy_left*0.25f;
+                        number coff = std::exp(-1.f*abs(dx_left))*0.25f;
 
-                        right->x0 = right->x0 + dx_right*0.25f;
-                        right->y0 = right->y0 + dy_right*0.25f;
+                        left->x0 = left->x0 + dx_left*coff;
+
+                        coff = std::exp(-1.f*abs(dy_left))*0.25f;
+
+                        left->y0 = left->y0 + dy_left*coff;
+
+                        coff = std::exp(-1.f*abs(dx_right))*0.25f;
+
+                        right->x0 = right->x0 + dx_right*coff;
+
+                        coff = std::exp(-1.f*abs(dy_right))*0.25f;
+
+                        right->y0 = right->y0 + dy_right*coff;
 
                         return;
                     }
@@ -334,17 +344,6 @@ namespace snn
             // select node to fit
 
             size_t node_index = 0;
-
-            // number mean = input.reduce() / InputSize;
-
-            // this->active_values = input - mean;
-
-            // this->active_values = this->active_values*this->active_values;
-
-            // number mean_act = this->active_values.reduce();
-
-            // this->active_values /= mean_act;
-            
 
             snn::SIMDVectorLite<InputSize> y_errors = this->active_values*target;
             snn::SIMDVectorLite<InputSize> output_errors = this->active_values*output;
