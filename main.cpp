@@ -282,9 +282,9 @@ int main(int argc,char** argv)
         outputs[o] = rand.init()*1024.f;
     }
 
-    inputs[1] = inputs[0];
+    // inputs[1] = inputs[0];
 
-    inputs[1][10] = 5.f;
+    // inputs[1][10] = 5.f;
 
     // those hold splines for activations functions. I am going to use splines:
     // exp(-(x-x1)^2 * b)*a

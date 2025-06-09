@@ -201,7 +201,10 @@ namespace snn
                 {
                     if( points.first->x0 == x )
                     {
-                        points.first->y0 = ( points.first->y0 + target )/2.f;
+                        // coverage based on error value
+                        number coff = std::exp(-1.f*abs(points.first->y0-target))*0.5f;
+
+                        points.first->y0 = ( points.first->y0 + target )*coff;
                         return;
                     }
                 }
