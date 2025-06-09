@@ -45,7 +45,7 @@ public:
 
     SIMDVectorLite(const std::array<number,Size>& arr);
 
-    number reduce();
+    number reduce() const;
 
     number operator[](size_t i) const;
 
@@ -208,7 +208,7 @@ SIMDVectorLite<OutputSize> SIMDVectorLite<Size>::split()
 }
 
 template<size_t Size>
-number SIMDVectorLite<Size>:: reduce()
+number SIMDVectorLite<Size>:: reduce() const
 {
     number output = 0;
 

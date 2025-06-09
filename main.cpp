@@ -265,78 +265,65 @@ int main(int argc,char** argv)
 
     const size_t size = 32;
 
-    snn::SIMDVectorLite<size> input;
+    const size_t samples_count = 32;
+
+    snn::SIMDVectorLite<size> inputs[samples_count];
+    number outputs[samples_count];
 
     snn::UniformInit<-1.f,1.f> rand;
 
-    for(size_t i=0;i<size;++i)
+    for(size_t o=0;o<samples_count;o++)
     {
-        input[i] = rand.init();
+        for(size_t i=0;i<size;++i)
+        {
+            inputs[o][i] = rand.init();
+        }
+
+        outputs[o] = rand.init()*1024.f;
     }
 
-    input[0] = 2.f;
+    // inputs[1] = inputs[0];
+
+    // inputs[1][10] = 5.f;
 
     // those hold splines for activations functions. I am going to use splines:
     // exp(-(x-x1)^2 * b)*a
     // we can treat x1 and a as coordinates in 2D space:
     // (x,y) = (x1,a)
 
-
-    number target_out = 4;
-    number error = 0;
-
     snn::EvoKAN<size,40> kan_block;
 
-    auto out = kan_block.fire(input);
+    const size_t iter=1000;
 
-    std::cout<<"KAN output: "<<out<<std::endl;
+    number error = 0.f;
 
-    error = abs(out - target_out);
-
-    std::cout<<"Error: "<<error<<std::endl;
-
-    kan_block.fit(input,out,target_out);
-
-    out = kan_block.fire(input);
-
-    std::cout<<"KAN output: "<<out<<std::endl;
-
-    error = abs(out - target_out);
-
-    std::cout<<"Error: "<<error<<std::endl;
-
-    kan_block.printInfo();
-
-    for(size_t i=0;i<size;++i)
+    for(size_t i=0;i<iter;++i)
     {
-        input[i] = rand.init();
+
+        error = 0.f;
+
+        std::cout<<"Iteration: "<<i<<std::endl;
+
+        for(size_t e=0;e<samples_count;++e)
+        {
+            number target = outputs[e];
+            snn::SIMDVectorLite<size> input = inputs[e];
+
+            number output = kan_block.fire(input);
+
+            error += std::abs(target-output);
+
+            kan_block.fit(input,output,target);
+
+        }
+
+        error /= samples_count;
+
+        std::cout<<"Error: "<<error<<std::endl;
+
     }
 
-    std::cout<<input<<std::endl;
-
-    target_out = 2.f;
-
-    out = kan_block.fire(input);
-
-    std::cout<<"Target output is "<<target_out<<std::endl;
-
-    std::cout<<"KAN output: "<<out<<std::endl;
-
-    error = abs(out - target_out);
-
-    std::cout<<"Error: "<<error<<std::endl;
-
-    kan_block.fit(input,out,target_out);
-
-    out = kan_block.fire(input);
-
-    std::cout<<"KAN output: "<<out<<std::endl;
-
-    error = abs(out - target_out);
-
-    std::cout<<"Error: "<<error<<std::endl;
-
-    kan_block.printInfo();
+    std::cout<<"Last error: "<<error<<std::endl;
 
     return 0;
 }
