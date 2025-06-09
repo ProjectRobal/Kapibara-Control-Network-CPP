@@ -258,7 +258,7 @@ long double cross_entropy_loss(const snn::SIMDVectorLite<N>& p1,const snn::SIMDV
     Algorithm is great but it fails when:
 
     - Inputs are too much correlated with each other ( are very similar to each other )
-    - Outputs are small
+    - Outputs are small ( well I had to decrease the error threshold for points nuding )
 
 
 */
@@ -286,15 +286,15 @@ int main(int argc,char** argv)
     {
         for(size_t i=0;i<size;++i)
         {
-            inputs[o][i] = rand.init()/1000.f;
+            inputs[o][i] = rand.init()/100.f;
         }
 
-        outputs[o] = rand.init()*1024.f;
+        outputs[o] = rand.init()*1.f;
     }
 
-    // inputs[1] = inputs[0];
+    inputs[1] = inputs[0];
 
-    // inputs[1][10] = 1.f;
+    inputs[1][10] = 1.f;
 
     // those hold splines for activations functions. I am going to use splines:
     // exp(-(x-x1)^2 * b)*a
