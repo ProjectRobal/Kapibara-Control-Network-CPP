@@ -171,7 +171,7 @@ namespace snn
                 auto points = this->search(x); 
                 
                 // nudge closest points towards (x,target)
-                if( error <= 0.001f && this->nodes.size() > 0 )
+                if( error <= 0.0001f && this->nodes.size() > 0 )
                 {
 
                     if( points.first != nullptr && points.second != nullptr )
@@ -282,7 +282,7 @@ namespace snn
 
             for(size_t i=0;i<InputSize;++i)
             {
-                this->active_values[i] = 1.f;//this->uniform_init.init();
+                this->active_values[i] = this->uniform_init.init();
             }
 
             number prob_mean = this->active_values.reduce();

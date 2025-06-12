@@ -286,7 +286,7 @@ int main(int argc,char** argv)
     snn::EvoKAN<4,40> q[2];
 
 
-    const size_t iter=1000000;
+    const size_t iter=10000;
 
     number error = 0.f;
 
@@ -305,9 +305,9 @@ int main(int argc,char** argv)
 
     size_t best_action_id = 0;
 
-    const number alpha = 0.8f;
+    const number alpha = 1.f;
 
-    const number gamma = 0.99f; 
+    const number gamma = 0.5f; 
 
     number epsilon = 1.f;
 
@@ -327,7 +327,7 @@ int main(int argc,char** argv)
         if( uniform.init() > epsilon )
         {
 
-            best_action_id = action[1] > action[0];
+            best_action_id = action[1] < action[0];
 
         }
         else
@@ -335,7 +335,7 @@ int main(int argc,char** argv)
             best_action_id = uniform.init() > 0.5f;
         }
         
-        epsilon = 0.8f*epsilon;
+        epsilon = 0.4f*epsilon;
         
         send_fifo<2>(action);
 
@@ -363,7 +363,7 @@ int main(int argc,char** argv)
 
         number max_q = std::max(action[0],action[1]);
 
-        number new_q = old_q + alpha*( reward + gamma*max_q - old_q);
+        number new_q = old_q + alpha*( reward + gamma*max_q);
 
         if( fifo_input[5] > 0.5f )
         {
@@ -381,6 +381,9 @@ int main(int argc,char** argv)
 
     }
 
+
+    q[0].printInfo();
+    q[1].printInfo();
 
     return 0;
 }
