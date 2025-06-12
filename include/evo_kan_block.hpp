@@ -18,6 +18,7 @@ namespace snn
     template<size_t InputSize,size_t MaxNodes=40>
     class EvoKAN
     {
+        static constexpr char* signature = "EVOKAN";
         // spline will be formed by using euqation:
         // y*exp(-(u-x)^2 * stretch)
 
@@ -34,10 +35,47 @@ namespace snn
                 this->y0 = y;
             }
 
+            SplineNode()
+            {
+
+            }
+
             void fit(number x,number y)
             {
                 this->a = (y-this->y0)/((x-this->x0)*(x-this->x0));
             }
+
+            static size_t required_size_for_serialization()
+            {
+                return 2*sizeof(number);
+            }
+
+            /*
+                Funtction used for serialization.
+
+                You need to provied buffer with size from required_size_for_serialization() function.
+            */
+            void serialize(char* buffer) const
+            {
+                const size_t buffer_size = 2*sizeof(number);
+
+                memcpy(buffer,(char*)&this->x0,sizeof(number));
+
+                memcpy(buffer+sizeof(number),(char*)&this->y0,sizeof(number));
+
+            }
+
+            /*
+                Funtction used for deserialization.
+
+                You need to provied buffer with size from required_size_for_serialization() function.
+            */
+            void deserialize(char* buffer) 
+            {
+                memcpy((char*)&this->x0,buffer,sizeof(number));
+                memcpy((char*)&this->y0,buffer+sizeof(number),sizeof(number));
+            }
+
 
         };
 
@@ -45,39 +83,6 @@ namespace snn
 
         
 
-
-        struct SplineNodePromise
-        {
-            private:
-
-            NodeRef node;
-            bool valid;
-
-            public:
-
-            SplineNodePromise(NodeRef _node)
-            : node(_node)
-            {
-                this->valid = true;
-            }
-
-            SplineNodePromise()
-            : node(nullptr)
-            {
-                this->valid = false;
-            }
-
-            operator bool()
-            {
-                return this->valid;
-            }
-
-            const SplineNode& value()
-            {
-                return *this->node;
-            }
-
-        };
 
         struct Spline
         {
@@ -154,6 +159,11 @@ namespace snn
             static inline NodeRef make_node(number x,number y)
             {
                 return std::make_shared<SplineNode>(x,y);
+            }
+
+            static inline NodeRef make_node()
+            {
+                return std::make_shared<SplineNode>();
             }
 
 
@@ -265,6 +275,54 @@ namespace snn
             {
                 return this->nodes.size();
             }
+
+            void save(std::ostream& out) const
+            {
+                const uint32_t length = this->nodes.size();
+
+                // write total numbers of nodes
+                out.write((char*)&length,sizeof(uint32_t));
+
+                const size_t buffer_size = SplineNode::required_size_for_serialization();
+
+                char buffer[buffer_size] = {0};
+
+                for( const NodeRef& node : this->nodes )
+                {
+                    node->serialize(buffer);
+
+                    out.write(buffer,buffer_size);
+                }
+                
+            }
+
+            void load(std::istream& in)
+            {
+                uint32_t length = 0;
+                
+                // read length of nodes
+                in.read((char*)&length,sizeof(uint32_t));
+
+                const size_t buffer_size = SplineNode::required_size_for_serialization();
+
+                char buffer[buffer_size] = {0};
+
+                for(size_t i=0;i<length;++i)
+                {
+                    in.read(buffer,buffer_size);
+
+                    NodeRef node = make_node();
+
+                    node->deserialize(buffer);
+
+                    this->nodes.push_back(node);
+                }
+
+                // we need to keep the order of nodes the way as they were saved
+                std::reverse(this->nodes.begin(),this->nodes.end());
+
+            }
+
         };
 
 
@@ -367,6 +425,34 @@ namespace snn
             for(size_t i=0;i<InputSize;++i)
             {
                 out<<"Spline "<<i<<": "<<this->splines[i].length()<<" nodes"<<std::endl;
+            }
+        }
+
+        void save(std::ostream& out) const
+        {
+            // add a metadata
+
+            // a network type
+            // out.write(EvoKAN::signature,strlen(EvoKAN::signature));
+
+            // a number size in bytes
+            // uint8_t byte_size = sizeof(number);
+            // out.write(&byte_size,1);
+
+
+            // save splines
+            for(const Spline& spline : this->splines)
+            {
+                spline.save(out);
+            }
+
+        }
+
+        void load(std::istream& in)
+        {
+            for(Spline& spline : this->splines)
+            {
+                spline.load(in);
             }
         }
 
