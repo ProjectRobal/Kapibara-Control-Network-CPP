@@ -277,63 +277,110 @@ int main(int argc,char** argv)
 
     const size_t samples_count = 32;
 
-    snn::SIMDVectorLite<size> inputs[samples_count];
-    number outputs[samples_count];
-
-    snn::UniformInit<-1.f,1.f> rand;
-
-    for(size_t o=0;o<samples_count;o++)
-    {
-        for(size_t i=0;i<size;++i)
-        {
-            inputs[o][i] = rand.init()/100.f;
-        }
-
-        outputs[o] = rand.init()*1.f;
-    }
-
-    inputs[1] = inputs[0];
-
-    inputs[1][10] = 1.f;
 
     // those hold splines for activations functions. I am going to use splines:
     // exp(-(x-x1)^2 * b)*a
     // we can treat x1 and a as coordinates in 2D space:
     // (x,y) = (x1,a)
 
-    snn::EvoKAN<size,40> kan_block;
+    snn::EvoKAN<4,40> q[2];
 
-    const size_t iter=1000;
+
+    const size_t iter=1000000;
 
     number error = 0.f;
 
-    for(size_t i=0;i<iter;++i)
+    snn::UniformInit<0.f,1.f> uniform;
+
+    snn::SIMDVectorLite<6> fifo_input = read_fifo_static();
+
+    snn::SIMDVectorLite<4> input;
+
+    input[0] = fifo_input[0];
+    input[1] = fifo_input[1];
+    input[2] = fifo_input[2];
+    input[3] = fifo_input[3];
+
+    number reward = 0.f;
+
+    size_t best_action_id = 0;
+
+    const number alpha = 0.8f;
+
+    const number gamma = 0.99f; 
+
+    number epsilon = 1.f;
+
+    number cum_rewad = 0;
+
+    for( size_t i = 0 ; i < iter ; ++i )
     {
+        // std::cout<<"Step: "<<i<<std::endl;
+        // std::cout<<fifo_input<<std::endl;
 
-        error = 0.f;
+        snn::SIMDVectorLite<2> action(0);
 
-        std::cout<<"Iteration: "<<i<<std::endl;
+        action[0] =  q[0].fire(input);
 
-        for(size_t e=0;e<samples_count;++e)
+        action[1] = q[1].fire(input);
+
+        if( uniform.init() > epsilon )
         {
-            number target = outputs[e];
-            snn::SIMDVectorLite<size> input = inputs[e];
 
-            number output = kan_block.fire(input);
-
-            error += std::abs(target-output);
-
-            kan_block.fit(input,output,target);
+            best_action_id = action[1] > action[0];
 
         }
+        else
+        {
+            best_action_id = uniform.init() > 0.5f;
+        }
+        
+        epsilon = 0.8f*epsilon;
+        
+        send_fifo<2>(action);
 
-        error /= samples_count;
+        fifo_input = read_fifo_static();
 
-        std::cout<<"Error: "<<error<<std::endl;
+        snn::SIMDVectorLite<4> last_input = input;
+
+        input[0] = fifo_input[0];
+        input[1] = fifo_input[1];
+        input[2] = fifo_input[2];
+        input[3] = fifo_input[3];
+
+        reward = fifo_input[4];
+
+        // update q values
+
+        number old_q = action[best_action_id];
+
+        // get Q values for new state
+        action[0] =  q[0].fire(input);
+
+        action[1] = q[1].fire(input);
+
+        snn::EvoKAN<4,40> &best_q = q[best_action_id];
+
+        number max_q = std::max(action[0],action[1]);
+
+        number new_q = old_q + alpha*( reward + gamma*max_q - old_q);
+
+        if( fifo_input[5] > 0.5f )
+        {
+            std::cout<<"Rewards: "<<cum_rewad<<std::endl;
+
+            cum_rewad = 0.f;
+
+            new_q = -10.f;
+        }
+
+        cum_rewad += reward;
+
+
+        best_q.fit(last_input,old_q,new_q);
 
     }
 
-    std::cout<<"Last error: "<<error<<std::endl;
 
     return 0;
 }

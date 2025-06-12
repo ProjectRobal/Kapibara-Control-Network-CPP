@@ -9,3 +9,5 @@ layer_*.layer
 network.kac
 network.kac.bak
 *.sha256
+fifo
+fifo_in

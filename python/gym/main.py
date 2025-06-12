@@ -71,9 +71,11 @@ def main():
         observation, reward, terminated, truncated, info =env.step(interface[0]>interface[1])
         
         to_send[:4] = observation[:]
-        #to_send[4] = ( - (observation[0] ** 2) / 11.52 - (observation[2] ** 2) / 288)
+        # to_send[4] = ( - (observation[0] ** 2) / 11.52 - (observation[2] ** 2) / 288)
         
-        #to_send[4] = -( abs(observation[2]) - abs(last_observation[2]) ) * 10.0
+        to_send[4] = reward
+        
+        # to_send[4] = -( abs(observation[2]) - abs(last_observation[2]) ) * 10.0
                  
         sendInterface(to_send)
         
@@ -92,10 +94,7 @@ def main():
             timestamp+=1
             observation=env.reset()[0]
             last_observation[:] = observation[:]
-            to_send[4] = (steps - 500)
-            
-            if to_send[4] == 0:
-                to_send[4] = 1000
+            to_send[4] = 0
             
             to_send[5] = 1.0
             
