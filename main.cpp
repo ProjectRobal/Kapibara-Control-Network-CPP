@@ -46,6 +46,7 @@
 #include "layer_hebbian.hpp"
 
 #include "evo_kan_block.hpp"
+#include "evo_kan_layer.hpp"
 
 /*
 
@@ -283,7 +284,7 @@ int main(int argc,char** argv)
     // we can treat x1 and a as coordinates in 2D space:
     // (x,y) = (x1,a)
 
-    snn::EvoKAN<4,40> q[2];
+    snn::EvoKAN<4> q[2];
 
 
     const size_t iter=10000;
@@ -359,7 +360,7 @@ int main(int argc,char** argv)
 
         action[1] = q[1].fire(input);
 
-        snn::EvoKAN<4,40> &best_q = q[best_action_id];
+        snn::EvoKAN<4> &best_q = q[best_action_id];
 
         number max_q = std::max(action[0],action[1]);
 

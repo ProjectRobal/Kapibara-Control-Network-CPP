@@ -15,10 +15,9 @@
 namespace snn
 {
 
-    template<size_t InputSize,size_t MaxNodes=40>
+    template<size_t InputSize>
     class EvoKAN
     {
-        static constexpr char* signature = "EVOKAN";
         // spline will be formed by using euqation:
         // y*exp(-(u-x)^2 * stretch)
 
