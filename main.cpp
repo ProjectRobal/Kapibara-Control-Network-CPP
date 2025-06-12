@@ -335,7 +335,7 @@ int main(int argc,char** argv)
             best_action_id = uniform.init() > 0.5f;
         }
         
-        epsilon = 0.4f*epsilon;
+        epsilon = 0.9f*epsilon;
         
         send_fifo<2>(action);
 
@@ -371,7 +371,7 @@ int main(int argc,char** argv)
 
             cum_rewad = 0.f;
 
-            new_q = -10.f;
+            new_q = 0.f;
         }
 
         cum_rewad += reward;
