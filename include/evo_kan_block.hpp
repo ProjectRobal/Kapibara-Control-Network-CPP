@@ -429,16 +429,6 @@ namespace snn
 
         void save(std::ostream& out) const
         {
-            // add a metadata
-
-            // a network type
-            // out.write(EvoKAN::signature,strlen(EvoKAN::signature));
-
-            // a number size in bytes
-            // uint8_t byte_size = sizeof(number);
-            // out.write(&byte_size,1);
-
-
             // save splines
             for(const Spline& spline : this->splines)
             {

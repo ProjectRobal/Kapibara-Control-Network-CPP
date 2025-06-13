@@ -264,6 +264,19 @@ long double cross_entropy_loss(const snn::SIMDVectorLite<N>& p1,const snn::SIMDV
 
 */
 
+template<size_t Size>
+number variance(const snn::SIMDVectorLite<Size>& input)
+{
+    number mean = input.reduce() / Size;
+
+    snn::SIMDVectorLite m_mean = input - mean;
+
+    m_mean = m_mean*m_mean;
+
+    return m_mean.reduce() / Size;
+}
+
+
 
 int main(int argc,char** argv)
 {
@@ -284,10 +297,12 @@ int main(int argc,char** argv)
     // we can treat x1 and a as coordinates in 2D space:
     // (x,y) = (x1,a)
 
-    snn::EvoKAN<4> q[2];
+    // snn::EvoKanLayer<4,16> input_layer;
+
+    snn::EvoKanLayer<4,2> q;
 
 
-    const size_t iter=10000;
+    const size_t iter=1000;
 
     number error = 0.f;
 
@@ -314,6 +329,8 @@ int main(int argc,char** argv)
 
     number cum_rewad = 0;
 
+    snn::GaussInit<0.f,1.f> gauss;
+
     for( size_t i = 0 ; i < iter ; ++i )
     {
         // std::cout<<"Step: "<<i<<std::endl;
@@ -321,9 +338,7 @@ int main(int argc,char** argv)
 
         snn::SIMDVectorLite<2> action(0);
 
-        action[0] =  q[0].fire(input);
-
-        action[1] = q[1].fire(input);
+        action = q.fire(input);
 
         if( uniform.init() > epsilon )
         {
@@ -353,14 +368,14 @@ int main(int argc,char** argv)
 
         // update q values
 
-        number old_q = action[best_action_id];
+        snn::SIMDVectorLite<2> last_action = action;
+
+        number old_q = last_action[best_action_id];
+
 
         // get Q values for new state
-        action[0] =  q[0].fire(input);
+        action = q.fire(input);
 
-        action[1] = q[1].fire(input);
-
-        snn::EvoKAN<4> &best_q = q[best_action_id];
 
         number max_q = std::max(action[0],action[1]);
 
@@ -375,16 +390,30 @@ int main(int argc,char** argv)
             new_q = 0.f;
         }
 
+        last_action[best_action_id] = new_q;
+
         cum_rewad += reward;
 
 
-        best_q.fit(last_input,old_q,new_q);
+        q.fit(last_input,last_action);
+
+        if( i % 10 == 0)
+        {
+            std::cout<<"Target: "<<last_action<<std::endl;
+            std::cout<<"Output: "<<q.fire(last_input)<<std::endl;
+        }
+
 
     }
 
+    std::fstream file;
 
-    q[0].printInfo();
-    q[1].printInfo();
+    file.open("cartpole.ekan",std::ios::out|std::ios::binary);
+
+    q.save(file);
+
+    file.close();
+
 
     return 0;
 }

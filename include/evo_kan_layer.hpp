@@ -12,8 +12,22 @@
 namespace snn
 {
 
+    class EvoKanLayerProto
+    {
+        public:
+
+        virtual size_t input_size() = 0;
+
+        virtual size_t output_size() = 0;
+
+        virtual void save(std::ostream& out) = 0;
+
+        virtual void load(std::istream& in) = 0;
+
+    };
+
     template<size_t InputSize,size_t OutputSize>
-    class EvoKanLayer
+    class EvoKanLayer : public EvoKanLayerProto
     {
 
         static constexpr char* signature = "EVOKAN";
@@ -28,7 +42,17 @@ namespace snn
 
         EvoKanLayer(){}
 
-        const snn::SIMDVectorLite<OutputSize>& fire(const snn::SIMDVectorLite<InputSize>& input) const
+        size_t input_size()
+        {
+            return InputSize;
+        }
+
+        size_t output_size()
+        {
+            return OutputSize;
+        }
+
+        const snn::SIMDVectorLite<OutputSize>& fire(const snn::SIMDVectorLite<InputSize>& input)
         {
 
             for( size_t i = 0; i < OutputSize ; ++i )
