@@ -89,6 +89,7 @@
         "__tree": "cpp",
         "simd": "cpp",
         "queue": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "__config": "cpp"
     }
 }

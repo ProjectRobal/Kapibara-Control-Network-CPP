@@ -12,6 +12,8 @@ typedef std::experimental::fixed_size_simd<number , MAX_SIMD_VECTOR_SIZE> SIMD;
 
 typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> SIMD_MASK;
 
+#define ERROR_THRESHOLD_KAN (0.01f)
+
 #define MAITING_THRESHOLD 0.5f
 
 #define AMOUNT_THAT_PASS 0.3f

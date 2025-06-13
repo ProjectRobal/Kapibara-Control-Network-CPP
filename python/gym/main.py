@@ -68,7 +68,7 @@ def main():
         
         print(interface)
         
-        observation, reward, terminated, truncated, info =env.step(interface[0]>interface[1])
+        observation, reward, terminated, truncated, info =env.step(interface[0]<interface[1])
         
         to_send[:4] = observation[:]
         # to_send[4] = ( - (observation[0] ** 2) / 11.52 - (observation[2] ** 2) / 288)

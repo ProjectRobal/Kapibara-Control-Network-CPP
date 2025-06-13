@@ -180,7 +180,7 @@ namespace snn
                 auto points = this->search(x); 
                 
                 // nudge closest points towards (x,target)
-                if( error <= 0.001f && this->nodes.size() > 0 )
+                if( error <= ERROR_THRESHOLD_KAN && this->nodes.size() > 0 )
                 {
 
                     if( points.first != nullptr && points.second != nullptr )
@@ -301,6 +301,8 @@ namespace snn
                 
                 // read length of nodes
                 in.read((char*)&length,sizeof(uint32_t));
+
+                this->nodes.reserve(length);
 
                 const size_t buffer_size = SplineNode::required_size_for_serialization();
 
