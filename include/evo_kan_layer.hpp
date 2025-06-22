@@ -34,13 +34,16 @@ namespace snn
 
         protected:
 
-        EvoKAN<InputSize> blocks[OutputSize];
+        EvoKAN<InputSize> *blocks;
 
         snn::SIMDVectorLite<OutputSize> last_output;
 
         public:
 
-        EvoKanLayer(){}
+        EvoKanLayer(){
+
+            blocks = new EvoKAN<InputSize>[OutputSize];
+        }
 
         size_t input_size()
         {
@@ -88,9 +91,10 @@ namespace snn
             char byte_size = sizeof(number);
             out.write(&byte_size,1);
 
-            for( const EvoKAN<InputSize>& block : this->blocks )
+            // for( const EvoKAN<InputSize>& block : this->blocks )
+            for( size_t i=0; i<OutputSize; i++ )
             {
-                block.save(out);
+                this->blocks[i].save(out);
             }
 
         }
@@ -119,9 +123,10 @@ namespace snn
                 throw std::runtime_error("Incompatible number data type size!!!");
             }
 
-            for( EvoKAN<InputSize>& block : this->blocks )
+            // for( EvoKAN<InputSize>& block : this->blocks )
+            for( size_t i=0; i<OutputSize; i++ )
             {
-                block.load(in);
+                this->blocks[i].load(in);
             }
 
         }

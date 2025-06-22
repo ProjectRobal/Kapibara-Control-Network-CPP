@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <opencv2/opencv.hpp>
+
 
 #include "config.hpp"
 
@@ -276,6 +278,17 @@ number variance(const snn::SIMDVectorLite<Size>& input)
     return m_mean.reduce() / Size;
 }
 
+/*
+
+    Idea is simple we take image and then using convolution and KAN layer generate map of rewards in 2D space.
+    
+    To fit data we generate noise mask and makes convolution fit to it then that 
+    noise map we give to output layer.
+
+    I don't have better idea for now, I should probably think about some defragmentation algorithm for it.
+
+*/
+
 
 
 int main(int argc,char** argv)
@@ -299,120 +312,102 @@ int main(int argc,char** argv)
 
     // snn::EvoKanLayer<4,16> input_layer;
 
-    snn::EvoKanLayer<4,2> q;
+    // load test image
 
+    cv::Mat image = cv::imread("./room.jpg",cv::IMREAD_GRAYSCALE); // Replace with your image path
 
-    const size_t iter=1000;
-
-    number error = 0.f;
-
-    snn::UniformInit<0.f,1.f> uniform;
-
-    snn::SIMDVectorLite<6> fifo_input = read_fifo_static();
-
-    snn::SIMDVectorLite<4> input;
-
-    input[0] = fifo_input[0];
-    input[1] = fifo_input[1];
-    input[2] = fifo_input[2];
-    input[3] = fifo_input[3];
-
-    number reward = 0.f;
-
-    size_t best_action_id = 0;
-
-    const number alpha = 1.f;
-
-    const number gamma = 0.5f; 
-
-    number epsilon = 1.f;
-
-    number cum_rewad = 0;
-
-    snn::GaussInit<0.f,1.f> gauss;
-
-    for( size_t i = 0 ; i < iter ; ++i )
-    {
-        // std::cout<<"Step: "<<i<<std::endl;
-        // std::cout<<fifo_input<<std::endl;
-
-        snn::SIMDVectorLite<2> action(0);
-
-        action = q.fire(input);
-
-        if( uniform.init() > epsilon )
-        {
-
-            best_action_id = action[1] < action[0];
-
-        }
-        else
-        {
-            best_action_id = uniform.init() > 0.5f;
-        }
-        
-        epsilon = 0.9f*epsilon;
-        
-        send_fifo<2>(action);
-
-        fifo_input = read_fifo_static();
-
-        snn::SIMDVectorLite<4> last_input = input;
-
-        input[0] = fifo_input[0];
-        input[1] = fifo_input[1];
-        input[2] = fifo_input[2];
-        input[3] = fifo_input[3];
-
-        reward = fifo_input[4];
-
-        // update q values
-
-        snn::SIMDVectorLite<2> last_action = action;
-
-        number old_q = last_action[best_action_id];
-
-
-        // get Q values for new state
-        action = q.fire(input);
-
-
-        number max_q = std::max(action[0],action[1]);
-
-        number new_q = old_q + alpha*( reward + gamma*max_q);
-
-        if( fifo_input[5] > 0.5f )
-        {
-            std::cout<<"Rewards: "<<cum_rewad<<std::endl;
-
-            cum_rewad = 0.f;
-
-            new_q = 0.f;
-        }
-
-        last_action[best_action_id] = new_q;
-
-        cum_rewad += reward;
-
-
-        q.fit(last_input,last_action);
-
-        if( i % 10 == 0)
-        {
-            std::cout<<"Target: "<<last_action<<std::endl;
-            std::cout<<"Output: "<<q.fire(last_input)<<std::endl;
-        }
-
-
+    // Check if the image is loaded successfully
+    if (image.empty()) {
+        std::cerr << "Error: Could not load image." << std::endl;
+        return 1;
     }
 
-    std::fstream file;
+    // Resize the image to 120x120
+    cv::Mat resized_image;
+    cv::resize(image, resized_image, cv::Size(120, 120));
 
-    file.open("cartpole.ekan",std::ios::out|std::ios::binary);
 
-    q.save(file);
+    // Display the resized image
 
-    file.close();
+    // we are going to use kernel of 2x2
+    snn::SIMDVectorLite<4> cnn_input;
+
+    snn::SIMDVectorLite<4> *cnn_input_snaphost = new snn::SIMDVectorLite<4>[60*60];
+
+
+    snn::EvoKAN<4> kernel;
+
+
+    // output
+    snn::SIMDVectorLite<(60)*(60)> output(0.f);
+
+    snn::SIMDVectorLite<(60)*(60)> target_output(0.f);
+
+    
+    snn::SIMDVectorLite<64> last_target(0.f);
+
+    last_target[10] = 12.f;
+
+    last_target[14] = -10.f;
+
+
+    last_target[30] = -4.f;
+    // output KAN layer, we can use small output and attach the information about current position in the reward map
+
+    snn::EvoKanLayer<(60)*(60),64> last_layer;
+
+
+    snn::UniformInit<-10.f,10.f> noise;
+
+    snn::UniformInit<0.f,1.f> chooser;
+
+    for(size_t i=0;i<64;i++)
+    {
+        last_target[i] = noise.init();
+    }
+
+
+    start = std::chrono::system_clock::now();
+    
+    // we use stride of 2
+    for(int y=1;y<120;y+=2)
+    {
+        for(int x=1;x<120;x+=2)
+        {
+            cnn_input[0] = resized_image.at<u_char>(x-1,y-1)/255.f;
+            cnn_input[1] = resized_image.at<u_char>(x,y-1)/255.f;
+
+            cnn_input[2] = resized_image.at<u_char>(x-1,y)/255.f;
+            cnn_input[3] = resized_image.at<u_char>(x,y)/255.f;
+
+            // if( (y/2)*60 + (x/2) % 2 == 0 )
+            if( chooser.init() > 0.75f)
+            {
+                kernel.fit(cnn_input,0.f,noise.init());
+            }
+
+            output[(y/2)*60 + (x/2)] = kernel.fire(cnn_input);
+            // std::cout<<kernel.fire(cnn_input)<<std::endl;
+        }
+    }
+
+
+    last_layer.fit(output,last_target);
+
+    auto output_last = last_layer.fire(output);
+
+    end = std::chrono::system_clock::now();
+
+
+    std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+
+    std::cout<<output_last<<std::endl;
+
+    
+    char c;
+
+    std::cout<<"Press any key to continue"<<std::endl;
+    std::cin>>c;
 
 
     return 0;

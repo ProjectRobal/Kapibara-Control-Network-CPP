@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cstdint>
 #include <vector>
+#include <deque>
 #include <cmath>
 
 #include <simd_vector_lite.hpp>
@@ -87,13 +88,14 @@ namespace snn
         {
             private:
 
-            std::vector<NodeRef> nodes;
+            std::deque<NodeRef> nodes;
 
             number biggest_y;
 
             number min_x;
             number max_x;
 
+            // instead of binary search we can use interporlation search
             std::pair<NodeRef,NodeRef> search( number x ) const
             {
                 if( this->nodes.size() == 0 )
@@ -233,12 +235,42 @@ namespace snn
 
                 NodeRef new_node = Spline::make_node(x,target);
 
-                this->nodes.push_back(new_node);
+                this->max_x = std::max(this->max_x,x);
+                this->min_x = std::min(this->min_x,x);
 
-                std::sort(this->nodes.begin(),this->nodes.end(),[](NodeRef a, NodeRef b)
-                                  {
-                                      return a->x0 < b->x0;
-                                  });
+                // I have to test it more
+
+                if( x > this->max_x )
+                {
+                    this->nodes.push_back(new_node);
+                }
+                else if( x < this->min_x )
+                {
+                    this->nodes.push_front(new_node);
+                }
+                else if( this->nodes.size() > 0 )
+                {
+                    number range = this->max_x - this->min_x;
+
+                    size_t length = this->nodes.size();
+
+                    size_t i = static_cast<number>((x - this->min_x)/range)*length;
+
+                    this->nodes.insert(this->nodes.begin()+i,new_node);
+                }
+                else
+                {
+                    this->nodes.push_back(new_node);   
+                }
+
+                // this->nodes.push_back(new_node);
+
+                // we could optimize it more, we could keep track of min and max x values and then decide to add 
+                // at front, somewhere in the middle or at the back
+                // std::sort(this->nodes.begin(),this->nodes.end(),[](NodeRef a, NodeRef b)
+                //                   {
+                //                       return a->x0 < b->x0;
+                //                   });
 
             }
 
@@ -302,7 +334,6 @@ namespace snn
                 // read length of nodes
                 in.read((char*)&length,sizeof(uint32_t));
 
-                this->nodes.reserve(length);
 
                 const size_t buffer_size = SplineNode::required_size_for_serialization();
 
