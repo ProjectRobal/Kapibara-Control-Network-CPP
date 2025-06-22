@@ -123,9 +123,9 @@ namespace snn
 
                 number range = this->max_x - this->min_x;
 
-                size_t length = this->nodes.size();
+                number length = this->nodes.size()-1;
 
-                size_t i = static_cast<number>((x - this->min_x)/range)*length - 1;
+                size_t i = std::floor(static_cast<number>((x - this->min_x)/range)*length);
 
                 left = this->nodes.begin() + i;
                 right = left + 1;
