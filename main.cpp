@@ -314,7 +314,7 @@ int main(int argc,char** argv)
 
     // load test image
 
-    cv::Mat image = cv::imread("./room.jpg",cv::IMREAD_GRAYSCALE); // Replace with your image path
+    cv::Mat image = cv::imread("room.jpg",cv::IMREAD_GRAYSCALE); // Replace with your image path
 
     // Check if the image is loaded successfully
     if (image.empty()) {

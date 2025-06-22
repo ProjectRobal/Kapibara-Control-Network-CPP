@@ -111,46 +111,24 @@ namespace snn
                 auto left = this->nodes.begin();
                 auto right = this->nodes.end()-1;
 
-                if( (*left)->x0 > x )
+                if( x >= this->max_x )
                 {
                     return std::pair(nullptr,*left);
                 }
 
-                if( (*right)->x0 < x )
+                if( x < this->min_x )
                 {
                     return std::pair(*right,nullptr);
                 }
 
-                size_t length = (right - left) + 1;
+                number range = this->max_x - this->min_x;
 
-                while( length > 2 )
-                {
+                size_t length = this->nodes.size();
 
-                    auto center = left + (length/2);
+                size_t i = static_cast<number>((x - this->min_x)/range)*length - 1;
 
-                    NodeRef node = *center;
-
-                    if( x == node->x0 )
-                    {
-                        left = center;
-                        right = center+1;
-
-                        break;
-                    }
-
-                    if( x < node->x0 )
-                    {
-                        right = center;
-                    }
-                    else
-                    {
-                        left = center;
-                    }
-
-                    length = (right - left)+1;
-
-                }
-
+                left = this->nodes.begin() + i;
+                right = left + 1;
 
                 return std::pair(*left,*right);
             }
