@@ -88,7 +88,7 @@ namespace snn
         {
             private:
 
-            std::deque<NodeRef> nodes;
+            std::vector<NodeRef> nodes;
 
             number biggest_y;
 
@@ -135,6 +135,16 @@ namespace snn
 
             public:
 
+            number get_max() const
+            {
+                return this->max_x;
+            }
+
+            number get_min() const
+            {
+                return this->min_x;
+            }
+
             static inline NodeRef make_node(number x,number y)
             {
                 return std::make_shared<SplineNode>(x,y);
@@ -160,6 +170,7 @@ namespace snn
                 auto points = this->search(x); 
                 
                 // nudge closest points towards (x,target)
+                // maybe those exp functions are unecessary?
                 if( error <= ERROR_THRESHOLD_KAN && this->nodes.size() > 0 )
                 {
 
@@ -224,7 +235,7 @@ namespace snn
                 }
                 else if( x < this->min_x )
                 {
-                    this->nodes.push_front(new_node);
+                    this->nodes.insert(this->nodes.begin(),new_node);
                 }
                 else if( this->nodes.size() > 0 )
                 {
@@ -250,6 +261,40 @@ namespace snn
                 //                       return a->x0 < b->x0;
                 //                   });
 
+            }
+
+            NodeRef get_by_index(number i) const
+            {
+                if( i >= this->nodes.size() || i < 0 )
+                {
+                    return nullptr;
+                }
+
+                auto iter = this->nodes.begin() + static_cast<size_t>(i);
+
+                NodeRef node = *iter;
+
+                if( i == this->nodes.size() - 1 )
+                {
+                    node->a = 0;
+                    return node;
+                }
+
+
+                NodeRef right = *(iter+1);
+
+                if( node->x0 != right->x0 )
+                {
+
+                    node->fit(right->x0,right->y0);
+
+                }
+                else
+                {
+                    node->a = 0;
+                }
+
+                return node;
             }
 
             NodeRef get_node(number x) const
@@ -367,12 +412,31 @@ namespace snn
             snn::SIMDVectorLite<InputSize> y(0.f);
             snn::SIMDVectorLite<InputSize> a(0.f);
 
+            snn::SIMDVectorLite<InputSize> max_x(0.f);
+            snn::SIMDVectorLite<InputSize> min_x(0.f);
+            snn::SIMDVectorLite<InputSize> length(0.f);
+
             size_t index = 0;
-            
 
             for(const Spline& spline : this->splines)
             {
-                auto node = spline.get_node(input[index]);
+                max_x[index] = spline.get_max();
+                min_x[index] = spline.get_min();
+                length[index] = static_cast<number>(spline.length());
+            }
+
+            snn::SIMDVectorLite<InputSize> range = max_x - min_x;
+
+            length-=1;
+
+            snn::SIMDVectorLite<InputSize> indexes = ((input - min_x)/range)*length;
+
+            index = 0;            
+            
+            for(const Spline& spline : this->splines)
+            {
+                // that part takes some time, but how to retrive elements faster?
+                auto node = spline.get_by_index(indexes[index]);
 
                 if( node )
                 {

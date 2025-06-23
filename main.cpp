@@ -367,7 +367,6 @@ int main(int argc,char** argv)
     }
 
 
-    start = std::chrono::system_clock::now();
     
     // we use stride of 2
     for(int y=1;y<120;y+=2)
@@ -391,8 +390,9 @@ int main(int argc,char** argv)
         }
     }
 
-
     last_layer.fit(output,last_target);
+
+    start = std::chrono::system_clock::now();
 
     auto output_last = last_layer.fire(output);
 
