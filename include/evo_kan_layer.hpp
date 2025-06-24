@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iostream>
-
+#include <thread>
 #include <cstdint>
 
 #include "evo_kan_block.hpp"
@@ -38,6 +38,8 @@ namespace snn
 
         snn::SIMDVectorLite<OutputSize> last_output;
 
+        std::mutex fire_mutex;
+
         public:
 
         EvoKanLayer(){
@@ -55,13 +57,57 @@ namespace snn
             return OutputSize;
         }
 
+        void fire_paraller(const snn::SIMDVectorLite<InputSize>& input,size_t& free_slot)
+        {
+
+            size_t index = 0;
+
+            {
+                std::lock_guard<std::mutex> guard(fire_mutex);
+
+                index = free_slot;
+                free_slot++;
+            }
+
+            while( index < OutputSize )
+            {
+                this->last_output[index] = this->blocks[index].fire(input);
+
+                {
+                    std::lock_guard<std::mutex> guard(fire_mutex);
+
+                    index = free_slot;
+                    free_slot++;
+                }
+            }
+
+        }
+
         const snn::SIMDVectorLite<OutputSize>& fire(const snn::SIMDVectorLite<InputSize>& input)
         {
 
-            for( size_t i = 0; i < OutputSize ; ++i )
+            std::thread threads[4];
+
+            size_t free_slot = 0;
+
+            for( size_t i = 0; i < 4; ++i )
             {
-                this->last_output[i] = this->blocks[i].fire(input);
+                threads[i] = std::thread(&EvoKanLayer<InputSize,OutputSize>::fire_paraller,this,std::cref(input),std::ref(free_slot));
             }
+
+            for( size_t i = 0; i < 4; ++i )
+            {
+                if( threads[i].joinable() )
+                {
+                    threads[i].join();
+                }
+            }
+
+
+            // for( size_t i = 0; i < OutputSize ; ++i )
+            // {
+            //     this->last_output[i] = this->blocks[i].fire(input);
+            // }
 
             return this->last_output;
         }

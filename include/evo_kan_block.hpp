@@ -161,6 +161,7 @@ namespace snn
                 this->biggest_y = 0;
                 this->min_x = 0;
                 this->max_x = 0;
+                this->nodes.reserve(128);
             }
 
             void fit(number x,number output,number target)
@@ -270,9 +271,7 @@ namespace snn
                     return nullptr;
                 }
 
-                auto iter = this->nodes.begin() + static_cast<size_t>(i);
-
-                NodeRef node = *iter;
+                NodeRef node = this->nodes[static_cast<size_t>(i)];
 
                 if( i == this->nodes.size() - 1 )
                 {
@@ -281,7 +280,7 @@ namespace snn
                 }
 
 
-                NodeRef right = *(iter+1);
+                NodeRef right = this->nodes[static_cast<size_t>(i)+1];
 
                 if( node->x0 != right->x0 )
                 {
@@ -404,6 +403,7 @@ namespace snn
 
         }
 
+
         number fire(const snn::SIMDVectorLite<InputSize>& input)
         {
             number output = 0.f;
@@ -431,7 +431,10 @@ namespace snn
 
             snn::SIMDVectorLite<InputSize> indexes = ((input - min_x)/range)*length;
 
-            index = 0;            
+            index = 0;    
+            
+            std::thread threads[4];
+
             
             for(const Spline& spline : this->splines)
             {
