@@ -40,6 +40,8 @@ namespace snn
 
         std::mutex fire_mutex;
 
+        std::mutex fit_mutex;
+
         public:
 
         EvoKanLayer(){
@@ -112,12 +114,56 @@ namespace snn
             return this->last_output;
         }
 
+        void fit_paraller(const snn::SIMDVectorLite<InputSize>& input,const snn::SIMDVectorLite<OutputSize>& target,size_t& free_slot)
+        {
+
+            size_t index = 0;
+
+            {
+                std::lock_guard<std::mutex> guard(fire_mutex);
+
+                index = free_slot;
+                free_slot++;
+            }
+
+            while( index < OutputSize )
+            {
+                this->blocks[index].fit(input,this->last_output[index],target[index]);
+
+                {
+                    std::lock_guard<std::mutex> guard(fire_mutex);
+
+                    index = free_slot;
+                    free_slot++;
+                }
+            }
+
+        }
+
         void fit(const snn::SIMDVectorLite<InputSize>& input,const snn::SIMDVectorLite<OutputSize>& target)
         {
-            for( size_t i = 0; i < OutputSize ; ++i )
+
+            std::thread threads[4];
+
+            size_t free_slot = 0;
+
+            for( size_t i = 0; i < 4; ++i )
             {
-                this->blocks[i].fit(input,this->last_output[i],target[i]);
+                threads[i] = std::thread(&EvoKanLayer<InputSize,OutputSize>::fit_paraller,this,std::cref(input),std::cref(target),std::ref(free_slot));
             }
+
+            for( size_t i = 0; i < 4; ++i )
+            {
+                if( threads[i].joinable() )
+                {
+                    threads[i].join();
+                }
+            }
+
+            // for( size_t i = 0; i < OutputSize ; ++i )
+            // {
+            //     this->blocks[i].fit(input,this->last_output[i],target[i]);
+            // }
         }
 
         const snn::SIMDVectorLite<OutputSize>& get_last_output()

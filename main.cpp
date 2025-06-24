@@ -287,6 +287,13 @@ number variance(const snn::SIMDVectorLite<Size>& input)
 
     I don't have better idea for now, I should probably think about some defragmentation algorithm for it.
 
+
+    What can we do to speed it up?
+
+    We can have fixed number of nodes in activations, so we can avoid using std::vectors.
+
+    We can use uint16_t instead of floats for some speed ups, sounds like a good idea generally.
+
 */
 
 
@@ -366,7 +373,7 @@ int main(int argc,char** argv)
         last_target[i] = noise.init();
     }
 
-
+    double time_of_cnn = 0.f;
     
     // we use stride of 2
     for(int y=1;y<120;y+=2)
@@ -385,19 +392,26 @@ int main(int argc,char** argv)
                 kernel.fit(cnn_input,0.f,noise.init());
             }
 
+            start = std::chrono::system_clock::now();
+
             output[(y/2)*60 + (x/2)] = kernel.fire(cnn_input);
+
+            end = std::chrono::system_clock::now();
+
+            time_of_cnn += std::chrono::duration<double>(end - start).count();
             // std::cout<<kernel.fire(cnn_input)<<std::endl;
         }
     }
 
-    last_layer.fit(output,last_target);
+    std::cout<<"Elapsed: "<<time_of_cnn<<" s"<<std::endl;
 
     start = std::chrono::system_clock::now();
 
-    auto output_last = last_layer.fire(output);
+    last_layer.fit(output,last_target);
 
     end = std::chrono::system_clock::now();
 
+    auto output_last = last_layer.fire(output);
 
     std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
 

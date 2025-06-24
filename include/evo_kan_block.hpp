@@ -433,8 +433,6 @@ namespace snn
 
             index = 0;    
             
-            std::thread threads[4];
-
             
             for(const Spline& spline : this->splines)
             {
