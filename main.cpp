@@ -292,7 +292,9 @@ number variance(const snn::SIMDVectorLite<Size>& input)
 
     We can have fixed number of nodes in activations, so we can avoid using std::vectors.
 
-    We can use uint16_t instead of floats for some speed ups, sounds like a good idea generally.
+    We can use uint16_t instead of floats for some speed ups, sounds like a good idea generally, but it doesn't give significant speed ups.
+
+    I get rid of smart pointers and it gave major speed ups.
 
 */
 
