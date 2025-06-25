@@ -377,6 +377,16 @@ namespace snn
 
             }
 
+            ~Spline()
+            {
+                for(size_t i=0;i<this->nodes.size();++i)
+                {
+                    delete this->nodes[i];
+                }
+
+                this->nodes.clear();
+            }
+
         };
 
 
