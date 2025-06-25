@@ -88,7 +88,7 @@ namespace snn
         {
             private:
 
-            std::vector<NodeRef> nodes;
+            std::vector<SplineNode*> nodes;
 
             number biggest_y;
 
@@ -96,7 +96,7 @@ namespace snn
             number max_x;
 
             // instead of binary search we can use interporlation search
-            std::pair<NodeRef,NodeRef> search( number x ) const
+            std::pair<SplineNode*,SplineNode*> search( number x ) const
             {
                 if( this->nodes.size() == 0 )
                 {
@@ -145,14 +145,14 @@ namespace snn
                 return this->min_x;
             }
 
-            static inline NodeRef make_node(number x,number y)
+            static inline SplineNode* make_node(number x,number y)
             {
-                return std::make_shared<SplineNode>(x,y);
+                return  new SplineNode(x,y);
             }
 
-            static inline NodeRef make_node()
+            static inline SplineNode* make_node()
             {
-                return std::make_shared<SplineNode>();
+                return new SplineNode();
             }
 
 
@@ -178,8 +178,8 @@ namespace snn
                     if( points.first != nullptr && points.second != nullptr )
                     {
                     
-                        NodeRef left = points.first;
-                        NodeRef right = points.second;
+                        SplineNode* left = points.first;
+                        SplineNode* right = points.second;
 
                         number dx_left = x - left->x0;
                         number dy_left = target - left->y0;
@@ -223,7 +223,7 @@ namespace snn
 
                 // add new point
 
-                NodeRef new_node = Spline::make_node(x,target);
+                SplineNode* new_node = Spline::make_node(x,target);
 
                 this->max_x = std::max(this->max_x,x);
                 this->min_x = std::min(this->min_x,x);
@@ -264,14 +264,14 @@ namespace snn
 
             }
 
-            NodeRef get_by_index(number i) const
+            SplineNode* get_by_index(number i) const
             {
                 if( i >= this->nodes.size() || i < 0 )
                 {
                     return nullptr;
                 }
 
-                NodeRef node = this->nodes[static_cast<size_t>(i)];
+                SplineNode* node = this->nodes[static_cast<size_t>(i)];
 
                 if( i == this->nodes.size() - 1 )
                 {
@@ -280,7 +280,7 @@ namespace snn
                 }
 
 
-                NodeRef right = this->nodes[static_cast<size_t>(i)+1];
+                SplineNode* right = this->nodes[static_cast<size_t>(i)+1];
 
                 if( node->x0 != right->x0 )
                 {
@@ -296,7 +296,7 @@ namespace snn
                 return node;
             }
 
-            NodeRef get_node(number x) const
+            SplineNode* get_node(number x) const
             {
                 
                 auto nodes = this->search(x);
@@ -307,8 +307,8 @@ namespace snn
                 }
 
 
-                NodeRef node = nodes.first;
-                NodeRef right = nodes.second;
+                SplineNode* node = nodes.first;
+                SplineNode* right = nodes.second;
 
                 if( node->x0 != right->x0 )
                 {
@@ -340,7 +340,7 @@ namespace snn
 
                 char buffer[buffer_size] = {0};
 
-                for( const NodeRef& node : this->nodes )
+                for( const SplineNode* node : this->nodes )
                 {
                     node->serialize(buffer);
 
@@ -365,7 +365,7 @@ namespace snn
                 {
                     in.read(buffer,buffer_size);
 
-                    NodeRef node = make_node();
+                    SplineNode* node = make_node();
 
                     node->deserialize(buffer);
 
