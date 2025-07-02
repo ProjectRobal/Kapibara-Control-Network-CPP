@@ -21,10 +21,7 @@ namespace snn
     template<size_t InputSize,size_t NodeCount,class X_INIT = DEF_X_INIT,class Y_INIT = DEF_Y_INIT>
     class StaticKAN
     {
-        // spline will be formed by using euqation:
-        // y*exp(-(u-x)^2 * stretch)
-
-        // y0*exp((x0-x)^2 * b)
+        
         struct SplineNode
         {
             number x0;
@@ -209,35 +206,90 @@ namespace snn
                 
             }
 
-            void fit(number x,number output,number target)
+            void fit_by_index(number i,number x,number output,number target)
             {
-                number error = abs(output-target);
 
-                auto points = this->search(x); 
+                number error = abs(output - target);
+
+                // if( error < 0.75f )
+                // {
+                //     // if error is too small, we do not do anything
+                //     return;
+                // }
+
+                number coverage = (1.f - std::exp(-error))*0.5f;
+
+                if( i < 0 )
+                {
+                    // nudge first node
+
+                    SplineNode* node = this->nodes[0];
+
+                    number dy = node->y0 - target;
+                    node->y0 -= dy*coverage;
+
+                    node->x0 -= (x - node->x0)*0.25f;
+
+                    return;
+                }
+
+                if( i >= this->nodes.size() )
+                {
+                    // nudge last node
+
+                    SplineNode* node = this->nodes[this->nodes.size()-1];
+
+                    number dy = node->y0 - target;
+                    node->y0 -= dy*coverage;
+                    
+                    node->x0 -= (x - node->x0)*0.25f;
+
+                    return;
+                }
+
+
+
+                size_t index = static_cast<size_t>(i);
+
+                // if i is in bounds, we nudge both nodes
+
+                SplineNode* left = this->nodes[index];
+
+                if( left->x0 == x )
+                {
+
+                    number dy = left->y0 - target;
+
+                    left->y0 -= dy*coverage;
+
+                    return;
+                }
+
+                SplineNode* right = this->nodes[index+1];
+
+                snn::SIMDVectorLite<2> dx;
+
+                dx[0] = left->x0;
+                dx[1] = right->x0;
+
+                snn::SIMDVectorLite<2> dy;
+
+                dy[0] = left->y0;
+                dy[1] = right->y0;
+
+                dx = dx - x;
+
+                dx*=coverage;
+
+                dy = dy - target;
+
+                dy*=coverage;
                 
-                // nudge closest points towards (x,target)
-                // maybe those exp functions are unecessary?
-                if( error <= ERROR_THRESHOLD_KAN && this->nodes.size() > 0 )
-                {
+                left->x0 -= dx[0];
+                right->x0 -= dx[1];
 
-                    
-
-                }
-
-                if( points.first != nullptr && points.second != nullptr )
-                {
-                    
-                }
-
-                // this->nodes.push_back(new_node);
-
-                // we could optimize it more, we could keep track of min and max x values and then decide to add 
-                // at front, somewhere in the middle or at the back
-                // std::sort(this->nodes.begin(),this->nodes.end(),[](NodeRef a, NodeRef b)
-                //                   {
-                //                       return a->x0 < b->x0;
-                //                   });
-
+                left->y0 -= dy[0];
+                right->y0 -= dy[1];
             }
 
             SplineNode* get_by_index(number i) const
@@ -257,34 +309,6 @@ namespace snn
 
 
                 SplineNode* right = this->nodes[static_cast<size_t>(i)+1];
-
-                if( node->x0 != right->x0 )
-                {
-
-                    node->fit(right->x0,right->y0);
-
-                }
-                else
-                {
-                    node->a = 0;
-                }
-
-                return node;
-            }
-
-            SplineNode* get_node(number x) const
-            {
-                
-                auto nodes = this->search(x);
-
-                if( nodes.first == nullptr || nodes.second == nullptr )
-                {
-                    return nullptr;
-                }
-
-
-                SplineNode* node = nodes.first;
-                SplineNode* right = nodes.second;
 
                 if( node->x0 != right->x0 )
                 {
@@ -423,7 +447,6 @@ namespace snn
 
             snn::SIMDVectorLite<InputSize> max_x(0.f);
             snn::SIMDVectorLite<InputSize> min_x(0.f);
-            snn::SIMDVectorLite<InputSize> length(0.f);
 
             size_t index = 0;
 
@@ -431,16 +454,13 @@ namespace snn
             {
                 max_x[index] = spline.get_max();
                 min_x[index] = spline.get_min();
-                length[index] = static_cast<number>(spline.length());
 
                 index += 1;
             }
 
             snn::SIMDVectorLite<InputSize> range = max_x - min_x;
 
-            length-=1;
-
-            snn::SIMDVectorLite<InputSize> indexes = ((input - min_x)/range)*length;
+            snn::SIMDVectorLite<InputSize> indexes = ((input - min_x)/range)*(NodeCount-1);
 
             index = 0;    
             
@@ -492,11 +512,36 @@ namespace snn
             snn::SIMDVectorLite<InputSize> y_errors = this->active_values*target;
             snn::SIMDVectorLite<InputSize> output_errors = this->active_values*output;
 
+            snn::SIMDVectorLite<InputSize> x(0.f);
+            snn::SIMDVectorLite<InputSize> y(0.f);
+            snn::SIMDVectorLite<InputSize> a(0.f);
+
+            snn::SIMDVectorLite<InputSize> max_x(0.f);
+            snn::SIMDVectorLite<InputSize> min_x(0.f);
+
             size_t index = 0;
+
+            for(const Spline& spline : this->splines)
+            {
+                max_x[index] = spline.get_max();
+                min_x[index] = spline.get_min();
+
+                index += 1;
+            }
+
+            snn::SIMDVectorLite<InputSize> range = max_x - min_x;
+
+
+            snn::SIMDVectorLite<InputSize> indexes = ((input - min_x)/range)*(NodeCount-1);
+
+
+            index = 0;
 
             for(Spline& spline : this->splines)
             {
-                spline.fit(input[index],output_errors[index],y_errors[index]);
+                // spline.fit(input[index],output_errors[index],y_errors[index]);
+
+                spline.fit_by_index(indexes[index],input[index],output_errors[index],y_errors[index]);
 
                 index ++;
             }

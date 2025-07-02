@@ -35,7 +35,7 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 // Static KAN configs:
 
 // we use uniform distribution for x values
-#define DEF_X_INIT snn::UniformInit<-1.f,1.f>
+#define DEF_X_INIT snn::UniformInit<-10.f,10.f>
 
 // we use gaussian distribution for initial values
 #define DEF_Y_INIT snn::GaussInit<0.f,0.01f>

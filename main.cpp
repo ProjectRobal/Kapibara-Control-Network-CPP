@@ -326,7 +326,7 @@ int main(int argc,char** argv)
     last_target[30] = -4.f;
     // output KAN layer, we can use small output and attach the information about current position in the reward map
 
-    snn::StaticKAN<64,1024> static_kan_block;
+    snn::StaticKAN<64,4096> static_kan_block;
 
 
     snn::UniformInit<-0.5f,0.5f> noise;
@@ -341,8 +341,6 @@ int main(int argc,char** argv)
     
     start = std::chrono::system_clock::now();
 
-    last_layer.fit(output,last_target);
-
     auto output_last = static_kan_block.fire(last_target);
 
     end = std::chrono::system_clock::now();
@@ -351,7 +349,54 @@ int main(int argc,char** argv)
 
     std::cout<<output_last<<std::endl;
 
+    for(size_t i=0;i<100;++i)
+    {
+
+        static_kan_block.fit(last_target,output_last,10.f);
+
+        output_last = static_kan_block.fire(last_target);
+
+        std::cout<<output_last<<std::endl;
+
+    }
+
+    snn::SIMDVectorLite<64> last_target_backup = last_target;
+
+    // for(size_t i=0;i<64;++i)
+    // {
+    //     last_target[i] = noise.init();
+    // }
+
+    last_target[10] = 4.f;
+
+
+    for(size_t i=0;i<100;++i)
+    {
+        start = std::chrono::system_clock::now();
+
+        static_kan_block.fit(last_target,output_last,20.f);
+
+        output_last = static_kan_block.fire(last_target);
+
+        std::cout<<output_last<<std::endl;
+
+        end = std::chrono::system_clock::now();
+
+        std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+
+    }
     // static_kan_block.printInfo();
+
+    std::cout<<"Fitting done"<<std::endl;
+
+    std::cout<<"For 10.f"<<std::endl;
+
+    std::cout<<static_kan_block.fire(last_target_backup)<<std::endl;
+
+    std::cout<<"For 20.f"<<std::endl;
+
+    std::cout<<static_kan_block.fire(last_target)<<std::endl;
+
     
     char c;
 
