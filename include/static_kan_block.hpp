@@ -416,7 +416,7 @@ namespace snn
 
             for(size_t i=0;i<InputSize;++i)
             {
-                this->active_values[i] = 1.f;
+                this->active_values[i] = this->uniform_init.init();
             }
 
             number prob_mean = this->active_values.reduce();
