@@ -341,7 +341,7 @@ int main(int argc,char** argv)
     
     start = std::chrono::system_clock::now();
 
-    // last_layer.fit(output,last_target);
+    last_layer.fit(output,last_target);
 
     auto output_last = static_kan_block.fire(last_target);
 
