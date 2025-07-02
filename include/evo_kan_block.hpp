@@ -271,16 +271,18 @@ namespace snn
                     return nullptr;
                 }
 
-                SplineNode* node = this->nodes[static_cast<size_t>(i)];
+                size_t index = static_cast<size_t>(i);
 
-                if( i == this->nodes.size() - 1 )
+                SplineNode* node = this->nodes[index];
+
+                if( index == this->nodes.size()-1  )
                 {
                     node->a = 0;
                     return node;
                 }
 
 
-                SplineNode* right = this->nodes[static_cast<size_t>(i)+1];
+                SplineNode* right = this->nodes[index+1];
 
                 if( node->x0 != right->x0 )
                 {
@@ -433,6 +435,8 @@ namespace snn
                 max_x[index] = spline.get_max();
                 min_x[index] = spline.get_min();
                 length[index] = static_cast<number>(spline.length());
+
+                index++;
             }
 
             snn::SIMDVectorLite<InputSize> range = max_x - min_x;

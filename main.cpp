@@ -389,10 +389,10 @@ int main(int argc,char** argv)
             cnn_input[3] = resized_image.at<u_char>(x,y)/255.f;
 
             // if( (y/2)*60 + (x/2) % 2 == 0 )
-            // if( chooser.init() > 0.75f)
-            // {
-            //     kernel.fit(cnn_input,0.f,noise.init());
-            // }
+            if( chooser.init() > 0.75f)
+            {
+                kernel.fit(cnn_input,0.f,noise.init());
+            }
 
             start = std::chrono::system_clock::now();
 
@@ -409,7 +409,7 @@ int main(int argc,char** argv)
 
     start = std::chrono::system_clock::now();
 
-    // last_layer.fit(output,last_target);
+    last_layer.fit(output,last_target);
 
     auto output_last = last_layer.fire(output);
 
