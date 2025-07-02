@@ -50,6 +50,8 @@
 #include "evo_kan_block.hpp"
 #include "evo_kan_layer.hpp"
 
+#include "static_kan_block.hpp"
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -313,45 +315,6 @@ int main(int argc,char** argv)
 
     const size_t samples_count = 32;
 
-
-    // those hold splines for activations functions. I am going to use splines:
-    // exp(-(x-x1)^2 * b)*a
-    // we can treat x1 and a as coordinates in 2D space:
-    // (x,y) = (x1,a)
-
-    // snn::EvoKanLayer<4,16> input_layer;
-
-    // load test image
-
-    cv::Mat image = cv::imread("room.jpg",cv::IMREAD_GRAYSCALE); // Replace with your image path
-
-    // Check if the image is loaded successfully
-    if (image.empty()) {
-        std::cerr << "Error: Could not load image." << std::endl;
-        return 1;
-    }
-
-    // Resize the image to 120x120
-    cv::Mat resized_image;
-    cv::resize(image, resized_image, cv::Size(120, 120));
-
-
-    // Display the resized image
-
-    // we are going to use kernel of 2x2
-    snn::SIMDVectorLite<4> cnn_input;
-
-    snn::SIMDVectorLite<4> *cnn_input_snaphost = new snn::SIMDVectorLite<4>[60*60];
-
-
-    snn::EvoKAN<4> kernel;
-
-
-    // output
-    snn::SIMDVectorLite<(60)*(60)> output(0.f);
-
-    snn::SIMDVectorLite<(60)*(60)> target_output(0.f);
-
     
     snn::SIMDVectorLite<64> last_target(0.f);
 
@@ -363,10 +326,10 @@ int main(int argc,char** argv)
     last_target[30] = -4.f;
     // output KAN layer, we can use small output and attach the information about current position in the reward map
 
-    snn::EvoKanLayer<(60)*(60),64> last_layer;
+    snn::StaticKAN<64,1024> static_kan_block;
 
 
-    snn::UniformInit<-10.f,10.f> noise;
+    snn::UniformInit<-0.5f,0.5f> noise;
 
     snn::UniformInit<0.f,1.f> chooser;
 
@@ -375,43 +338,12 @@ int main(int argc,char** argv)
         last_target[i] = noise.init();
     }
 
-    double time_of_cnn = 0.f;
     
-    // we use stride of 2
-    for(int y=1;y<120;y+=2)
-    {
-        for(int x=1;x<120;x+=2)
-        {
-            cnn_input[0] = resized_image.at<u_char>(x-1,y-1)/255.f;
-            cnn_input[1] = resized_image.at<u_char>(x,y-1)/255.f;
-
-            cnn_input[2] = resized_image.at<u_char>(x-1,y)/255.f;
-            cnn_input[3] = resized_image.at<u_char>(x,y)/255.f;
-
-            // if( (y/2)*60 + (x/2) % 2 == 0 )
-            // if( chooser.init() > 0.75f)
-            // {
-            //     kernel.fit(cnn_input,0.f,noise.init());
-            // }
-
-            start = std::chrono::system_clock::now();
-
-            output[(y/2)*60 + (x/2)] = kernel.fire(cnn_input);
-
-            end = std::chrono::system_clock::now();
-
-            time_of_cnn += std::chrono::duration<double>(end - start).count();
-            // std::cout<<kernel.fire(cnn_input)<<std::endl;
-        }
-    }
-
-    std::cout<<"Elapsed: "<<time_of_cnn<<" s"<<std::endl;
-
     start = std::chrono::system_clock::now();
 
     // last_layer.fit(output,last_target);
 
-    auto output_last = last_layer.fire(output);
+    auto output_last = static_kan_block.fire(last_target);
 
     end = std::chrono::system_clock::now();
 
@@ -419,6 +351,7 @@ int main(int argc,char** argv)
 
     std::cout<<output_last<<std::endl;
 
+    // static_kan_block.printInfo();
     
     char c;
 
