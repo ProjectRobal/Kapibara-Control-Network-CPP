@@ -217,7 +217,7 @@ namespace snn
                 //     return;
                 // }
 
-                number coverage = (1.f - std::exp(-error))*0.5f;
+                number coverage = (1.f - std::exp(-error))*0.3f;
 
                 if( i < 0 )
                 {
@@ -228,7 +228,7 @@ namespace snn
                     number dy = node->y0 - target;
                     node->y0 -= dy*coverage;
 
-                    node->x0 -= (x - node->x0)*0.25f;
+                    node->x0 -= (x - node->x0)*coverage;
 
                     return;
                 }
@@ -242,7 +242,7 @@ namespace snn
                     number dy = node->y0 - target;
                     node->y0 -= dy*coverage;
                     
-                    node->x0 -= (x - node->x0)*0.25f;
+                    node->x0 -= (x - node->x0)*coverage;
 
                     return;
                 }
@@ -409,6 +409,8 @@ namespace snn
 
         snn::UniformInit<0.f,1.f> uniform_init;
 
+        snn::SIMDVectorLite<InputSize> x_x;
+
         public:
 
         StaticKAN()
@@ -416,7 +418,14 @@ namespace snn
 
             for(size_t i=0;i<InputSize;++i)
             {
-                this->active_values[i] = this->uniform_init.init();
+                if(this->uniform_init.init() < 0.25f)
+                {
+                   this->active_values[i] = this->uniform_init.init();
+                }
+                else
+                {
+                    this->active_values[i] = 0.f;
+                }
             }
 
             number prob_mean = this->active_values.reduce();
@@ -481,14 +490,31 @@ namespace snn
                 index ++;
             }
 
-            snn::SIMDVectorLite<InputSize> x_x = input - x;
+            this->x_x = input - x;
 
-            x_x = a*(x_x*x_x) + y;
+            this->x_x = a*(this->x_x*this->x_x) + y;
 
-            output += x_x.reduce();
+            // std::cout<<"x_x: "<<this->x_x<<std::endl;
+
+            output += this->x_x.reduce();
 
             // generate fit select probablitiy for each node
 
+            for(size_t i=0;i<InputSize;++i)
+            {
+                if(this->uniform_init.init() < 0.25f)
+                {
+                   this->active_values[i] = this->uniform_init.init();
+                }
+                else
+                {
+                    this->active_values[i] = 0.f;
+                }
+            }
+
+            number prob_mean = this->active_values.reduce();
+
+            this->active_values /= prob_mean;
             
 
             return output;
@@ -509,8 +535,8 @@ namespace snn
 
             size_t node_index = 0;
 
-            snn::SIMDVectorLite<InputSize> y_errors = this->active_values*target;
-            snn::SIMDVectorLite<InputSize> output_errors = this->active_values*output;
+            snn::SIMDVectorLite<InputSize> y_errors = this->active_values*(target - output);
+            snn::SIMDVectorLite<InputSize> output_errors = this->active_values*this->x_x;
 
             snn::SIMDVectorLite<InputSize> x(0.f);
             snn::SIMDVectorLite<InputSize> y(0.f);
@@ -541,7 +567,12 @@ namespace snn
             {
                 // spline.fit(input[index],output_errors[index],y_errors[index]);
 
-                spline.fit_by_index(indexes[index],input[index],output_errors[index],y_errors[index]);
+                if( this->active_values[index] != 0.f )
+                {
+
+                    spline.fit_by_index(indexes[index],input[index],output_errors[index],this->x_x[index] + y_errors[index]);
+
+                }
 
                 index ++;
             }

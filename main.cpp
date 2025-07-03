@@ -351,10 +351,12 @@ int main(int argc,char** argv)
 
     for(size_t i=0;i<100;++i)
     {
-
+        
         static_kan_block.fit(last_target,output_last,10.f);
 
         output_last = static_kan_block.fire(last_target);
+
+            // std::cout<<output_last<<std::endl;
 
         std::cout<<output_last<<std::endl;
 
@@ -370,13 +372,21 @@ int main(int argc,char** argv)
     last_target[10] = 4.f;
 
 
-    for(size_t i=0;i<100;++i)
+    last_target[14] = 2.f;
+
+    for(size_t i=0;i<1000;++i)
     {
         start = std::chrono::system_clock::now();
 
+        output_last = static_kan_block.fire(last_target);
+
         static_kan_block.fit(last_target,output_last,20.f);
 
-        output_last = static_kan_block.fire(last_target);
+        std::cout<<output_last<<std::endl;
+
+        output_last = static_kan_block.fire(last_target_backup);
+
+        static_kan_block.fit(last_target_backup,output_last,10.f);
 
         std::cout<<output_last<<std::endl;
 
@@ -385,6 +395,7 @@ int main(int argc,char** argv)
         std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
 
     }
+
     // static_kan_block.printInfo();
 
     std::cout<<"Fitting done"<<std::endl;
