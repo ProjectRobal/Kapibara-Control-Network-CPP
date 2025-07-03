@@ -418,14 +418,14 @@ namespace snn
 
             for(size_t i=0;i<InputSize;++i)
             {
-                if(this->uniform_init.init() < 0.25f)
+                // if(this->uniform_init.init() < 0.25f)
                 {
                    this->active_values[i] = this->uniform_init.init();
                 }
-                else
-                {
-                    this->active_values[i] = 0.f;
-                }
+                // else
+                // {
+                //     this->active_values[i] = 0.f;
+                // }
             }
 
             number prob_mean = this->active_values.reduce();
@@ -536,7 +536,7 @@ namespace snn
             size_t node_index = 0;
 
             snn::SIMDVectorLite<InputSize> y_errors = this->active_values*(target - output);
-            snn::SIMDVectorLite<InputSize> output_errors = this->active_values*this->x_x;
+            snn::SIMDVectorLite<InputSize> output_errors = this->x_x;
 
             snn::SIMDVectorLite<InputSize> x(0.f);
             snn::SIMDVectorLite<InputSize> y(0.f);

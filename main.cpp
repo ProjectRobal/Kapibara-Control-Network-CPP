@@ -326,7 +326,7 @@ int main(int argc,char** argv)
     last_target[30] = -4.f;
     // output KAN layer, we can use small output and attach the information about current position in the reward map
 
-    snn::StaticKAN<64,4096> static_kan_block;
+    snn::StaticKAN<64,4096*2> static_kan_block;
 
 
     snn::UniformInit<(number)-0.5f,(number)0.5f> noise;
@@ -344,7 +344,7 @@ int main(int argc,char** argv)
 
     number outputs[dataset_size];
 
-    for(auto input : dataset)
+    for(auto& input : dataset)
     {
         for(size_t i=0;i<64;++i)
         {
@@ -368,12 +368,14 @@ int main(int argc,char** argv)
 
     std::cout<<output_last<<std::endl;
 
-    for(size_t e=0;e<10;++e)
+    for(size_t e=0;e<1000;++e)
     {
-        for(size_t i=0;i<dataset_size;++i)
+        for(size_t i=0;i<15;++i)
         {
             output_last = static_kan_block.fire(dataset[i]);
             static_kan_block.fit(dataset[i],output_last,outputs[i]);
+
+            std::cout<<output_last<<" "<<outputs[i]<<std::endl;
 
             // std::cout<<"Fitting: "<<i<<"/"<<dataset_size<<" error: "<<std::abs(output_last - outputs[i])<<std::endl;
         }
@@ -384,7 +386,7 @@ int main(int argc,char** argv)
 
     double total_error = 0.f;
 
-    for(size_t i=0;i<dataset_size;++i)
+    for(size_t i=0;i<15;++i)
     {
         number out = static_kan_block.fire(dataset[i]);
 
