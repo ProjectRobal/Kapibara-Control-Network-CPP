@@ -38,7 +38,7 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 #define DEF_X_INIT snn::UniformInit<-10.f,10.f>
 
 // we use gaussian distribution for initial values
-#define DEF_Y_INIT snn::GaussInit<0.f,0.01f>
+#define DEF_Y_INIT snn::GaussInit<0.f,0.0001f>
 
 
 // A maximum weight switch probablity

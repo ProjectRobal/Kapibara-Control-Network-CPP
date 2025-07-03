@@ -338,6 +338,25 @@ int main(int argc,char** argv)
         last_target[i] = noise.init();
     }
 
+    const size_t dataset_size = 100;
+
+    snn::SIMDVectorLite<64> dataset[dataset_size];
+
+    number outputs[dataset_size];
+
+    for(auto input : dataset)
+    {
+        for(size_t i=0;i<64;++i)
+        {
+            input[i] = noise.init();
+        }
+
+    }
+
+    for(size_t i=0;i<dataset_size;++i)
+    {
+        outputs[i] = noise.init()*10.f;
+    }
     
     start = std::chrono::system_clock::now();
 
@@ -349,64 +368,34 @@ int main(int argc,char** argv)
 
     std::cout<<output_last<<std::endl;
 
-    for(size_t i=0;i<100;++i)
+    for(size_t e=0;e<5;++e)
     {
-        
-        static_kan_block.fit(last_target,output_last,10.f);
+        for(size_t i=0;i<dataset_size;++i)
+        {
+            output_last = static_kan_block.fire(dataset[i]);
+            static_kan_block.fit(dataset[i],output_last,outputs[i]);
 
-        output_last = static_kan_block.fire(last_target);
+            std::cout<<output_last<<std::endl;
 
-            // std::cout<<output_last<<std::endl;
-
-        std::cout<<output_last<<std::endl;
+            std::cout<<"Fitting: "<<i<<"/"<<dataset_size<<" error: "<<std::abs(output_last - outputs[i])<<std::endl;
+        }
 
     }
-
-    snn::SIMDVectorLite<64> last_target_backup = last_target;
-
-    // for(size_t i=0;i<64;++i)
-    // {
-    //     last_target[i] = noise.init();
-    // }
-
-    last_target[10] = 4.f;
-
-
-    last_target[14] = 2.f;
-
-    for(size_t i=0;i<1000;++i)
-    {
-        start = std::chrono::system_clock::now();
-
-        output_last = static_kan_block.fire(last_target);
-
-        static_kan_block.fit(last_target,output_last,20.f);
-
-        std::cout<<output_last<<std::endl;
-
-        output_last = static_kan_block.fire(last_target_backup);
-
-        static_kan_block.fit(last_target_backup,output_last,10.f);
-
-        std::cout<<output_last<<std::endl;
-
-        end = std::chrono::system_clock::now();
-
-        std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
-
-    }
-
-    // static_kan_block.printInfo();
 
     std::cout<<"Fitting done"<<std::endl;
 
-    std::cout<<"For 10.f"<<std::endl;
+    double total_error = 0.f;
 
-    std::cout<<static_kan_block.fire(last_target_backup)<<std::endl;
+    for(size_t i=0;i<dataset_size;++i)
+    {
+        number out = static_kan_block.fire(dataset[i]);
 
-    std::cout<<"For 20.f"<<std::endl;
+        number error = std::abs(out - outputs[i]);
 
-    std::cout<<static_kan_block.fire(last_target)<<std::endl;
+        total_error += error;
+    }
+
+    std::cout<<"Total error: "<<total_error/dataset_size<<std::endl;
 
     
     char c;
