@@ -4,7 +4,7 @@
 #include <experimental/simd>
 
 // specific number types used by neurons
-typedef float number;
+typedef double number;
 
 #define MAX_SIMD_VECTOR_SIZE std::experimental::simd_abi::max_fixed_size<number>
 
@@ -35,10 +35,10 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 // Static KAN configs:
 
 // we use uniform distribution for x values
-#define DEF_X_INIT snn::UniformInit<-10.f,10.f>
+#define DEF_X_INIT snn::UniformInit<(number)-10.f,(number)10.f>
 
 // we use gaussian distribution for initial values
-#define DEF_Y_INIT snn::GaussInit<0.f,0.0001f>
+#define DEF_Y_INIT snn::GaussInit<(number)0.f,(number)0.0001f>
 
 
 // A maximum weight switch probablity

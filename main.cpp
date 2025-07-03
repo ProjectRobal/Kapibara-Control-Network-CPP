@@ -329,9 +329,9 @@ int main(int argc,char** argv)
     snn::StaticKAN<64,4096> static_kan_block;
 
 
-    snn::UniformInit<-0.5f,0.5f> noise;
+    snn::UniformInit<(number)-0.5f,(number)0.5f> noise;
 
-    snn::UniformInit<0.f,1.f> chooser;
+    snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
     for(size_t i=0;i<64;i++)
     {
@@ -368,16 +368,14 @@ int main(int argc,char** argv)
 
     std::cout<<output_last<<std::endl;
 
-    for(size_t e=0;e<5;++e)
+    for(size_t e=0;e<10;++e)
     {
         for(size_t i=0;i<dataset_size;++i)
         {
             output_last = static_kan_block.fire(dataset[i]);
             static_kan_block.fit(dataset[i],output_last,outputs[i]);
 
-            std::cout<<output_last<<std::endl;
-
-            std::cout<<"Fitting: "<<i<<"/"<<dataset_size<<" error: "<<std::abs(output_last - outputs[i])<<std::endl;
+            // std::cout<<"Fitting: "<<i<<"/"<<dataset_size<<" error: "<<std::abs(output_last - outputs[i])<<std::endl;
         }
 
     }

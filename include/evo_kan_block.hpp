@@ -397,7 +397,7 @@ namespace snn
         // used in fiting process to distribute error
         snn::SIMDVectorLite<InputSize> active_values;
 
-        snn::UniformInit<0.f,1.f> uniform_init;
+        snn::UniformInit<(number)0.f,(number)1.f> uniform_init;
 
         public:
 
