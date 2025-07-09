@@ -88,7 +88,7 @@ namespace snn
         {
             private:
 
-            std::array<SplineNode*,NodeCount> nodes;
+            std::vector<SplineNode*> nodes;
 
             number biggest_y;
 
@@ -163,28 +163,26 @@ namespace snn
 
                 Y_INIT y_init;
 
-                std::vector<number> unique;
+                this->min_x = -10.f;
+                this->max_x = 10.f;
 
-                this->min_x = std::numeric_limits<number>::max();
-                this->max_x = std::numeric_limits<number>::lowest();
+                number dx = ( this->max_x - this->min_x ) / static_cast<number>(NodeCount);
 
-                for(auto& node : this->nodes)
+                number x = this->min_x;
+
+                while( x <= this->max_x )
                 {
-                    number x = x_init.init();
 
-                    // we need to make sure that x is unique
-                    while( std::find(unique.begin(),unique.end(),x) != unique.end() )
+                    SplineNode* node = Spline::make_node(x,y_init.init());
+
+                    if( node == NULL )
                     {
-                        x = x_init.init();
+                        throw std::runtime_error("Cannot allocate memory for SplineNode");
                     }
 
-                    unique.push_back(x);
-
-                    node = Spline::make_node(x,y_init.init());
-
-                    this->min_x = std::min(this->min_x,node->x0);
-                    this->max_x = std::max(this->max_x,node->x0);
+                    this->nodes.push_back(node);
                     
+                    x += dx;
                 }
 
                 // sort after initialization
@@ -192,11 +190,11 @@ namespace snn
                                   {
                                       return a->x0 < b->x0;
                                   });
+
             }
 
 
             Spline()
-            : nodes({nullptr})
             {
                 this->biggest_y = 0;
                 this->min_x = 0;
@@ -230,6 +228,20 @@ namespace snn
 
                     node->x0 -= (x - node->x0)*coverage;
 
+                    if( node->x0 )
+                    {
+
+                    }
+
+                    this->min_x = std::min(this->min_x,node->x0);
+                    this->max_x = std::max(this->max_x,node->x0);
+
+                    if( node->x0 > this->nodes[1]->x0 )
+                    {
+                        // if first node is after second node, we need to swap them
+                        std::swap(this->nodes[0],this->nodes[1]);
+                    }
+
                     return;
                 }
 
@@ -243,6 +255,15 @@ namespace snn
                     node->y0 -= dy*coverage;
                     
                     node->x0 -= (x - node->x0)*coverage;
+
+                    this->min_x = std::min(this->min_x,node->x0);
+                    this->max_x = std::max(this->max_x,node->x0);
+
+                    if( node->x0 < this->nodes[this->nodes.size()-2]->x0 )
+                    {
+                        // if first node is after second node, we need to swap them
+                        std::swap(this->nodes[this->nodes.size()-1],this->nodes[this->nodes.size()-2]);
+                    }
 
                     return;
                 }
@@ -279,17 +300,39 @@ namespace snn
 
                 dx = dx - x;
 
-                dx*=coverage;
+                dx*=coverage/10.f;
 
                 dy = dy - target;
 
                 dy*=coverage;
                 
-                left->x0 -= dx[0];
-                right->x0 -= dx[1];
+                // snn::SIMDVectorLite<2> dx2 = dx*dx;
 
-                left->y0 -= dy[0];
-                right->y0 -= dy[1];
+                // if(abs(dx[0]) < abs(dx[1]))
+                {
+                    if( abs(left->x0 - right->x0) > 0.00001f )
+                    {
+                        left->x0 -= dx[0];
+                    }
+
+                    left->y0 -= dy[0];
+                }
+                // else
+                {
+                    if( abs(left->x0 - right->x0) > 0.00001f )
+                    {
+                        right->x0 -= dx[1];
+                    }
+
+                    right->y0 -= dy[1];
+                }
+                
+
+                this->min_x = std::min(this->min_x,left->x0);
+                this->min_x = std::min(this->min_x,right->x0);
+
+                this->max_x = std::max(this->max_x,left->x0);
+                this->max_x = std::max(this->max_x,right->x0);
             }
 
             SplineNode* get_by_index(number i) const
@@ -402,7 +445,7 @@ namespace snn
         };
 
 
-        Spline splines[InputSize];
+        Spline *splines;
 
         // used in fiting process to distribute error
         snn::SIMDVectorLite<InputSize> active_values;
@@ -415,6 +458,8 @@ namespace snn
 
         StaticKAN()
         {
+
+            this->splines = new Spline[InputSize];
 
             for(size_t i=0;i<InputSize;++i)
             {
@@ -459,10 +504,10 @@ namespace snn
 
             size_t index = 0;
 
-            for(const Spline& spline : this->splines)
+            for(;index<InputSize;)
             {
-                max_x[index] = spline.get_max();
-                min_x[index] = spline.get_min();
+                max_x[index] = splines[index].get_max();
+                min_x[index] = splines[index].get_min();
 
                 index += 1;
             }
@@ -474,10 +519,10 @@ namespace snn
             index = 0;    
             
             
-            for(const Spline& spline : this->splines)
+            for(;index<InputSize;)
             {
                 // that part takes some time, but how to retrive elements faster?
-                auto node = spline.get_by_index(indexes[index]);
+                auto node = splines[index].get_by_index(indexes[index]);
 
                 if( node )
                 {
@@ -547,10 +592,10 @@ namespace snn
 
             size_t index = 0;
 
-            for(const Spline& spline : this->splines)
+            for(;index<InputSize;)
             {
-                max_x[index] = spline.get_max();
-                min_x[index] = spline.get_min();
+                max_x[index] = splines[index].get_max();
+                min_x[index] = splines[index].get_min();
 
                 index += 1;
             }
@@ -563,14 +608,14 @@ namespace snn
 
             index = 0;
 
-            for(Spline& spline : this->splines)
+            for(;index<InputSize;)
             {
                 // spline.fit(input[index],output_errors[index],y_errors[index]);
 
                 if( this->active_values[index] != 0.f )
                 {
 
-                    spline.fit_by_index(indexes[index],input[index],output_errors[index],this->x_x[index] + y_errors[index]);
+                    splines[index].fit_by_index(indexes[index],input[index],output_errors[index],this->x_x[index] + y_errors[index]);
 
                 }
 
@@ -590,18 +635,18 @@ namespace snn
         void save(std::ostream& out) const
         {
             // save splines
-            for(const Spline& spline : this->splines)
+            for(size_t i=0;i<InputSize;++i)
             {
-                spline.save(out);
+                splines[i].save(out);
             }
 
         }
 
         void load(std::istream& in)
         {
-            for(Spline& spline : this->splines)
+            for(size_t i=0;i<InputSize;++i)
             {
-                spline.load(in);
+                splines[i].load(in);
             }
         }
 

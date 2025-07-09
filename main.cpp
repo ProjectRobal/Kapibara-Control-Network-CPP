@@ -326,17 +326,14 @@ int main(int argc,char** argv)
     last_target[30] = -4.f;
     // output KAN layer, we can use small output and attach the information about current position in the reward map
 
-    snn::StaticKAN<64,4096*2> static_kan_block;
+    snn::StaticKAN<64,4096> static_kan_block;
+
+    snn::StaticKAN<64,4096*2> static_kan_layer[16];
 
 
     snn::UniformInit<(number)-0.5f,(number)0.5f> noise;
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
-
-    for(size_t i=0;i<64;i++)
-    {
-        last_target[i] = noise.init();
-    }
 
     const size_t dataset_size = 100;
 
@@ -360,7 +357,9 @@ int main(int argc,char** argv)
     
     start = std::chrono::system_clock::now();
 
-    auto output_last = static_kan_block.fire(last_target);
+    // auto output_last = static_kan_block.fire(last_target);
+
+    number output_last = 0;
 
     end = std::chrono::system_clock::now();
 
@@ -368,11 +367,19 @@ int main(int argc,char** argv)
 
     std::cout<<output_last<<std::endl;
 
+    snn::SIMDVectorLite<16> layer_output;
+
     for(size_t e=0;e<1000;++e)
     {
-        for(size_t i=0;i<15;++i)
+        for(size_t i=0;i<64;++i)
         {
             output_last = static_kan_block.fire(dataset[i]);
+
+            // for(size_t l=0;l<16;++l)
+            // {
+            //     layer_output[l] = static_kan_layer[l].fire(dataset[i]);
+            // }
+
             static_kan_block.fit(dataset[i],output_last,outputs[i]);
 
             std::cout<<output_last<<" "<<outputs[i]<<std::endl;
@@ -386,7 +393,7 @@ int main(int argc,char** argv)
 
     double total_error = 0.f;
 
-    for(size_t i=0;i<15;++i)
+    for(size_t i=0;i<64;++i)
     {
         number out = static_kan_block.fire(dataset[i]);
 
