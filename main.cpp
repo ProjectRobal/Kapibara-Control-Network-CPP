@@ -335,7 +335,7 @@ int main(int argc,char** argv)
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 128;
+    const size_t dataset_size = 256;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 

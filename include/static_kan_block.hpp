@@ -226,7 +226,7 @@ namespace snn
                     return;
                 }
 
-                number coverage = (1.f - std::exp(-error))*0.1f;
+                number coverage = (1.f - std::exp(-error))*0.3f;
 
                 if( i < 0 )
                 {
@@ -306,7 +306,7 @@ namespace snn
 
                 dx = dx - x;
 
-                dx*=coverage/10.f;
+                dx*=coverage;
 
                 dy = dy - target;
 
@@ -565,7 +565,7 @@ namespace snn
                    this->active_values[i] = this->uniform_init.init();
                 }
                 else
-                {
+                {   
                     this->active_values[i] = 0.f;
                 }
             }
