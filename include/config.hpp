@@ -32,6 +32,16 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 
 #define MUTATION_PROBABILITY 0.25f
 
+// Static KAN configs:
+
+// we use uniform distribution for x values
+#define DEF_X_LEFT ((number)-10.f)
+
+#define DEF_X_RIGHT ((number)10.f)
+
+// we use gaussian distribution for initial values
+#define DEF_Y_INIT snn::GaussInit<(number)0.f,(number)0.001f>
+
 
 // A maximum weight switch probablity
 #define MAX_SWITCH_PROBABILITY 0.5f

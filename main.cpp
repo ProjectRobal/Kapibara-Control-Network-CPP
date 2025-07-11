@@ -50,6 +50,8 @@
 #include "evo_kan_block.hpp"
 #include "evo_kan_layer.hpp"
 
+#include "static_kan_block.hpp"
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -313,45 +315,6 @@ int main(int argc,char** argv)
 
     const size_t samples_count = 32;
 
-
-    // those hold splines for activations functions. I am going to use splines:
-    // exp(-(x-x1)^2 * b)*a
-    // we can treat x1 and a as coordinates in 2D space:
-    // (x,y) = (x1,a)
-
-    // snn::EvoKanLayer<4,16> input_layer;
-
-    // load test image
-
-    cv::Mat image = cv::imread("room.jpg",cv::IMREAD_GRAYSCALE); // Replace with your image path
-
-    // Check if the image is loaded successfully
-    if (image.empty()) {
-        std::cerr << "Error: Could not load image." << std::endl;
-        return 1;
-    }
-
-    // Resize the image to 120x120
-    cv::Mat resized_image;
-    cv::resize(image, resized_image, cv::Size(120, 120));
-
-
-    // Display the resized image
-
-    // we are going to use kernel of 2x2
-    snn::SIMDVectorLite<4> cnn_input;
-
-    snn::SIMDVectorLite<4> *cnn_input_snaphost = new snn::SIMDVectorLite<4>[60*60];
-
-
-    snn::EvoKAN<4> kernel;
-
-
-    // output
-    snn::SIMDVectorLite<(60)*(60)> output(0.f);
-
-    snn::SIMDVectorLite<(60)*(60)> target_output(0.f);
-
     
     snn::SIMDVectorLite<64> last_target(0.f);
 
@@ -363,30 +326,57 @@ int main(int argc,char** argv)
     last_target[30] = -4.f;
     // output KAN layer, we can use small output and attach the information about current position in the reward map
 
-    snn::EvoKanLayer<(60)*(60),64> last_layer;
+    snn::StaticKAN<64,256> static_kan_block;
+
+    // snn::StaticKAN<64,4096*2> static_kan_layer[16];
 
 
-    snn::UniformInit<-10.f,10.f> noise;
+    snn::UniformInit<(number)-0.5f,(number)0.5f> noise;
 
-    snn::UniformInit<0.f,1.f> chooser;
+    snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    for(size_t i=0;i<64;i++)
+    const size_t dataset_size = 256;
+
+    snn::SIMDVectorLite<64> dataset[dataset_size];
+
+    number outputs[dataset_size];
+
+    for(auto& input : dataset)
     {
-        last_target[i] = noise.init();
+        for(size_t i=0;i<64;++i)
+        {
+            input[i] = noise.init();
+        }
+
     }
 
-    double time_of_cnn = 0.f;
-    
-    // we use stride of 2
-    for(int y=1;y<120;y+=2)
+    for(size_t i=0;i<dataset_size;++i)
     {
-        for(int x=1;x<120;x+=2)
-        {
-            cnn_input[0] = resized_image.at<u_char>(x-1,y-1)/255.f;
-            cnn_input[1] = resized_image.at<u_char>(x,y-1)/255.f;
+        outputs[i] = noise.init()*10.f;
+    }
+    
+    start = std::chrono::system_clock::now();
 
-            cnn_input[2] = resized_image.at<u_char>(x-1,y)/255.f;
-            cnn_input[3] = resized_image.at<u_char>(x,y)/255.f;
+    // auto output_last = static_kan_block.fire(last_target);
+
+    number output_last = 0;
+
+    end = std::chrono::system_clock::now();
+
+    std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+
+    std::cout<<output_last<<std::endl;
+
+    snn::SIMDVectorLite<16> layer_output;
+
+    number error = 0.f;
+
+    for(size_t e=0;e<10000;++e)
+    {
+        for(size_t i=0;i<dataset_size;++i)
+        {
+            output_last = static_kan_block.fire(dataset[i]);
+
 
             // if( (y/2)*60 + (x/2) % 2 == 0 )
             if( chooser.init() > 0.75f)
@@ -394,30 +384,35 @@ int main(int argc,char** argv)
                 kernel.fit(cnn_input,0.f,noise.init());
             }
 
-            start = std::chrono::system_clock::now();
 
-            output[(y/2)*60 + (x/2)] = kernel.fire(cnn_input);
+            static_kan_block.fit(dataset[i],output_last,outputs[i]);
 
-            end = std::chrono::system_clock::now();
+            error += abs(output_last - outputs[i]);
 
-            time_of_cnn += std::chrono::duration<double>(end - start).count();
-            // std::cout<<kernel.fire(cnn_input)<<std::endl;
+            // std::cout<<output_last<<" "<<outputs[i]<<std::endl;
+
+            // std::cout<<"Fitting: "<<i<<"/"<<dataset_size<<" error: "<<std::abs(output_last - outputs[i])<<std::endl;
         }
+
+        std::cout<<"Error: "<<error/dataset_size<<std::endl;
+
+        error = 0.f;
+
+
+    std::cout<<"Fitting done"<<std::endl;
+
+    double total_error = 0.f;
+
+    for(size_t i=0;i<dataset_size;++i)
+    {
+        number out = static_kan_block.fire(dataset[i]);
+
+        number error = std::abs(out - outputs[i]);
+
+        total_error += error;
     }
 
-    std::cout<<"Elapsed: "<<time_of_cnn<<" s"<<std::endl;
-
-    start = std::chrono::system_clock::now();
-
-    last_layer.fit(output,last_target);
-
-    auto output_last = last_layer.fire(output);
-
-    end = std::chrono::system_clock::now();
-
-    std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
-
-    std::cout<<output_last<<std::endl;
+    std::cout<<"Total error: "<<total_error/dataset_size<<std::endl;
 
     
     char c;
