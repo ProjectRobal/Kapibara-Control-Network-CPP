@@ -18,7 +18,7 @@
 namespace snn
 {
 
-    template<size_t InputSize,size_t NodeCount,class X_INIT = DEF_X_INIT,class Y_INIT = DEF_Y_INIT>
+    template<size_t InputSize,size_t NodeCount,class Y_INIT = DEF_Y_INIT,number X_LEFT = DEF_X_LEFT,number X_RIGHT = DEF_X_RIGHT>
     class StaticKAN
     {
         
@@ -170,16 +170,16 @@ namespace snn
             {
                 // initalize nodes with random values
 
-                X_INIT x_init;
-
                 Y_INIT y_init;
 
-                this->min_x = -10.f;
-                this->max_x = 10.f;
+                this->min_x = X_LEFT;
+                this->max_x = X_RIGHT;
 
                 number dx = ( this->max_x - this->min_x ) / static_cast<number>(NodeCount);
 
                 number x = this->min_x;
+
+                this->nodes.reserve(NodeCount);
 
                 while( x <= this->max_x )
                 {
@@ -197,10 +197,10 @@ namespace snn
                 }
 
                 // sort after initialization
-                std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
-                                  {
-                                      return a->x0 < b->x0;
-                                  });
+                // std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
+                //                   {
+                //                       return a->x0 < b->x0;
+                //                   });
 
             }
 
