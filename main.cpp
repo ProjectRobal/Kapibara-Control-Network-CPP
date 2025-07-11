@@ -377,10 +377,13 @@ int main(int argc,char** argv)
         {
             output_last = static_kan_block.fire(dataset[i]);
 
-            // for(size_t l=0;l<16;++l)
-            // {
-            //     layer_output[l] = static_kan_layer[l].fire(dataset[i]);
-            // }
+
+            // if( (y/2)*60 + (x/2) % 2 == 0 )
+            if( chooser.init() > 0.75f)
+            {
+                kernel.fit(cnn_input,0.f,noise.init());
+            }
+
 
             static_kan_block.fit(dataset[i],output_last,outputs[i]);
 
@@ -395,7 +398,6 @@ int main(int argc,char** argv)
 
         error = 0.f;
 
-    }
 
     std::cout<<"Fitting done"<<std::endl;
 
