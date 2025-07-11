@@ -226,7 +226,7 @@ namespace snn
                     return;
                 }
 
-                number coverage = (1.f - std::exp(-error))*0.3f;
+                number coverage = (1.f - std::exp(-error))*0.1f;
 
                 if( i < 0 )
                 {
@@ -574,7 +574,6 @@ namespace snn
 
             this->active_values /= prob_mean;
             
-
             return output;
         }
 
@@ -595,10 +594,7 @@ namespace snn
 
             snn::SIMDVectorLite<InputSize> y_errors = this->active_values*(target - output);
             snn::SIMDVectorLite<InputSize> outputs = this->x_x;
-
-            snn::SIMDVectorLite<InputSize> x(0.f);
-            snn::SIMDVectorLite<InputSize> y(0.f);
-            snn::SIMDVectorLite<InputSize> a(0.f);
+          
 
             snn::SIMDVectorLite<InputSize> max_x(0.f);
             snn::SIMDVectorLite<InputSize> min_x(0.f);
@@ -623,14 +619,8 @@ namespace snn
 
             for(;index<InputSize;)
             {
-                // spline.fit(input[index],output_errors[index],y_errors[index]);
 
-                if( this->active_values[index] != 0.f )
-                {
-
-                    splines[index].fit_by_index(indexes[index],input[index],outputs[index],this->x_x[index] + y_errors[index]);
-
-                }
+                splines[index].fit_by_index(indexes[index],input[index],outputs[index],outputs[index] + y_errors[index]);
 
                 index ++;
             }
