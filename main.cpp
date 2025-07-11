@@ -326,9 +326,9 @@ int main(int argc,char** argv)
     last_target[30] = -4.f;
     // output KAN layer, we can use small output and attach the information about current position in the reward map
 
-    snn::StaticKAN<64,4096> static_kan_block;
+    snn::StaticKAN<64,512> static_kan_block;
 
-    snn::StaticKAN<64,4096*2> static_kan_layer[16];
+    // snn::StaticKAN<64,4096*2> static_kan_layer[16];
 
 
     snn::UniformInit<(number)-0.5f,(number)0.5f> noise;
@@ -369,7 +369,7 @@ int main(int argc,char** argv)
 
     snn::SIMDVectorLite<16> layer_output;
 
-    for(size_t e=0;e<5000;++e)
+    for(size_t e=0;e<10000;++e)
     {
         for(size_t i=0;i<64;++i)
         {

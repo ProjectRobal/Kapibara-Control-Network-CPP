@@ -41,7 +41,18 @@ namespace snn
 
             void fit(number x,number y)
             {
-                this->a = (y-this->y0)/((x-this->x0)*(x-this->x0));
+                number a = (y-this->y0)/((x-this->x0)*(x-this->x0));
+
+                if(abs(a) >= 100000000)
+                {
+                    std::cout<<"left: x: "<<this->x0<<" y: "<<this->y0<<" a: "<<this->a<<std::endl;
+                    std::cout<<"right: x: "<<x<<" y: "<<y<<" a: "<<a<<std::endl;
+                    std::cout<<"Error: a is too big: "<<a<<std::endl;
+                    
+                    exit(1);
+                }
+
+                this->a = a;
             }
 
             static size_t required_size_for_serialization()
@@ -209,11 +220,11 @@ namespace snn
 
                 number error = abs(output - target);
 
-                // if( error < 0.75f )
-                // {
-                //     // if error is too small, we do not do anything
-                //     return;
-                // }
+                if( error < 0.1f )
+                {
+                    // if error is too small, we do not do anything
+                    return;
+                }
 
                 number coverage = (1.f - std::exp(-error))*0.3f;
 
@@ -227,11 +238,6 @@ namespace snn
                     node->y0 -= dy*coverage;
 
                     node->x0 -= (x - node->x0)*coverage;
-
-                    if( node->x0 )
-                    {
-
-                    }
 
                     this->min_x = std::min(this->min_x,node->x0);
                     this->max_x = std::max(this->max_x,node->x0);
@@ -308,21 +314,28 @@ namespace snn
                 
                 // snn::SIMDVectorLite<2> dx2 = dx*dx;
 
-                // if(abs(dx[0]) < abs(dx[1]))
+                if(abs(dx[0]) < abs(dx[1]))
                 {
-                    if( abs(left->x0 - right->x0) > 0.00001f )
+                    if( abs(left->x0 - right->x0) > 0.005f )
                     {
                         left->x0 -= dx[0];
+                        // right->x0 -= dx[1];
                     }
+                   
 
                     left->y0 -= dy[0];
                 }
-                // else
+                else
                 {
-                    if( abs(left->x0 - right->x0) > 0.00001f )
+                    if( abs(left->x0 - right->x0) > 0.005f )
                     {
+                        // left->x0 -= dx[0];
                         right->x0 -= dx[1];
                     }
+                    // else{
+                    //     right->x0 = left->x0 + 0.005f;
+                    // }
+
 
                     right->y0 -= dy[1];
                 }
@@ -581,7 +594,7 @@ namespace snn
             size_t node_index = 0;
 
             snn::SIMDVectorLite<InputSize> y_errors = this->active_values*(target - output);
-            snn::SIMDVectorLite<InputSize> output_errors = this->x_x;
+            snn::SIMDVectorLite<InputSize> outputs = this->x_x;
 
             snn::SIMDVectorLite<InputSize> x(0.f);
             snn::SIMDVectorLite<InputSize> y(0.f);
@@ -615,7 +628,7 @@ namespace snn
                 if( this->active_values[index] != 0.f )
                 {
 
-                    splines[index].fit_by_index(indexes[index],input[index],output_errors[index],this->x_x[index] + y_errors[index]);
+                    splines[index].fit_by_index(indexes[index],input[index],outputs[index],this->x_x[index] + y_errors[index]);
 
                 }
 
