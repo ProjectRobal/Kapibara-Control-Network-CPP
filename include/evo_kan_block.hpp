@@ -91,6 +91,8 @@ namespace snn
             number min_x;
             number max_x;
 
+            public:
+
             // instead of binary search we can use interporlation search
             std::pair<SplineNode*,SplineNode*> search( number x ) const
             {
@@ -128,8 +130,6 @@ namespace snn
 
                 return std::pair(*left,*right);
             }
-
-            public:
 
             number get_max() const
             {
@@ -187,16 +187,17 @@ namespace snn
                     return;
                 }   
 
-                // SplineNode *near_node = this->nodes[index];
+                SplineNode *near_node = this->search(x).first;
 
-                // if( (index >=0 && index < this->nodes.size()) && ( abs(near_node->x0 - x) < 0.001f ) )
-                // {
-                //     number dy = near_node->y0 - target;
+                if( (near_node) && ( abs(near_node->x0 - x) < 0.00001f ) )
+                {
+                    // so those may cause the output to sometimes sky rocket
+                    // number dy = near_node->y0 - target;
 
-                //     near_node->y0 -= 0.1f*dy;
+                    // near_node->y0 -= 0.1f*dy;
 
-                //     return;
-                // }
+                    return;
+                }
 
                 SplineNode* node = make_node(x,target);
 
@@ -371,14 +372,14 @@ namespace snn
 
             for(size_t i=0;i<InputSize;++i)
             {
-                if( this->uniform_init.init() < 0.25f )
+                // if( this->uniform_init.init() < 0.25f )
                 {
                     this->active_values[i] = this->uniform_init.init();
                 }
-                else
-                {
-                    this->active_values[i] = 0.f;
-                }
+                // else
+                // {
+                //     this->active_values[i] = 0.f;
+                // }
             }
 
             number prob_mean = this->active_values.reduce();
@@ -423,7 +424,7 @@ namespace snn
             for(const Spline& spline : this->splines)
             {
                 // that part takes some time, but how to retrive elements faster?
-                auto node = spline.get_by_index(indexes[index]);
+                auto node = spline.search(input[index]).first;
 
                 if( node )
                 {
@@ -454,21 +455,21 @@ namespace snn
 
             // generate fit select probablitiy for each node
 
-            for(size_t i=0;i<InputSize;++i)
-            {
-                if( this->uniform_init.init() < 0.25f )
-                {
-                    this->active_values[i] = this->uniform_init.init();
-                }
-                else
-                {
-                    this->active_values[i] = 0.f;
-                }
-            }
+            // for(size_t i=0;i<InputSize;++i)
+            // {
+            //     if( this->uniform_init.init() < 0.25f )
+            //     {
+            //         this->active_values[i] = this->uniform_init.init();
+            //     }
+            //     else
+            //     {
+            //         this->active_values[i] = 0.f;
+            //     }
+            // }
 
-            number prob_mean = this->active_values.reduce();
+            // number prob_mean = this->active_values.reduce();
 
-            this->active_values /= prob_mean;
+            // this->active_values /= prob_mean;
 
             
 
@@ -489,15 +490,15 @@ namespace snn
 
             // select node to fit
 
+            snn::SIMDVectorLite<InputSize> max_x(0.f);
+            snn::SIMDVectorLite<InputSize> min_x(0.f);
+            snn::SIMDVectorLite<InputSize> length(0.f);
+
             snn::SIMDVectorLite<InputSize> y_errors = this->active_values*(output - target);
             snn::SIMDVectorLite<InputSize> outputs = this->x_x;
 
             // std::cout<<"Outputs: "<<outputs<<std::endl;
             // std::cout<<"Y Errors: "<<y_errors<<" sum: "<<y_errors.reduce()<<std::endl;
-
-            snn::SIMDVectorLite<InputSize> max_x(0.f);
-            snn::SIMDVectorLite<InputSize> min_x(0.f);
-            snn::SIMDVectorLite<InputSize> length(0.f);
 
             size_t index = 0;
 

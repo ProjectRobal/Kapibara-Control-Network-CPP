@@ -335,7 +335,7 @@ int main(int argc,char** argv)
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 4;
+    const size_t dataset_size = 32;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
@@ -345,7 +345,7 @@ int main(int argc,char** argv)
     {
         for(size_t i=0;i<64;++i)
         {
-            input[i] = noise.init();
+            input[i] = noise.init()*10.f;
         }
 
     }
