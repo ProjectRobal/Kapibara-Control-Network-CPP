@@ -19,10 +19,6 @@ namespace snn
     template<size_t InputSize>
     class EvoKAN
     {
-        // spline will be formed by using euqation:
-        // y*exp(-(u-x)^2 * stretch)
-
-        // y0*exp((x0-x)^2 * b)
         struct SplineNode
         {
             number x0;
@@ -161,106 +157,86 @@ namespace snn
                 this->biggest_y = 0;
                 this->min_x = 0;
                 this->max_x = 0;
-                this->nodes.reserve(128);
+                this->nodes.reserve(1024);
             }
 
-            void fit(number x,number output,number target)
+            void fit(number x,number index,number output,number target)
             {
                 number error = abs(output-target);
 
-                auto points = this->search(x); 
+                if( error < 0.00001f )
+                {
+                    // if error is too small, we do not do anything
+                    return;
+                }
+
+                // auto points = this->search(x); 
                 
-                // nudge closest points towards (x,target)
-                // maybe those exp functions are unecessary?
-                if( error <= ERROR_THRESHOLD_KAN && this->nodes.size() > 0 )
+                if( this->nodes.size() < 2)
                 {
+                    // if there are no nodes, we need to create first one
+                    SplineNode* node = make_node(x,target);
 
-                    if( points.first != nullptr && points.second != nullptr )
+                    this->nodes.push_back(node);
+
+                    if( this->nodes.size() == 0 )
                     {
-                    
-                        SplineNode* left = points.first;
-                        SplineNode* right = points.second;
-
-                        number dx_left = x - left->x0;
-                        number dy_left = target - left->y0;
-
-                        number dx_right = x - right->x0;
-                        number dy_right = target - right->y0;
-
-                        number coff = std::exp(-1.f*abs(dx_left))*0.25f;
-
-                        left->x0 = left->x0 + dx_left*coff;
-
-                        coff = std::exp(-1.f*abs(dy_left))*0.25f;
-
-                        left->y0 = left->y0 + dy_left*coff;
-
-                        coff = std::exp(-1.f*abs(dx_right))*0.25f;
-
-                        right->x0 = right->x0 + dx_right*coff;
-
-                        coff = std::exp(-1.f*abs(dy_right))*0.25f;
-
-                        right->y0 = right->y0 + dy_right*coff;
-
-                        return;
+                        // if this is first node, we need to set min and max x
+                        this->min_x = x;
+                        this->max_x = x;
+                    }
+                    else
+                    {
+                        // if this is second node, we need to set min and max x
+                        this->min_x = std::min(this->min_x,x);
+                        this->max_x = std::max(this->max_x,x);
                     }
 
-                }
 
-                if( points.first != nullptr && points.second != nullptr )
-                {
-                    if( points.first->x0 == x )
+                    std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
                     {
-                        // coverage based on error value
-                        number coff = std::exp(-1.f*abs(points.first->y0-target))*0.5f;
+                        return a->x0 < b->x0;
+                    });
 
-                        points.first->y0 = ( points.first->y0 + target )*coff;
-                        return;
-                    }
+                    return;
+                }   
+
+                SplineNode *near_node = this->nodes[index];
+
+                if( (index >=0 && index < this->nodes.size()) && ( abs(near_node->x0 - x) < 0.0001f ) )
+                {
+                    number dy = near_node->y0 - target;
+
+                    near_node->y0 -= 0.5*dy;
+
+                    return;
                 }
 
+                SplineNode* node = make_node(x,target);
 
-                // add new point
+                this->nodes.push_back(node);
 
-                SplineNode* new_node = Spline::make_node(x,target);
+                // if( index < 0 )
+                // {
+                //     this->nodes.insert(this->nodes.begin(), node);
+                // }
+                // else if(index >= this->nodes.size())
+                // {
+                //     this->nodes.push_back(node);
+                // }
+                // else
+                // {
+                //     this->nodes.insert(this->nodes.begin() + index, node);
+                // }
 
-                this->max_x = std::max(this->max_x,x);
+                std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
+                {
+                    return a->x0 < b->x0;
+                });
+                
+
                 this->min_x = std::min(this->min_x,x);
-
-                // I have to test it more
-
-                if( x > this->max_x )
-                {
-                    this->nodes.push_back(new_node);
-                }
-                else if( x < this->min_x )
-                {
-                    this->nodes.insert(this->nodes.begin(),new_node);
-                }
-                else if( this->nodes.size() > 0 )
-                {
-                    number range = this->max_x - this->min_x;
-
-                    size_t length = this->nodes.size();
-
-                    size_t i = static_cast<number>((x - this->min_x)/range)*length;
-
-                    this->nodes.insert(this->nodes.begin()+i,new_node);
-                }
-                else
-                {
-                    this->nodes.push_back(new_node);   
-                }
-
-                // this->nodes.push_back(new_node);
-
-                // we could optimize it more, we could keep track of min and max x values and then decide to add 
-                // at front, somewhere in the middle or at the back
-                // std::sort(this->nodes.begin(),this->nodes.end(),[](NodeRef a, NodeRef b)
-                //                   {
-                //                       return a->x0 < b->x0;
-                //                   });
+                this->max_x = std::max(this->max_x,x);
 
             }
 
@@ -278,6 +254,7 @@ namespace snn
                 if( index == this->nodes.size()-1  )
                 {
                     node->a = 0;
+
                     return node;
                 }
 
@@ -399,6 +376,8 @@ namespace snn
 
         snn::UniformInit<(number)0.f,(number)1.f> uniform_init;
 
+        snn::SIMDVectorLite<InputSize> x_x;
+
         public:
 
         EvoKAN()
@@ -406,7 +385,14 @@ namespace snn
 
             for(size_t i=0;i<InputSize;++i)
             {
-                this->active_values[i] = 1.f;
+                if( this->uniform_init.init() < 0.25f )
+                {
+                    this->active_values[i] = this->uniform_init.init();
+                }
+                else
+                {
+                    this->active_values[i] = 0.f;
+                }
             }
 
             number prob_mean = this->active_values.reduce();
@@ -464,13 +450,29 @@ namespace snn
                 index ++;
             }
 
-            snn::SIMDVectorLite<InputSize> x_x = input - x;
+            this->x_x = input - x;
 
             x_x = a*(x_x*x_x) + y;
 
             output += x_x.reduce();
 
             // generate fit select probablitiy for each node
+
+            for(size_t i=0;i<InputSize;++i)
+            {
+                if( this->uniform_init.init() < 0.25f )
+                {
+                    this->active_values[i] = this->uniform_init.init();
+                }
+                else
+                {
+                    this->active_values[i] = 0.f;
+                }
+            }
+
+            number prob_mean = this->active_values.reduce();
+
+            this->active_values /= prob_mean;
 
             
 
@@ -485,21 +487,48 @@ namespace snn
             // if error is too small, we do not do anything
             if( error < 0.01f )
             {
+                // std::cout<<"Error is too small, skipping fit"<<std::endl;
                 return;
             }
 
             // select node to fit
 
-            size_t node_index = 0;
+            snn::SIMDVectorLite<InputSize> y_errors = this->active_values*(target);
+            snn::SIMDVectorLite<InputSize> outputs = this->x_x;
 
-            snn::SIMDVectorLite<InputSize> y_errors = this->active_values*target;
-            snn::SIMDVectorLite<InputSize> output_errors = this->active_values*output;
+            // std::cout<<"Outputs: "<<outputs<<std::endl;
+            // std::cout<<"Y Errors: "<<y_errors<<" sum: "<<y_errors.reduce()<<std::endl;
+
+            snn::SIMDVectorLite<InputSize> max_x(0.f);
+            snn::SIMDVectorLite<InputSize> min_x(0.f);
+            snn::SIMDVectorLite<InputSize> length(0.f);
 
             size_t index = 0;
 
+            for(;index<InputSize;)
+            {
+                max_x[index] = splines[index].get_max();
+                min_x[index] = splines[index].get_min();
+                length[index] = static_cast<number>(splines[index].length());
+
+                if( length[index] < 2)
+                {
+                    max_x[index] = min_x[index] + 0.01f;
+                    min_x[index] = max_x[index] - 0.01f;
+                }
+
+                index += 1;
+            }
+
+            snn::SIMDVectorLite<InputSize> range = max_x - min_x;
+
+            snn::SIMDVectorLite<InputSize> indexes = ((input - min_x)/range)*(length-1);
+
+            index = 0;
+
             for(Spline& spline : this->splines)
             {
-                spline.fit(input[index],output_errors[index],y_errors[index]);
+                spline.fit(input[index],indexes[index],outputs[index],outputs[index] + y_errors[index]);
 
                 index ++;
             }

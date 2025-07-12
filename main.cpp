@@ -326,7 +326,7 @@ int main(int argc,char** argv)
     last_target[30] = -4.f;
     // output KAN layer, we can use small output and attach the information about current position in the reward map
 
-    snn::StaticKAN<64,256> static_kan_block;
+    snn::EvoKAN<64> static_kan_block;
 
     // snn::StaticKAN<64,4096*2> static_kan_layer[16];
 
@@ -335,7 +335,7 @@ int main(int argc,char** argv)
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 256;
+    const size_t dataset_size = 4;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
@@ -371,19 +371,12 @@ int main(int argc,char** argv)
 
     number error = 0.f;
 
-    for(size_t e=0;e<10000;++e)
+
+    for(size_t e=0;e<100;++e)
     {
         for(size_t i=0;i<dataset_size;++i)
         {
             output_last = static_kan_block.fire(dataset[i]);
-
-
-            // if( (y/2)*60 + (x/2) % 2 == 0 )
-            if( chooser.init() > 0.75f)
-            {
-                kernel.fit(cnn_input,0.f,noise.init());
-            }
-
 
             static_kan_block.fit(dataset[i],output_last,outputs[i]);
 
@@ -397,6 +390,8 @@ int main(int argc,char** argv)
         std::cout<<"Error: "<<error/dataset_size<<std::endl;
 
         error = 0.f;
+
+    }
 
 
     std::cout<<"Fitting done"<<std::endl;
