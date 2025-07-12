@@ -172,45 +172,31 @@ namespace snn
 
                 // auto points = this->search(x); 
                 
-                if( this->nodes.size() < 2)
+                if( this->nodes.size() < 1)
                 {
                     // if there are no nodes, we need to create first one
                     SplineNode* node = make_node(x,target);
 
                     this->nodes.push_back(node);
 
-                    if( this->nodes.size() == 0 )
-                    {
-                        // if this is first node, we need to set min and max x
-                        this->min_x = x;
-                        this->max_x = x;
-                    }
-                    else
-                    {
-                        // if this is second node, we need to set min and max x
-                        this->min_x = std::min(this->min_x,x);
-                        this->max_x = std::max(this->max_x,x);
-                    }
-
-
-                    std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
-                    {
-                        return a->x0 < b->x0;
-                    });
+                   
+                    // if this is first node, we need to set min and max x
+                    this->min_x = x;
+                    this->max_x = x;
 
                     return;
                 }   
 
-                SplineNode *near_node = this->nodes[index];
+                // SplineNode *near_node = this->nodes[index];
 
-                if( (index >=0 && index < this->nodes.size()) && ( abs(near_node->x0 - x) < 0.0001f ) )
-                {
-                    number dy = near_node->y0 - target;
+                // if( (index >=0 && index < this->nodes.size()) && ( abs(near_node->x0 - x) < 0.001f ) )
+                // {
+                //     number dy = near_node->y0 - target;
 
-                    near_node->y0 -= 0.5*dy;
+                //     near_node->y0 -= 0.1f*dy;
 
-                    return;
-                }
+                //     return;
+                // }
 
                 SplineNode* node = make_node(x,target);
 
@@ -253,7 +239,7 @@ namespace snn
 
                 if( index == this->nodes.size()-1  )
                 {
-                    node->a = 0;
+                    node->a = 0.0f;
 
                     return node;
                 }
@@ -442,8 +428,18 @@ namespace snn
                 if( node )
                 {
                     x[index] = node->x0;
-                    y[index] = node->y0;
-                    a[index] = node->a;
+
+                    if( input[index] < min_x[index] || input[index] > max_x[index] )
+                    {
+                        // if x is out of range, we do not use this node
+                        y[index] = 0.f;
+                        a[index] = 0.f;
+                    }
+                    else
+                    {
+                        y[index] = node->y0;
+                        a[index] = node->a;
+                    }
 
                 }
 
@@ -493,7 +489,7 @@ namespace snn
 
             // select node to fit
 
-            snn::SIMDVectorLite<InputSize> y_errors = this->active_values*(target);
+            snn::SIMDVectorLite<InputSize> y_errors = this->active_values*(output - target);
             snn::SIMDVectorLite<InputSize> outputs = this->x_x;
 
             // std::cout<<"Outputs: "<<outputs<<std::endl;
@@ -528,7 +524,7 @@ namespace snn
 
             for(Spline& spline : this->splines)
             {
-                spline.fit(input[index],indexes[index],outputs[index],outputs[index] + y_errors[index]);
+                spline.fit(input[index],indexes[index],outputs[index],outputs[index]-y_errors[index]);
 
                 index ++;
             }
