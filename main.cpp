@@ -443,10 +443,58 @@ class Spline
 };
 
 
+void test_simd()
+{
+    snn::SIMDVectorLite<16> a(1);
+
+    assert( a.reduce() == 16 );
+
+    snn::SIMDVectorLite<17> b(1);
+
+    assert( b.reduce() == 17 );
+
+    snn::SIMDVectorLite<19> x1;
+
+    for(size_t i=0;i<19;++i)
+    {
+        x1[i] = i;
+    }
+
+    std::cout<<x1<<std::endl;
+
+    snn::SIMDVectorLite<19> x2;
+
+    for(size_t i=0;i<19;++i)
+    {
+        x2[i] = i;
+    }
+
+    std::cout<<x2<<std::endl;
+
+    // for some reason in perspective of x1, x2 has zeros 
+    // if simd vector size is bigger than 32 the error is not present
+    // but it fails with 68 not with 34
+    std::cout<<x1*x2<<std::endl;
+
+    snn::SIMDVectorLite<19> x = x1 + x2;
+
+    std::cout<<x<<std::endl;
+
+    for(size_t i=0;i<19;++i)
+    {
+        std::cout<<"Test i+i: "<<i<<" "<<i+i<<" "<<x[i]<<std::endl;
+        assert(x[i] == i+i);
+    }
+
+}
 
 int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
+
+    test_simd();
+
+    return 0;
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
