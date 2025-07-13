@@ -308,34 +308,14 @@ int main(int argc,char** argv)
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
-    snn::Arbiter arbiter;
-
-
-    const size_t size = 32;
-
     const size_t samples_count = 32;
-
-    
-    snn::SIMDVectorLite<64> last_target(0.f);
-
-    last_target[10] = 12.f;
-
-    last_target[14] = -10.f;
-
-
-    last_target[30] = -4.f;
-    // output KAN layer, we can use small output and attach the information about current position in the reward map
-
-    snn::EvoKAN<64> static_kan_block;
-
-    // snn::StaticKAN<64,4096*2> static_kan_layer[16];
 
 
     snn::UniformInit<(number)-0.5f,(number)0.5f> noise;
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 32;
+    const size_t dataset_size = 4;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
@@ -362,59 +342,6 @@ int main(int argc,char** argv)
     number output_last = 0;
 
     end = std::chrono::system_clock::now();
-
-    std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
-
-    std::cout<<output_last<<std::endl;
-
-    snn::SIMDVectorLite<16> layer_output;
-
-    number error = 0.f;
-
-
-    for(size_t e=0;e<100;++e)
-    {
-        for(size_t i=0;i<dataset_size;++i)
-        {
-            output_last = static_kan_block.fire(dataset[i]);
-
-            static_kan_block.fit(dataset[i],output_last,outputs[i]);
-
-            error += abs(output_last - outputs[i]);
-
-            // std::cout<<output_last<<" "<<outputs[i]<<std::endl;
-
-            // std::cout<<"Fitting: "<<i<<"/"<<dataset_size<<" error: "<<std::abs(output_last - outputs[i])<<std::endl;
-        }
-
-        std::cout<<"Error: "<<error/dataset_size<<std::endl;
-
-        error = 0.f;
-
-    }
-
-
-    std::cout<<"Fitting done"<<std::endl;
-
-    double total_error = 0.f;
-
-    for(size_t i=0;i<dataset_size;++i)
-    {
-        number out = static_kan_block.fire(dataset[i]);
-
-        number error = std::abs(out - outputs[i]);
-
-        total_error += error;
-    }
-
-    std::cout<<"Total error: "<<total_error/dataset_size<<std::endl;
-
-    
-    char c;
-
-    std::cout<<"Press any key to continue"<<std::endl;
-    std::cin>>c;
-
 
     return 0;
 }

@@ -374,7 +374,7 @@ namespace snn
             {
                 // if( this->uniform_init.init() < 0.25f )
                 {
-                    this->active_values[i] = this->uniform_init.init();
+                    this->active_values[i] = 0.1f;
                 }
                 // else
                 // {
@@ -424,10 +424,11 @@ namespace snn
             for(const Spline& spline : this->splines)
             {
                 // that part takes some time, but how to retrive elements faster?
-                auto node = spline.search(input[index]).first;
+                auto node = spline.get_node(input[index]);
 
                 if( node )
                 {
+                
                     x[index] = node->x0;
 
                     if( input[index] < min_x[index] || input[index] > max_x[index] )
@@ -530,6 +531,23 @@ namespace snn
                 index ++;
             }
 
+        }
+
+        number test_spline(size_t spline_index,number x) const
+        {
+            // return this->splines[spline_index].fire(x);
+            auto node = this->splines[spline_index].get_node(x);
+
+            if(!node)
+            {
+                return 0;
+            }
+
+            number x_x = x - node->x0;
+
+            x_x = node->a*(x_x*x_x) + node->y0;
+
+            return x_x;
         }
 
         void printInfo(std::ostream& out = std::cout) const
