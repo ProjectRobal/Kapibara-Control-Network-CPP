@@ -321,6 +321,11 @@ class Spline
 
     public:
 
+    Spline()
+    {
+        this->nodes.reserve(1024);
+    }
+
     void fit(number x,number y)
     {
 
@@ -359,7 +364,7 @@ class Spline
 
 
         size_t p = 0;
-        size_t q = this->nodes.size();
+        size_t q = this->nodes.size()-1;
 
         size_t center = (p+q)/2;
 
@@ -433,6 +438,8 @@ class Spline
 
     }
 
+    
+
 };
 
 
@@ -450,7 +457,7 @@ int main(int argc,char** argv)
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 32;
+    const size_t dataset_size = 1024;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
@@ -480,6 +487,22 @@ int main(int argc,char** argv)
     Spline spline[64];
 
     std::cout<<"Dataset:"<<std::endl;
+
+    snn::SIMDVectorLite<64> mask;
+
+    for(size_t i=0;i<64;++i)
+    {
+        if( noise.init()+ 0.5f < 0.5f)
+        {
+            mask[i] = noise.init() + 0.5f;
+        }
+        else
+        {
+            mask[i] = 0.f;
+        }
+    }
+
+    mask /= mask.reduce();
 
     for(size_t i=0;i<dataset_size;++i)
     {
@@ -518,6 +541,34 @@ int main(int argc,char** argv)
     }
 
     std::cout<<"Error: "<<error/dataset_size<<std::endl;
+
+    char c;
+
+    std::cin>>c;
+
+    // Save plot
+
+    number x_min = -10.f;
+    number x_max = 10.f;
+
+    const number step = 0.01f;
+
+    std::fstream file;
+    
+    file.open("test_plot.csv",std::ios::out);
+
+    while( x_min <= x_max )
+    {
+
+        number _y = spline[0].fire(x_min);
+
+        file<<x_min<<";"<<_y<<std::endl;
+
+        x_min += step;
+    }
+
+    file.close();
+    
 
     return 0;
 }
