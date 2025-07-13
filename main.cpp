@@ -300,6 +300,141 @@ number variance(const snn::SIMDVectorLite<Size>& input)
 
 */
 
+struct SplineNode
+{
+    number x;
+    number y;
+
+    SplineNode(number x,number y)
+    {
+        this->x = x;
+        this->y = y;
+    }
+};
+
+
+class Spline
+{
+    protected:
+
+    std::vector<SplineNode*> nodes;
+
+    public:
+
+    void fit(number x,number y)
+    {
+
+        SplineNode* node = new SplineNode(x,y);
+
+        this->nodes.push_back(node);
+
+        std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
+                {
+                    return a->x < b->x;
+                });
+    }
+
+    std::pair<SplineNode*,SplineNode*> search(number x)
+    {
+
+        if( this->nodes.size() == 0 )
+        {
+            return std::pair<SplineNode*,SplineNode*>(nullptr,nullptr);
+        }
+
+        if( this->nodes.size() == 1 )
+        {
+            return std::pair<SplineNode*,SplineNode*>(this->nodes[0],this->nodes[0]);
+        }
+
+        if( x < this->nodes[0]->x )
+        {
+            return std::pair<SplineNode*,SplineNode*>(nullptr,this->nodes[0]);
+        }
+        
+        if( x > this->nodes[this->nodes.size()-1]->x )
+        {
+            return std::pair<SplineNode*,SplineNode*>(this->nodes[0],nullptr);
+        }
+
+
+        size_t p = 0;
+        size_t q = this->nodes.size();
+
+        size_t center = (p+q)/2;
+
+        while( (q-p) > 1 )
+        {
+            SplineNode* center_node = this->nodes[center];
+
+            if( x > center_node->x )
+            {
+                p = center;
+            }
+            else if( x < center_node->x )
+            {
+                q = center;
+            }
+            else
+            {
+                return std::pair<SplineNode*,SplineNode*>(center_node,this->nodes[center+1]);
+            }
+
+            center = (p+q)/2;
+        }
+
+        SplineNode* left = this->nodes[center];
+
+        SplineNode* right = this->nodes[center+1];
+
+        return std::pair<SplineNode*,SplineNode*>(left,right);
+
+    }
+
+    number fire(number x)
+    {
+        if( nodes.size() == 0 )
+        {
+            return 0.f;
+        }
+
+        std::pair<SplineNode*,SplineNode*> nodes = this->search(x);
+
+        if( !nodes.first && !nodes.second )
+        {
+            return 0.f;
+        }
+
+        if( nodes.first && !nodes.second )
+        {
+            return nodes.first->x == x ? nodes.first->y : 0;
+        }
+
+        if( !nodes.first && nodes.second )
+        {
+            return nodes.second->x == x ? nodes.second->y : 0;
+        }
+
+        if( nodes.first->x == nodes.second->x )
+        {
+            return nodes.first->x == x ? nodes.first->y : 0; 
+        }   
+
+        // let's use linear approximation
+
+        number _x = x - nodes.first->x;
+
+        SplineNode* left = nodes.first;
+        SplineNode* right = nodes.second;
+
+        number a = ( right->y - left->y )/( right->x - left->x );
+
+        return a*_x + left->y;
+
+    }
+
+};
+
 
 
 int main(int argc,char** argv)
@@ -315,7 +450,7 @@ int main(int argc,char** argv)
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 4;
+    const size_t dataset_size = 32;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
@@ -337,11 +472,52 @@ int main(int argc,char** argv)
     
     start = std::chrono::system_clock::now();
 
-    // auto output_last = static_kan_block.fire(last_target);
-
     number output_last = 0;
 
     end = std::chrono::system_clock::now();
+
+
+    Spline spline[64];
+
+    std::cout<<"Dataset:"<<std::endl;
+
+    for(size_t i=0;i<dataset_size;++i)
+    {
+        for(size_t o=0;o<64;++o)
+        {
+
+            number x = dataset[i][o];
+            number y = outputs[i]/64.f;
+
+            spline[o].fit(x,y);
+
+        }
+       
+        // std::cout<<"x: "<<x<<" y: "<<y<<std::endl;
+
+    }
+
+    std::cout<<"Test fit:"<<std::endl;
+
+    number error = 0.f;
+
+    for(size_t i=0;i<dataset_size;++i)
+    {
+        number output = 0.f;
+
+        number y = outputs[i];
+
+        for(size_t o=0;o<64;++o)
+        {
+            number x = dataset[i][o];
+
+            output += spline[o].fire(x);
+        }
+
+        error += abs( y - output );
+    }
+
+    std::cout<<"Error: "<<error/dataset_size<<std::endl;
 
     return 0;
 }
