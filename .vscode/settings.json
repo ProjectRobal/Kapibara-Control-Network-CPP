@@ -91,7 +91,8 @@
         "queue": "cpp",
         "stack": "cpp",
         "__config": "cpp",
-        "__string": "cpp"
+        "__string": "cpp",
+        "complex": "cpp"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

@@ -45,35 +45,10 @@
 
 #include "attention.hpp"
 
-#include "layer_hebbian.hpp"
-
-#include "evo_kan_block.hpp"
-#include "evo_kan_layer.hpp"
-
 #include "static_kan_block.hpp"
 
-/*
+#include "evo_kan_block.hpp"
 
- To save on memory we can store weights on disk and then load it to ram as a buffer.
-
-  load 32 numbers from file.
-  when execution is made load another 32 numbers in background.
-
-  Each kac block will have line with N weights , each representing each population, plus one id with indicate what weight is choosen. In file we store
-  weight with coresponding reward.
-  When executing operation we will load each weight from each population.
-
- Each weights is going to have it's own population. We choose weight from population.
- Active weight gets reward, the lower reward is the higher probability of replacing weight,
- between 0.01 to 0.5 . 
- 
- Sometimes the weights in population are going to be replace, the worst half of poplulation.
-Some weights will be random some are going to be generated from collection of best weights, plus mutations.
-The wieghts that achived positive rewards are collected and then used as replacment with some mutations
-maybe. 
- Or to save on space we can generate new weights just using random distribution.
-
-*/
 
 size_t get_action_id(const snn::SIMDVector& actions)
 {
@@ -302,40 +277,100 @@ number variance(const snn::SIMDVectorLite<Size>& input)
 
 
 
+template<size_t Size>
+void test_simd()
+{
+    snn::SIMDVectorLite<Size-1> a(1);
+
+    assert( a.reduce() == Size-1 );
+
+    snn::SIMDVectorLite<Size-2> b(1);
+
+    assert( b.reduce() == Size-2 );
+
+    snn::SIMDVectorLite<Size> x1;
+
+    for(size_t i=0;i<Size;++i)
+    {
+        x1[i] = i;
+        assert(x1[i] == i);
+    }
+
+    snn::SIMDVectorLite<Size> x2;
+
+    for(size_t i=0;i<Size;++i)
+    {
+        x2[i] = i;
+        assert(x2[i] == i);
+    }
+
+    snn::SIMDVectorLite<Size> x = x1 + x2;
+
+    for(size_t i=0;i<Size;++i)
+    {
+        assert(x[i] == i+i);
+    }
+
+    x = x1-x2;
+
+    for(size_t i=0;i<Size;++i)
+    {
+        assert(x[i] == i-i);
+    }
+
+    x = x1*x2;
+
+    for(size_t i=0;i<Size;++i)
+    {
+        assert(x[i] == i*i);
+    }
+
+    x2[0] = 1.f;
+
+    x = x1/x2;
+
+    for(size_t i=1;i<Size;++i)
+    {
+        assert(x[i] > 0.99f && x[i] < 1.01f);
+    }
+
+}
+
 int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
 
+    std::cout<<"SIMD 19 length test"<<std::endl;
+    test_simd<19>();
+    std::cout<<"Passed"<<std::endl;
+
+    std::cout<<"SIMD 32 length test"<<std::endl;
+    test_simd<32>();
+    std::cout<<"Passed"<<std::endl;
+
+    std::cout<<"SIMD 33 length test"<<std::endl;
+    test_simd<33>();
+    std::cout<<"Passed"<<std::endl;
+
+    std::cout<<"SIMD 96 length test"<<std::endl;
+    test_simd<96>();
+    std::cout<<"Passed"<<std::endl;
+
+    std::cout<<"SIMD 100 length test"<<std::endl;
+    test_simd<100>();
+    std::cout<<"Passed"<<std::endl;
+
+
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
-    snn::Arbiter arbiter;
-
-
-    const size_t size = 32;
-
     const size_t samples_count = 32;
-
-    
-    snn::SIMDVectorLite<64> last_target(0.f);
-
-    last_target[10] = 12.f;
-
-    last_target[14] = -10.f;
-
-
-    last_target[30] = -4.f;
-    // output KAN layer, we can use small output and attach the information about current position in the reward map
-
-    snn::StaticKAN<64,256> static_kan_block;
-
-    // snn::StaticKAN<64,4096*2> static_kan_layer[16];
 
 
     snn::UniformInit<(number)-0.5f,(number)0.5f> noise;
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 256;
+    const size_t dataset_size = 1024;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
@@ -345,7 +380,7 @@ int main(int argc,char** argv)
     {
         for(size_t i=0;i<64;++i)
         {
-            input[i] = noise.init();
+            input[i] = noise.init()*10.f;
         }
 
     }
@@ -357,69 +392,77 @@ int main(int argc,char** argv)
     
     start = std::chrono::system_clock::now();
 
-    // auto output_last = static_kan_block.fire(last_target);
-
     number output_last = 0;
 
     end = std::chrono::system_clock::now();
 
-    std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+    snn::EvoKan<64> kan;
 
-    std::cout<<output_last<<std::endl;
-
-    snn::SIMDVectorLite<16> layer_output;
-
-    number error = 0.f;
-
-    for(size_t e=0;e<10000;++e)
-    {
-        for(size_t i=0;i<dataset_size;++i)
-        {
-            output_last = static_kan_block.fire(dataset[i]);
-
-
-            // if( (y/2)*60 + (x/2) % 2 == 0 )
-            if( chooser.init() > 0.75f)
-            {
-                kernel.fit(cnn_input,0.f,noise.init());
-            }
-
-
-            static_kan_block.fit(dataset[i],output_last,outputs[i]);
-
-            error += abs(output_last - outputs[i]);
-
-            // std::cout<<output_last<<" "<<outputs[i]<<std::endl;
-
-            // std::cout<<"Fitting: "<<i<<"/"<<dataset_size<<" error: "<<std::abs(output_last - outputs[i])<<std::endl;
-        }
-
-        std::cout<<"Error: "<<error/dataset_size<<std::endl;
-
-        error = 0.f;
-
-
-    std::cout<<"Fitting done"<<std::endl;
-
-    double total_error = 0.f;
+    std::cout<<"Dataset:"<<std::endl;
 
     for(size_t i=0;i<dataset_size;++i)
     {
-        number out = static_kan_block.fire(dataset[i]);
+        start = std::chrono::system_clock::now();
+        kan.fit(dataset[i],0.f,outputs[i]);
+       
+        end = std::chrono::system_clock::now();
 
-        number error = std::abs(out - outputs[i]);
-
-        total_error += error;
+        std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
     }
 
-    std::cout<<"Total error: "<<total_error/dataset_size<<std::endl;
+    std::cout<<"Test fit:"<<std::endl;
 
-    
+    number error = 0.f;
+
+    for(size_t i=0;i<dataset_size;++i)
+    {
+        number output = 0.f;
+
+        number y = outputs[i];
+
+        start = std::chrono::system_clock::now();
+
+        output = kan.fire(dataset[i]);
+
+        end = std::chrono::system_clock::now();
+
+        std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+
+        error += abs( y - output );
+    }
+
+    std::cout<<"Error: "<<error/dataset_size<<std::endl;
+
     char c;
 
-    std::cout<<"Press any key to continue"<<std::endl;
     std::cin>>c;
 
+    // Save plot
+
+    number x_min = -10.f;
+    number x_max = 10.f;
+
+    const number step = 0.01f;
+
+    std::fstream file;
+    
+    file.open("test_plot.csv",std::ios::out);
+
+    snn::SIMDVectorLite<64> input;
+
+    while( x_min <= x_max )
+    {
+        input[0] = x_min;
+
+        number _y = kan.fire(input);
+
+        file<<x_min<<";"<<_y<<std::endl;
+
+        x_min += step;
+    }
+
+    file.close();
+    
 
     return 0;
 }
