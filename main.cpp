@@ -465,7 +465,9 @@ class EvoKan
 
         for(size_t i=0;i<inputSize;++i)
         {
-            std::pair<SplineNode*,SplineNode*> nodes = this->splines[i].search(input[i]);
+            number _x = input[i];
+
+            std::pair<SplineNode*,SplineNode*> nodes = this->splines[i].search(_x);
 
             // when both nodes are valid
 
@@ -505,7 +507,7 @@ class EvoKan
                 continue;
             }
 
-            if( left->x == right->x )
+            if( left == right )
             {
 
                 y_left[i] = 0.f;
@@ -523,14 +525,13 @@ class EvoKan
             x_right[i] = right->x;
             y_right[i] = right->y;
 
-            w[i] = this->splines[i].fire(input[i]);
         }
 
-        // snn::SIMDVectorLite<inputSize> x = input - x_left;
+        snn::SIMDVectorLite<inputSize> x = input - x_left;
 
-        // a = ( y_right - y_left )/(x_right - x_left);
+        a = ( y_right - y_left )/(x_right - x_left);
 
-        // this->w = a*x + y_right;
+        this->w = a*x + y_left;
 
         return w.reduce();
     }
