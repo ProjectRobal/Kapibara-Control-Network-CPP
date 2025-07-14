@@ -442,48 +442,61 @@ class Spline
 
 };
 
-
+template<size_t Size>
 void test_simd()
 {
-    snn::SIMDVectorLite<16> a(1);
+    snn::SIMDVectorLite<Size-1> a(1);
 
-    assert( a.reduce() == 16 );
+    assert( a.reduce() == Size-1 );
 
-    snn::SIMDVectorLite<17> b(1);
+    snn::SIMDVectorLite<Size-2> b(1);
 
-    assert( b.reduce() == 17 );
+    assert( b.reduce() == Size-2 );
 
-    snn::SIMDVectorLite<19> x1;
+    snn::SIMDVectorLite<Size> x1;
 
-    for(size_t i=0;i<19;++i)
+    for(size_t i=0;i<Size;++i)
     {
         x1[i] = i;
+        assert(x1[i] == i);
     }
 
-    std::cout<<x1<<std::endl;
+    snn::SIMDVectorLite<Size> x2;
 
-    snn::SIMDVectorLite<19> x2;
-
-    for(size_t i=0;i<19;++i)
+    for(size_t i=0;i<Size;++i)
     {
         x2[i] = i;
+        assert(x2[i] == i);
     }
 
-    std::cout<<x2<<std::endl;
+    snn::SIMDVectorLite<Size> x = x1 + x2;
 
-    // for some reason in perspective of x1, x2 has zeros 
-    // if simd vector size is bigger than 32 the error is not present
-    // but it fails with 68 not with 34
-    std::cout<<x1*x2<<std::endl;
-
-    snn::SIMDVectorLite<19> x = x1 + x2;
-
-    std::cout<<x<<std::endl;
-
-    for(size_t i=0;i<19;++i)
+    for(size_t i=0;i<Size;++i)
     {
-        std::cout<<"Test i+i: "<<i<<" "<<i+i<<" "<<x[i]<<std::endl;
         assert(x[i] == i+i);
+    }
+
+    x = x1-x2;
+
+    for(size_t i=0;i<Size;++i)
+    {
+        assert(x[i] == i-i);
+    }
+
+    x = x1*x2;
+
+    for(size_t i=0;i<Size;++i)
+    {
+        assert(x[i] == i*i);
+    }
+
+    x2[0] = 1.f;
+
+    x = x1/x2;
+
+    for(size_t i=1;i<Size;++i)
+    {
+        assert(x[i] > 0.99f && x[i] < 1.01f);
     }
 
 }
@@ -492,9 +505,26 @@ int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
 
-    test_simd();
+    std::cout<<"SIMD 19 length test"<<std::endl;
+    test_simd<19>();
+    std::cout<<"Passed"<<std::endl;
 
-    return 0;
+    std::cout<<"SIMD 32 length test"<<std::endl;
+    test_simd<32>();
+    std::cout<<"Passed"<<std::endl;
+
+    std::cout<<"SIMD 33 length test"<<std::endl;
+    test_simd<33>();
+    std::cout<<"Passed"<<std::endl;
+
+    std::cout<<"SIMD 96 length test"<<std::endl;
+    test_simd<96>();
+    std::cout<<"Passed"<<std::endl;
+
+    std::cout<<"SIMD 100 length test"<<std::endl;
+    test_simd<100>();
+    std::cout<<"Passed"<<std::endl;
+
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
 

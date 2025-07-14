@@ -476,7 +476,7 @@ number SIMDVectorLite<Size>::operator[](size_t i) const
     {
         if( i >= VEC_COUNT*MAX_SIMD_VECTOR_SIZE )
         {
-            i = i % MAX_SIMD_VECTOR_SIZE;
+            i = i  - static_cast<size_t>(i/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE;
 
             return this->remainder[i];
         }
@@ -500,7 +500,7 @@ SIMDVectorLite<Size>::SIMD_reference SIMDVectorLite<Size>::operator[](size_t i)
     {
         if( i >= VEC_COUNT*MAX_SIMD_VECTOR_SIZE )
         {
-            i = i % MAX_SIMD_VECTOR_SIZE;
+            i = i  - static_cast<size_t>(i/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE;
 
             return SIMD_reference(&this->remainder,i);
         }
@@ -527,7 +527,7 @@ void SIMDVectorLite<Size>::set(size_t i,number v)
     {
         if( i > VEC_COUNT*MAX_SIMD_VECTOR_SIZE )
         {
-            i -= MAX_SIMD_VECTOR_SIZE;
+            i = i  - static_cast<size_t>(i/MAX_SIMD_VECTOR_SIZE)*MAX_SIMD_VECTOR_SIZE;
 
             this->remainder[i] = v;
         }
@@ -662,10 +662,6 @@ SIMDVectorLite<Size> SIMDVectorLite<Size>::operator*(number v) const
 template<size_t Size>
 SIMDVectorLite<Size> SIMDVectorLite<Size>::operator/(number v) const
 {
-    if( v == 0)
-    {
-        v+= 0.000000000000001f;
-    }
 
     SIMDVectorLite<Size> output;
     
@@ -730,12 +726,12 @@ void SIMDVectorLite<Size>::operator/=(const SIMDVectorLite<Size>& v)
 {
     for(size_t i=0;i<VEC_COUNT;++i)
     {
-        this->_vec[i] /= ( v._vec[i] + 0.000000000000000001f);
+        this->_vec[i] /= v._vec[i];
     }
 
     if constexpr( VEC_REMAINDER != 0 )
     {
-        this->remainder /= v.remainder + 0.000000000000000001f;
+        this->remainder /= v.remainder;
     }
 }
 
@@ -800,12 +796,12 @@ SIMDVectorLite<Size> SIMDVectorLite<Size>::operator/(const SIMDVectorLite<Size>&
     
     for(size_t i=0;i<VEC_COUNT;++i)
     {
-        output._vec[i] = this->_vec[i] / ( v._vec[i] +  0.000000000000000001f);
+        output._vec[i] = this->_vec[i] / v._vec[i];
     }
 
     if constexpr( VEC_REMAINDER != 0 )
     {
-        output.remainder = this->remainder / ( v.remainder + 0.000000000000000001f);
+        output.remainder = this->remainder / v.remainder;
     }
 
     return output;
