@@ -273,10 +273,15 @@ number variance(const snn::SIMDVectorLite<Size>& input)
 
 */
 
+/*!
+    A struct that represents point in spline curve with x and y coordinats, it also
+    support basic serialization and deserialization.
+*/
 struct SplineNode
 {
     number x;
     number y;
+    size_t index;
 
     SplineNode(number x,number y)
     {
@@ -293,11 +298,16 @@ struct SplineNode
     {
         char* buffer = new char[this->size_for_serialization()];
 
+        this->serialize(buffer);
+
+        return buffer;
+    }
+
+    void serialize(char* buffer) const
+    {
         snn::serialize_number<number>(this->x,buffer);
 
         snn::serialize_number<number>(this->y,buffer+SERIALIZED_NUMBER_SIZE);
-
-        return buffer;
     }
 
     void deserialize(char* buffer)
@@ -310,13 +320,18 @@ struct SplineNode
 
 };
 
-
+/*!
+    A class that represents spline curve used by EVO KAN as activations function.
+*/
 class Spline
 {
     protected:
 
     std::vector<SplineNode*> nodes;
 
+    /*!
+        In order for function to work, nodes has to be sorted in asceding order.
+    */
     void sort_nodes()
     {
         std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
@@ -331,11 +346,18 @@ class Spline
     {
         this->nodes.reserve(4096);
     }
+    
+    /*!
 
+        Update spline with new point.
+    
+    */
     void fit(number x,number y)
     {
+        // Check if point exists aleardy in spline
         std::pair<SplineNode*,SplineNode*> nodes = this->search(x);
 
+        // Check if points swarming is possible
         if( nodes.first && nodes.second )
         {
             SplineNode* left = nodes.first;
@@ -350,21 +372,35 @@ class Spline
 
             dx*=dx;
 
-            if(dx[0] < dx[1] && dx[0] < 0.0000001f)
+            // if x is closer to left nudge left point
+            if(dx[0] < dx[1] && dx[0] < 0.00000001f)
             {
                 left->y -= 0.1f*( left->y - y );
                 
                 left->x -= 0.01f*( left->x - x );
 
+                // if points are very close to each other remove one of them
+                if( abs( left->x - right->x ) < 0.00000001f)
+                {
+                    this->nodes.erase(this->nodes.begin()+left->index);
+                }
+
                 this->sort_nodes();
 
                 return;
             }
-            else if(dx[1] < dx[0] && dx[1] < 0.0000001f)
+            // if x is closer to right nudge right point
+            else if(dx[1] < dx[0] && dx[1] < 0.00000001f)
             {
                 right->y -= 0.1f*( right->y - y );
 
                 right->x -= 0.01f*( right->x - x );
+
+                // if points are very close to each other remove one of them
+                if( abs( left->x - right->x ) < 0.00000001f)
+                {
+                    this->nodes.erase(this->nodes.begin()+right->index);
+                }
                 
                 this->sort_nodes();
 
@@ -373,6 +409,7 @@ class Spline
 
         }
 
+        // if x is equal to one of the nodes x, nudge y
         if( nodes.first && nodes.first->x == x )
         {
             SplineNode* left = nodes.first;
@@ -381,7 +418,7 @@ class Spline
 
             return;
         }
-
+        // if x is equal to one of the nodes x, nudge y
         if( nodes.second && nodes.second->x == x )
         {
             SplineNode* right = nodes.second;
@@ -391,7 +428,7 @@ class Spline
             return;
         }
 
-
+        // if there is no such point present insert it into spline.
         SplineNode* node = new SplineNode(x,y);
 
         this->nodes.push_back(node);
@@ -399,6 +436,9 @@ class Spline
         this->sort_nodes();
     }
 
+    /*!
+        It use binary search to find pair of points with x between them.
+    */
     std::pair<SplineNode*,SplineNode*> search(number x)
     {
 
@@ -409,17 +449,23 @@ class Spline
 
         if( this->nodes.size() == 1 )
         {
+            this->nodes[0]->index = 0;
+
             return std::pair<SplineNode*,SplineNode*>(this->nodes[0],this->nodes[0]);
         }
 
         if( x < this->nodes[0]->x )
         {
+            this->nodes[0]->index = 0;
+
             return std::pair<SplineNode*,SplineNode*>(nullptr,this->nodes[0]);
         }
         
         if( x > this->nodes[this->nodes.size()-1]->x )
         {
-            return std::pair<SplineNode*,SplineNode*>(this->nodes[0],nullptr);
+            this->nodes[this->nodes.size()-1]->index = this->nodes.size()-1;
+
+            return std::pair<SplineNode*,SplineNode*>(this->nodes[this->nodes.size()-1],nullptr);
         }
 
 
@@ -442,6 +488,9 @@ class Spline
             }
             else
             {
+                center_node->index = center;
+                this->nodes[center+1]->index = center+1;
+
                 return std::pair<SplineNode*,SplineNode*>(center_node,this->nodes[center+1]);
             }
 
@@ -449,13 +498,18 @@ class Spline
         }
 
         SplineNode* left = this->nodes[center];
+        left->index = p;
 
         SplineNode* right = this->nodes[center+1];
+        right->index = q;
 
         return std::pair<SplineNode*,SplineNode*>(left,right);
 
     }
 
+    /*!
+        Activation function.
+    */
     number fire(number x)
     {
         if( nodes.size() == 0 )
@@ -527,6 +581,12 @@ class EvoKan
         this->splines = new Spline[inputSize];
     }
 
+    /*!
+        Function that update all splines based on input and porpagate target to all of
+        them. 
+
+        It also check whether the fit is even neccesary by comparing target with last output.
+    */
     void fit(const snn::SIMDVectorLite<inputSize>& input,number output,number target)
     {
 
@@ -544,6 +604,9 @@ class EvoKan
 
     }
 
+    /*!
+        Use splines to return activation for input. It use SIMD parralization to speed up a process.
+    */
     number fire(const snn::SIMDVectorLite<inputSize>& input)
     {
 
