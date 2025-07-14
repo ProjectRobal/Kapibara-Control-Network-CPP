@@ -45,35 +45,8 @@
 
 #include "attention.hpp"
 
-#include "layer_hebbian.hpp"
-
-#include "evo_kan_block.hpp"
-#include "evo_kan_layer.hpp"
-
 #include "static_kan_block.hpp"
 
-/*
-
- To save on memory we can store weights on disk and then load it to ram as a buffer.
-
-  load 32 numbers from file.
-  when execution is made load another 32 numbers in background.
-
-  Each kac block will have line with N weights , each representing each population, plus one id with indicate what weight is choosen. In file we store
-  weight with coresponding reward.
-  When executing operation we will load each weight from each population.
-
- Each weights is going to have it's own population. We choose weight from population.
- Active weight gets reward, the lower reward is the higher probability of replacing weight,
- between 0.01 to 0.5 . 
- 
- Sometimes the weights in population are going to be replace, the worst half of poplulation.
-Some weights will be random some are going to be generated from collection of best weights, plus mutations.
-The wieghts that achived positive rewards are collected and then used as replacment with some mutations
-maybe. 
- Or to save on space we can generate new weights just using random distribution.
-
-*/
 
 size_t get_action_id(const snn::SIMDVector& actions)
 {
@@ -438,7 +411,134 @@ class Spline
 
     }
 
-    
+    ~Spline()
+    {
+        for( SplineNode* node : this->nodes )
+        {
+            delete node;
+        }
+
+        this->nodes.clear();
+    }
+
+};
+
+
+template<size_t inputSize>
+class EvoKan
+{
+    protected:
+
+    Spline* splines;
+
+    snn::SIMDVectorLite<inputSize> w;
+
+    public:
+
+    EvoKan()
+    {
+        this->splines = new Spline[inputSize];
+    }
+
+    void fit(const snn::SIMDVectorLite<inputSize>& input,number output,number target)
+    {
+
+        number tar = target/static_cast<number>(inputSize);
+
+        for(size_t i=0;i<inputSize;++i)
+        {
+            this->splines[i].fit(input[i],tar);
+        }
+
+    }
+
+    number fire(const snn::SIMDVectorLite<inputSize>& input)
+    {
+
+        snn::SIMDVectorLite<inputSize> x_left;
+        snn::SIMDVectorLite<inputSize> y_left;
+
+        snn::SIMDVectorLite<inputSize> x_right;
+        snn::SIMDVectorLite<inputSize> y_right;
+
+        snn::SIMDVectorLite<inputSize> a;
+
+        for(size_t i=0;i<inputSize;++i)
+        {
+            std::pair<SplineNode*,SplineNode*> nodes = this->splines[i].search(input[i]);
+
+            // when both nodes are valid
+
+            SplineNode* left = nodes.first;
+            SplineNode* right = nodes.second;
+
+            if( !left && !right)
+            {
+                y_left[i] = 0.f;
+                y_right[i] = 0.f;
+
+                x_left[i] = 0.f;
+                x_right[i] = 1.f;
+
+                continue;
+            }
+
+            if( left && !right )
+            {
+                y_left[i] = 0.f;
+                y_right[i] = left->x == input[i] ? left->y : 0;
+
+                x_left[i] = 0.f;
+                x_right[i] = 1.f;
+
+                continue;
+            }
+
+            if( !left && right )
+            {
+                y_left[i] = 0.f;
+                y_right[i] = right->x == input[i] ? right->y : 0;
+
+                x_left[i] = 0.f;
+                x_right[i] = 1.f;
+
+                continue;
+            }
+
+            if( left->x == right->x )
+            {
+
+                y_left[i] = 0.f;
+                y_right[i] = left->y;
+
+                x_left[i] = 0.f;
+                x_right[i] = 1.f;
+
+                continue;
+            }
+
+            x_left[i] = left->x;
+            y_left[i] = left->y;
+
+            x_right[i] = right->x;
+            y_right[i] = right->y;
+
+            w[i] = this->splines[i].fire(input[i]);
+        }
+
+        // snn::SIMDVectorLite<inputSize> x = input - x_left;
+
+        // a = ( y_right - y_left )/(x_right - x_left);
+
+        // this->w = a*x + y_right;
+
+        return w.reduce();
+    }
+
+    ~EvoKan()
+    {
+        delete [] this->splines;
+    }
 
 };
 
@@ -535,7 +635,7 @@ int main(int argc,char** argv)
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 1024;
+    const size_t dataset_size = 16;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
@@ -561,8 +661,7 @@ int main(int argc,char** argv)
 
     end = std::chrono::system_clock::now();
 
-
-    Spline spline[64];
+    EvoKan<64> kan;
 
     std::cout<<"Dataset:"<<std::endl;
 
@@ -584,15 +683,7 @@ int main(int argc,char** argv)
 
     for(size_t i=0;i<dataset_size;++i)
     {
-        for(size_t o=0;o<64;++o)
-        {
-
-            number x = dataset[i][o];
-            number y = outputs[i]/64.f;
-
-            spline[o].fit(x,y);
-
-        }
+        kan.fit(dataset[i],0.f,outputs[i]);
        
         // std::cout<<"x: "<<x<<" y: "<<y<<std::endl;
 
@@ -608,12 +699,7 @@ int main(int argc,char** argv)
 
         number y = outputs[i];
 
-        for(size_t o=0;o<64;++o)
-        {
-            number x = dataset[i][o];
-
-            output += spline[o].fire(x);
-        }
+        output = kan.fire(dataset[i]);
 
         error += abs( y - output );
     }
@@ -635,10 +721,13 @@ int main(int argc,char** argv)
     
     file.open("test_plot.csv",std::ios::out);
 
+    snn::SIMDVectorLite<64> input;
+
     while( x_min <= x_max )
     {
+        input[0] = x_min;
 
-        number _y = spline[0].fire(x_min);
+        number _y = kan.fire(input);
 
         file<<x_min<<";"<<_y<<std::endl;
 
