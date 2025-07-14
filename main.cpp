@@ -283,6 +283,31 @@ struct SplineNode
         this->x = x;
         this->y = y;
     }
+
+    constexpr size_t size_for_serialization() const
+    {
+        return 2*SERIALIZED_NUMBER_SIZE;
+    }
+
+    char* serialize() const
+    {
+        char* buffer = new char[this->size_for_serialization()];
+
+        snn::serialize_number<number>(this->x,buffer);
+
+        snn::serialize_number<number>(this->y,buffer+SERIALIZED_NUMBER_SIZE);
+
+        return buffer;
+    }
+
+    void deserialize(char* buffer)
+    {
+        this->x = snn::deserialize_number<number>(buffer);
+
+        this->y = snn::deserialize_number<number>(buffer+SERIALIZED_NUMBER_SIZE);
+    }
+
+
 };
 
 
@@ -292,24 +317,86 @@ class Spline
 
     std::vector<SplineNode*> nodes;
 
+    void sort_nodes()
+    {
+        std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
+                {
+                    return a->x < b->x;
+                });
+    }
+
     public:
 
     Spline()
     {
-        this->nodes.reserve(1024);
+        this->nodes.reserve(4096);
     }
 
     void fit(number x,number y)
     {
+        std::pair<SplineNode*,SplineNode*> nodes = this->search(x);
+
+        if( nodes.first && nodes.second )
+        {
+            SplineNode* left = nodes.first;
+            SplineNode* right = nodes.second;
+
+            snn::SIMDVectorLite<2> dx;
+
+            dx[0] = left->x;
+            dx[1] = right->x;
+
+            dx -= x;
+
+            dx*=dx;
+
+            if(dx[0] < dx[1] && dx[0] < 0.0000001f)
+            {
+                left->y -= 0.1f*( left->y - y );
+                
+                left->x -= 0.01f*( left->x - x );
+
+                this->sort_nodes();
+
+                return;
+            }
+            else if(dx[1] < dx[0] && dx[1] < 0.0000001f)
+            {
+                right->y -= 0.1f*( right->y - y );
+
+                right->x -= 0.01f*( right->x - x );
+                
+                this->sort_nodes();
+
+                return;
+            }
+
+        }
+
+        if( nodes.first && nodes.first->x == x )
+        {
+            SplineNode* left = nodes.first;
+
+            left->y -= 0.1f*( left->y - y );
+
+            return;
+        }
+
+        if( nodes.second && nodes.second->x == x )
+        {
+            SplineNode* right = nodes.second;
+
+            right->y -= 0.1f*( right->y - y );
+
+            return;
+        }
+
 
         SplineNode* node = new SplineNode(x,y);
 
         this->nodes.push_back(node);
 
-        std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
-                {
-                    return a->x < b->x;
-                });
+        this->sort_nodes();
     }
 
     std::pair<SplineNode*,SplineNode*> search(number x)
@@ -442,6 +529,11 @@ class EvoKan
 
     void fit(const snn::SIMDVectorLite<inputSize>& input,number output,number target)
     {
+
+        if( abs(target - output) < 0.0001f )
+        {
+            return;
+        }
 
         number tar = target/static_cast<number>(inputSize);
 
@@ -636,7 +728,7 @@ int main(int argc,char** argv)
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 16;
+    const size_t dataset_size = 1024;
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
@@ -666,28 +758,14 @@ int main(int argc,char** argv)
 
     std::cout<<"Dataset:"<<std::endl;
 
-    snn::SIMDVectorLite<64> mask;
-
-    for(size_t i=0;i<64;++i)
-    {
-        if( noise.init()+ 0.5f < 0.5f)
-        {
-            mask[i] = noise.init() + 0.5f;
-        }
-        else
-        {
-            mask[i] = 0.f;
-        }
-    }
-
-    mask /= mask.reduce();
-
     for(size_t i=0;i<dataset_size;++i)
     {
+        start = std::chrono::system_clock::now();
         kan.fit(dataset[i],0.f,outputs[i]);
        
-        // std::cout<<"x: "<<x<<" y: "<<y<<std::endl;
+        end = std::chrono::system_clock::now();
 
+        std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
     }
 
     std::cout<<"Test fit:"<<std::endl;
@@ -700,7 +778,13 @@ int main(int argc,char** argv)
 
         number y = outputs[i];
 
+        start = std::chrono::system_clock::now();
+
         output = kan.fire(dataset[i]);
+
+        end = std::chrono::system_clock::now();
+
+        std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
 
         error += abs( y - output );
     }
