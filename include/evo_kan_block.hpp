@@ -137,6 +137,26 @@ namespace snn
             return w.reduce();
         }
 
+        void simplify()
+        {
+            for(size_t i=0;i<inputSize;++i)
+            {
+                this->splines[i].simplify();
+            }
+        }
+
+        void printInfo( std::ostream& out = std::cout )
+        {
+            out<<"EvoKan stats:"<<std::endl;
+
+            for(size_t i=0;i<inputSize;++i)
+            {
+                out<<"Spline id: "<<i<<std::endl;
+                this->splines[i].printInfo(out);
+                out<<std::endl;
+            }
+        }
+
         ~EvoKan()
         {
             delete [] this->splines;

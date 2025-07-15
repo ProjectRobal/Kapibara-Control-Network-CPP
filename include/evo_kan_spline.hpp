@@ -78,11 +78,25 @@ namespace snn
                     });
         }
 
+        /*
+            Use insertion sort to keep nodes sorted during node insertion.
+        */
+        void add_node(SplineNode* node)
+        {
+            auto loc = std::lower_bound(this->nodes.begin(),this->nodes.end(),node->x,
+            [](SplineNode* a,number x){
+
+                return a->x < x;
+            });
+
+            this->nodes.insert(loc,node);
+        }
+
         public:
 
         Spline()
         {
-            this->nodes.reserve(4096);
+            this->nodes.reserve(4096);            
         }
         
         /*!
@@ -111,7 +125,7 @@ namespace snn
                 dx*=dx;
 
                 // if x is closer to left nudge left point
-                if(dx[0] < dx[1] && dx[0] < 0.00000001f)
+                if(dx[0] < dx[1]  && dx[0] < 0.00000001f)
                 {
                     left->y -= 0.1f*( left->y - y );
                     
@@ -123,24 +137,24 @@ namespace snn
                         this->nodes.erase(this->nodes.begin()+left->index);
                     }
 
-                    this->sort_nodes();
+                    // this->sort_nodes();
 
                     return;
                 }
                 // if x is closer to right nudge right point
-                else if(dx[1] < dx[0] && dx[1] < 0.00000001f)
+                else if(dx[1] < dx[0] && dx[1] < 0.000000001f)
                 {
                     right->y -= 0.1f*( right->y - y );
 
                     right->x -= 0.01f*( right->x - x );
 
                     // if points are very close to each other remove one of them
-                    if( abs( left->x - right->x ) < 0.00000001f)
+                    if( abs( left->x - right->x ) < 0.000000001f)
                     {
                         this->nodes.erase(this->nodes.begin()+right->index);
                     }
                     
-                    this->sort_nodes();
+                    // this->sort_nodes();
 
                     return;
                 }
@@ -166,12 +180,14 @@ namespace snn
                 return;
             }
 
-            // if there is no such point present insert it into spline.
+            // // if there is no such point present insert it into spline.
             SplineNode* node = new SplineNode(x,y);
 
-            this->nodes.push_back(node);
+            // this->nodes.push_back(node);
 
-            this->sort_nodes();
+            // this->sort_nodes();
+
+            this->add_node(node);
         }
 
         /*!
@@ -245,6 +261,104 @@ namespace snn
 
         }
 
+        void remove_redudant_points()
+        {
+            auto iter = this->nodes.begin();
+            
+            while( (iter+1) != this->nodes.end() )
+            {
+                auto next_iter = iter + 1;
+
+                number dx = (*iter)->x-(*next_iter)->x;
+
+                number dy = (*iter)->y-(*next_iter)->y;
+
+                number distance = dx*dx + dy*dy;
+
+                if( distance <= 0.000001f )
+                {
+                    SplineNode* node = (*next_iter);
+
+                    delete node;
+
+                    this->nodes.erase(next_iter);
+                }
+
+                iter++;
+            }
+        }
+
+        void smooth_the_spline(const size_t chunk_size)
+        {
+            auto iter = this->nodes.begin();
+
+            std::vector<SplineNode*> new_nodes;
+            
+            size_t i = 0;
+
+            number x = 0;
+            number y = 0;
+
+            while( iter!= this->nodes.end() )
+            {
+                SplineNode* node = (*iter);
+
+                x += node->x;
+                y += node->y;
+
+                i++;
+
+                iter++;
+
+                if( i == chunk_size )
+                {
+                    SplineNode* mean_node = new SplineNode(x/chunk_size,y/chunk_size);
+
+                    new_nodes.push_back(mean_node);
+
+                    i = 0;
+
+                    x = 0;
+                    y = 0;
+
+                }
+
+            }
+
+            for(SplineNode* node : this->nodes)
+            {
+                delete node;
+            }
+
+            this->nodes.clear();
+
+            this->nodes = std::move(new_nodes);
+
+            this->sort_nodes();
+
+        }
+
+        void linearization()
+        {
+            auto iter = this->nodes.begin();
+            auto first_iter = this->nodes.begin();
+
+            std::vector<SplineNode*> new_nodes;
+
+
+        }
+
+        void simplify()
+        {
+            // remove close points
+            this->remove_redudant_points();
+
+            // it isn't ideal
+            // this->smooth_the_spline(4);
+
+            this->linearization();
+        }
+
         /*!
             Activation function.
         */
@@ -288,6 +402,12 @@ namespace snn
 
             return a*_x + left->y;
 
+        }
+
+
+        void printInfo(std::ostream& out)
+        {
+            out<<"Node count: "<<this->nodes.size()<<std::endl;
         }
 
         ~Spline()

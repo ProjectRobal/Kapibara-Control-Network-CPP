@@ -336,6 +336,69 @@ void test_simd()
 
 }
 
+void test_sort()
+{
+    std::vector<number> unsorted;
+
+    snn::GaussInit<0.f,0.1f> init;
+
+    number max_x = -9999999999;
+    number min_x = 9999999999;
+
+    for(size_t i=0;i<1024;++i)
+    {
+        number x = init.init();
+
+        max_x = std::max(max_x,x);
+        min_x = std::min(min_x,x);
+
+        unsorted.push_back(x);
+    }
+
+    // std::sort(unsorted.begin(),unsorted.end());
+
+    std::vector<number> sorted = unsorted;
+
+    number to_add = init.init();
+
+    sorted.push_back(to_add);
+    
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+
+    std::sort(sorted.begin(),sorted.end());
+
+    std::vector<number> sorted2;
+
+    start = std::chrono::system_clock::now();
+
+    for(size_t i=0;i<unsorted.size();++i)
+    {
+        number x = unsorted[i];
+
+        auto loc = std::lower_bound(sorted2.begin(),sorted2.end(),x);
+
+        sorted2.insert(loc,x);
+
+    }
+
+    auto loc = std::lower_bound(sorted2.begin(),sorted2.end(),to_add);
+
+    sorted2.insert(loc,to_add);
+
+    end = std::chrono::system_clock::now();
+
+    std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+
+    // check 
+
+    for(size_t i=0;i<sorted.size();++i)
+    {   
+        // std::cout<<"i: "<<i<<" left: "<<sorted[i]<<" right: "<<sorted2[i]<<std::endl;
+        assert(sorted[i] == sorted2[i]);
+    }
+
+}
+
 int main(int argc,char** argv)
 {
     std::cout<<"Starting..."<<std::endl;
@@ -359,6 +422,11 @@ int main(int argc,char** argv)
     std::cout<<"SIMD 100 length test"<<std::endl;
     test_simd<100>();
     std::cout<<"Passed"<<std::endl;
+
+    std::cout<<"Sorting test"<<std::endl;
+    test_sort();
+
+    // return 0;
 
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -399,15 +467,17 @@ int main(int argc,char** argv)
     snn::EvoKan<64> kan;
 
     std::cout<<"Dataset:"<<std::endl;
-
-    for(size_t i=0;i<dataset_size;++i)
+    for(size_t e=0;e<1;++e)
     {
-        start = std::chrono::system_clock::now();
-        kan.fit(dataset[i],0.f,outputs[i]);
-       
-        end = std::chrono::system_clock::now();
+        for(size_t i=0;i<dataset_size;++i)
+        {
+            start = std::chrono::system_clock::now();
+            kan.fit(dataset[i],0.f,outputs[i]);
+        
+            end = std::chrono::system_clock::now();
 
-        std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+            std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+        }
     }
 
     std::cout<<"Test fit:"<<std::endl;
@@ -426,12 +496,13 @@ int main(int argc,char** argv)
 
         end = std::chrono::system_clock::now();
 
-        std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+        // std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
 
         error += abs( y - output );
     }
 
     std::cout<<"Error: "<<error/dataset_size<<std::endl;
+
 
     char c;
 
