@@ -22,9 +22,9 @@ namespace snn
 
         public:
 
-        EvoKan()
+        EvoKan( size_t initial_size = 0 )
         {
-            this->splines = new Spline[inputSize];
+            this->splines = new Spline[inputSize](initial_size);
         }
 
         /*!

@@ -40,7 +40,7 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 
 #define ERROR_THRESHOLD_FOR_POINT_REMOVAL (0.00000001f)
 
-// Static KAN configs:
+// KAN configs:
 
 // we use uniform distribution for x values
 #define DEF_X_LEFT ((number)-10.f)
@@ -49,6 +49,9 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 
 // we use gaussian distribution for initial values
 #define DEF_Y_INIT snn::GaussInit<(number)0.f,(number)0.001f>
+
+
+#define THREAD_COUNT (4)
 
 
 // A maximum weight switch probablity

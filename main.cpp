@@ -49,6 +49,8 @@
 
 #include "evo_kan_block.hpp"
 
+#include "evo_kan_layer.hpp"
+
 
 size_t get_action_id(const snn::SIMDVector& actions)
 {

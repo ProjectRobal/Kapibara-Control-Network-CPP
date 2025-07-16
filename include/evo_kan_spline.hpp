@@ -94,9 +94,34 @@ namespace snn
 
         public:
 
-        Spline()
+        Spline( size_t initial_size = 0 )
         {
-            this->nodes.reserve(4096);            
+            this->nodes.reserve(4096);
+
+            if( initial_size == 0 )
+            {
+                return;
+            }
+
+
+            number min_x = DEF_X_LEFT;
+            number max_x = DEF_X_RIGHT;
+
+            const number step = ( max_x - min_x )/initial_size;
+
+            DEF_Y_INIT init;
+            
+            while( min_x <= max_x )
+            {
+                number y = init.init();
+
+                SplineNode *node = new SplineNode(min_x,y);
+
+                this->nodes.push_back(node);
+
+                min_x += step;
+            }
+
         }
         
         /*!
