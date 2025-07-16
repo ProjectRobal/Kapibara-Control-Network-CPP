@@ -432,6 +432,10 @@ int main(int argc,char** argv)
     // We simulate image of 128x128 monochromatic
     snn::EvoKanLayer<16384,64> kan;
 
+    // char q;
+    // std::cin>>q;
+
+    // return 0;
     // std::fstream file;
 
     // file.open("network.neur",std::ios::in|std::ios::binary);

@@ -28,7 +28,7 @@ namespace snn
 
         public:
 
-        EvoKanLayer(const size_t initial_spline_size = 0);
+        EvoKanLayer( size_t initial_spline_size = 0);
 
         SIMDVectorLite<outputSize> fire(const SIMDVectorLite<inputSize>& input);
 
@@ -98,7 +98,7 @@ namespace snn
     }
 
     template< size_t inputSize, size_t outputSize >
-    EvoKanLayer<inputSize,outputSize>::EvoKanLayer(const size_t initial_spline_size)
+    EvoKanLayer<inputSize,outputSize>::EvoKanLayer( size_t initial_spline_size)
     {
         this->blocks = new EvoKan<inputSize>[outputSize](initial_spline_size);
     }

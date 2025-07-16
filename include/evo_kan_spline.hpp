@@ -129,12 +129,13 @@ namespace snn
 
     Spline::Spline( size_t initial_size )
     {
-        this->nodes.reserve(4096);
 
         if( initial_size == 0 )
         {
             return;
         }
+
+        this->nodes.reserve(initial_size);
 
 
         number min_x = DEF_X_LEFT;
