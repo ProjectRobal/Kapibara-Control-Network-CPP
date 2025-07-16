@@ -21,118 +21,139 @@ namespace snn
         SIMDVectorLite<outputSize> output;
 
 
-        static void fire_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,SIMDVectorLite<outputSize>& output,size_t& current_id,std::mutex& mux)
-        {
-            size_t id = 0;
+        static void fire_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,SIMDVectorLite<outputSize>& output,size_t& current_id,std::mutex& mux);
 
-            while( true )
-            {
-                {
-                    std::lock_guard guard(mux);
-
-                    id = current_id;
-
-                    current_id++;
-
-                    if( id >= outputSize )
-                    {
-                        return;
-                    }
-                }
-
-                output[id] = blocks[id].fire(input);
-            }
-        }
-
-        static void fit_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,const SIMDVectorLite<outputSize>& output,const SIMDVectorLite<outputSize>& target,size_t& current_id,std::mutex& mux)
-        {
-            size_t id = 0;
-
-            number _target;
-            number _output;
-
-            while( true )
-            {
-                {
-                    std::lock_guard guard(mux);
-
-                    id = current_id;
-
-                    current_id++;
-
-                    if( id >= outputSize )
-                    {
-                        return;
-                    }
-
-                    _target = target[id];
-                    _output = output[id];
-                }
-
-                blocks[id].fit(input,_output,_target);
-            }
-        }
+        static void fit_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,const SIMDVectorLite<outputSize>& output,const SIMDVectorLite<outputSize>& target,size_t& current_id,std::mutex& mux);
 
         public:
 
-        EvoKanLayer(const size_t initial_spline_size = 0)
-        {
-            this->blocks = new EvoKan<inputSize>[outputSize](initial_spline_size);
-        }
+        EvoKanLayer(const size_t initial_spline_size = 0);
 
-        SIMDVectorLite<outputSize> fire(const SIMDVectorLite<inputSize>& input)
-        {
-            size_t current_id = 0;
+        SIMDVectorLite<outputSize> fire(const SIMDVectorLite<inputSize>& input);
 
-            std::mutex id_lock;
+        void fit(const SIMDVectorLite<inputSize>& input,const SIMDVectorLite<outputSize>& target);
 
-            std::thread threads[THREAD_COUNT];
-
-            for(size_t i=0;i<THREAD_COUNT;++i)
-            {
-                threads[i] = std::thread(EvoKanLayer::fire_thread,this->blocks,std::cref(input),std::ref(this->output),std::ref(current_id),std::ref(id_lock));
-            }
-
-            for(size_t i=0;i<THREAD_COUNT;++i)
-            {
-                if( threads[i].joinable() )
-                {
-                    threads[i].join();
-                }
-            }
-
-            return this->output;
-
-        }
-
-        void fit(const SIMDVectorLite<inputSize>& input,const SIMDVectorLite<outputSize>& target)
-        {
-            size_t current_id = 0;
-
-            std::mutex id_lock;
-
-            std::thread threads[THREAD_COUNT];
-
-            for(size_t i=0;i<THREAD_COUNT;++i)
-            {
-                threads[i] = std::thread(EvoKanLayer::fit_thread,this->blocks,std::cref(input),std::cref(this->output),std::cref(target),std::ref(current_id),std::ref(id_lock));
-            }
-
-            for(size_t i=0;i<THREAD_COUNT;++i)
-            {
-                if( threads[i].joinable() )
-                {
-                    threads[i].join();
-                }
-            }
-            
-        }
-
-        ~EvoKanLayer()
-        {
-            delete [] this->blocks;
-        }
+        ~EvoKanLayer();
 
     }; 
+
+
+    template< size_t inputSize, size_t outputSize >
+    void EvoKanLayer<inputSize,outputSize>::fire_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,SIMDVectorLite<outputSize>& output,size_t& current_id,std::mutex& mux)
+    {
+        size_t id = 0;
+
+        while( true )
+        {
+            {
+                std::lock_guard guard(mux);
+
+                id = current_id;
+
+                current_id++;
+
+                if( id >= outputSize )
+                {
+                    return;
+                }
+            }
+
+            output[id] = blocks[id].fire(input);
+        }
+    }
+
+    template< size_t inputSize, size_t outputSize >
+    void EvoKanLayer<inputSize,outputSize>::fit_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,const SIMDVectorLite<outputSize>& output,const SIMDVectorLite<outputSize>& target,size_t& current_id,std::mutex& mux)
+    {
+        size_t id = 0;
+
+        number _target;
+        number _output;
+
+        while( true )
+        {
+            {
+                std::lock_guard guard(mux);
+
+                id = current_id;
+
+                current_id++;
+
+                if( id >= outputSize )
+                {
+                    return;
+                }
+
+                _target = target[id];
+                _output = output[id];
+            }
+
+            blocks[id].fit(input,_output,_target);
+        }
+    }
+
+    template< size_t inputSize, size_t outputSize >
+    EvoKanLayer<inputSize,outputSize>::EvoKanLayer(const size_t initial_spline_size)
+    {
+        this->blocks = new EvoKan<inputSize>[outputSize](initial_spline_size);
+    }
+
+    template< size_t inputSize, size_t outputSize >
+    SIMDVectorLite<outputSize> EvoKanLayer<inputSize,outputSize>::fire(const SIMDVectorLite<inputSize>& input)
+    {
+        size_t current_id = 0;
+
+        std::mutex id_lock;
+
+        std::thread threads[THREAD_COUNT];
+
+        for(size_t i=0;i<THREAD_COUNT;++i)
+        {
+            threads[i] = std::thread(EvoKanLayer::fire_thread,this->blocks,std::cref(input),std::ref(this->output),std::ref(current_id),std::ref(id_lock));
+        }
+
+        for(size_t i=0;i<THREAD_COUNT;++i)
+        {
+            if( threads[i].joinable() )
+            {
+                threads[i].join();
+            }
+        }
+
+        return this->output;
+
+    }
+
+    template< size_t inputSize, size_t outputSize >
+    void EvoKanLayer<inputSize,outputSize>::fit(const SIMDVectorLite<inputSize>& input,const SIMDVectorLite<outputSize>& target)
+    {
+        size_t current_id = 0;
+
+        std::mutex id_lock;
+
+        std::thread threads[THREAD_COUNT];
+
+        for(size_t i=0;i<THREAD_COUNT;++i)
+        {
+            threads[i] = std::thread(EvoKanLayer::fit_thread,this->blocks,std::cref(input),std::cref(this->output),std::cref(target),std::ref(current_id),std::ref(id_lock));
+        }
+
+        for(size_t i=0;i<THREAD_COUNT;++i)
+        {
+            if( threads[i].joinable() )
+            {
+                threads[i].join();
+            }
+        }
+        
+    }
+
+    template< size_t inputSize, size_t outputSize >
+    EvoKanLayer<inputSize,outputSize>::~EvoKanLayer()
+    {
+        delete [] this->blocks;
+    }
+
+
 
 }
