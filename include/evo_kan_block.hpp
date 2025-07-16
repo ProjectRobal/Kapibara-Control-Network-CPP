@@ -36,7 +36,7 @@ namespace snn
         void fit(const SIMDVectorLite<inputSize>& input,number output,number target)
         {
 
-            if( abs(target - output) < 0.0001f )
+            if( abs(target - output) < ERROR_THRESHOLD_FOR_FIT )
             {
                 return;
             }

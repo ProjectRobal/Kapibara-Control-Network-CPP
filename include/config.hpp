@@ -34,6 +34,12 @@ typedef std::experimental::fixed_size_simd_mask<number , MAX_SIMD_VECTOR_SIZE> S
 
 #define MUTATION_PROBABILITY 0.25f
 
+#define ERROR_THRESHOLD_FOR_FIT (0.0001f)
+
+#define ERROR_THRESHOLD_FOR_INSERTION (0.00000001f)
+
+#define ERROR_THRESHOLD_FOR_POINT_REMOVAL (0.00000001f)
+
 // Static KAN configs:
 
 // we use uniform distribution for x values

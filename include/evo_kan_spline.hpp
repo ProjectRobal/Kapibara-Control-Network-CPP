@@ -125,14 +125,14 @@ namespace snn
                 dx*=dx;
 
                 // if x is closer to left nudge left point
-                if(dx[0] < dx[1]  && dx[0] < 0.00000001f)
+                if(dx[0] < dx[1]  && dx[0] < ERROR_THRESHOLD_FOR_INSERTION)
                 {
                     left->y -= 0.1f*( left->y - y );
                     
                     left->x -= 0.01f*( left->x - x );
 
                     // if points are very close to each other remove one of them
-                    if( abs( left->x - right->x ) < 0.00000001f)
+                    if( abs( left->x - right->x ) < ERROR_THRESHOLD_FOR_POINT_REMOVAL)
                     {
                         this->nodes.erase(this->nodes.begin()+left->index);
                     }
@@ -142,14 +142,14 @@ namespace snn
                     return;
                 }
                 // if x is closer to right nudge right point
-                else if(dx[1] < dx[0] && dx[1] < 0.000000001f)
+                else if(dx[1] < dx[0] && dx[1] < ERROR_THRESHOLD_FOR_INSERTION)
                 {
                     right->y -= 0.1f*( right->y - y );
 
                     right->x -= 0.01f*( right->x - x );
 
                     // if points are very close to each other remove one of them
-                    if( abs( left->x - right->x ) < 0.000000001f)
+                    if( abs( left->x - right->x ) < ERROR_THRESHOLD_FOR_POINT_REMOVAL)
                     {
                         this->nodes.erase(this->nodes.begin()+right->index);
                     }
