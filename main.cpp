@@ -444,7 +444,7 @@ int main(int argc,char** argv)
 
     snn::SIMDVectorLite<64> dataset[dataset_size];
 
-    number outputs[dataset_size];
+    snn::SIMDVectorLite<4> outputs[dataset_size];
 
     for(auto& input : dataset)
     {
@@ -455,9 +455,12 @@ int main(int argc,char** argv)
 
     }
 
-    for(size_t i=0;i<dataset_size;++i)
+    for(auto& output : outputs)
     {
-        outputs[i] = noise.init()*10.f;
+        for(size_t i=0;i<4;++i)
+        {
+            output[i] = noise.init()*10.f;
+        }
     }
     
     start = std::chrono::system_clock::now();
@@ -466,7 +469,7 @@ int main(int argc,char** argv)
 
     end = std::chrono::system_clock::now();
 
-    snn::EvoKan<64> kan;
+    snn::EvoKanLayer<64,4> kan;
 
     std::cout<<"Dataset:"<<std::endl;
     for(size_t e=0;e<1;++e)
@@ -474,7 +477,7 @@ int main(int argc,char** argv)
         for(size_t i=0;i<dataset_size;++i)
         {
             start = std::chrono::system_clock::now();
-            kan.fit(dataset[i],0.f,outputs[i]);
+            kan.fit(dataset[i],outputs[i]);
         
             end = std::chrono::system_clock::now();
 
@@ -488,9 +491,9 @@ int main(int argc,char** argv)
 
     for(size_t i=0;i<dataset_size;++i)
     {
-        number output = 0.f;
+        snn::SIMDVectorLite<4> output;
 
-        number y = outputs[i];
+        snn::SIMDVectorLite<4> y = outputs[i];
 
         start = std::chrono::system_clock::now();
 
@@ -500,41 +503,41 @@ int main(int argc,char** argv)
 
         // std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
 
-        error += abs( y - output );
+        error += abs( (y - output).reduce() );
     }
 
     std::cout<<"Error: "<<error/dataset_size<<std::endl;
 
 
-    char c;
+    // char c;
 
-    std::cin>>c;
+    // std::cin>>c;
 
-    // Save plot
+    // // Save plot
 
-    number x_min = -10.f;
-    number x_max = 10.f;
+    // number x_min = -10.f;
+    // number x_max = 10.f;
 
-    const number step = 0.01f;
+    // const number step = 0.01f;
 
-    std::fstream file;
+    // std::fstream file;
     
-    file.open("test_plot.csv",std::ios::out);
+    // file.open("test_plot.csv",std::ios::out);
 
-    snn::SIMDVectorLite<64> input;
+    // snn::SIMDVectorLite<64> input;
 
-    while( x_min <= x_max )
-    {
-        input[0] = x_min;
+    // while( x_min <= x_max )
+    // {
+    //     input[0] = x_min;
 
-        number _y = kan.fire(input);
+    //     number _y = kan.fire(input);
 
-        file<<x_min<<";"<<_y<<std::endl;
+    //     file<<x_min<<";"<<_y<<std::endl;
 
-        x_min += step;
-    }
+    //     x_min += step;
+    // }
 
-    file.close();
+    // file.close();
     
 
     return 0;

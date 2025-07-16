@@ -77,7 +77,7 @@ namespace snn
 
         EvoKanLayer(const size_t initial_spline_size = 0)
         {
-            this->blocks = new EvoKan<inputSize>(initial_spline_size);
+            this->blocks = new EvoKan<inputSize>[outputSize](initial_spline_size);
         }
 
         SIMDVectorLite<outputSize> fire(const SIMDVectorLite<inputSize>& input)
@@ -105,7 +105,7 @@ namespace snn
 
         }
 
-        void fit(const SIMDVectorLite<inputSize>& input,const SIMDVectorLite<inputSize>& target)
+        void fit(const SIMDVectorLite<inputSize>& input,const SIMDVectorLite<outputSize>& target)
         {
             size_t current_id = 0;
 
