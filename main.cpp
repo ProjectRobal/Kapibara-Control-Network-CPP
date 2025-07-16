@@ -429,25 +429,25 @@ int main(int argc,char** argv)
     test_sort();
 
     // return 0;
+    // We simulate image of 128x128 monochromatic
+    snn::EvoKanLayer<16384,64> kan;
 
-    snn::EvoKanLayer<64,4> kan;
+    // std::fstream file;
 
-    std::fstream file;
+    // file.open("network.neur",std::ios::in|std::ios::binary);
 
-    file.open("network.neur",std::ios::in|std::ios::binary);
+    // kan.load(file);
 
-    kan.load(file);
+    // if( !file.good() )
+    // {
+    //     std::cerr<<"Cannot load network splines!"<<std::endl;
+    // }
+    // else
+    // {
+    //     std::cout<<"Network loaded!!!"<<std::endl;
+    // }
 
-    if( !file.good() )
-    {
-        std::cerr<<"Cannot load network splines!"<<std::endl;
-    }
-    else
-    {
-        std::cout<<"Network loaded!!!"<<std::endl;
-    }
-
-    file.close();
+    // file.close();
 
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
@@ -459,15 +459,15 @@ int main(int argc,char** argv)
 
     snn::UniformInit<(number)0.f,(number)1.f> chooser;
 
-    const size_t dataset_size = 1024;
+    const size_t dataset_size = 32;
 
-    snn::SIMDVectorLite<64> dataset[dataset_size];
+    snn::SIMDVectorLite<16384> dataset[dataset_size];
 
-    snn::SIMDVectorLite<4> outputs[dataset_size];
+    snn::SIMDVectorLite<64> outputs[dataset_size];
 
     for(auto& input : dataset)
     {
-        for(size_t i=0;i<64;++i)
+        for(size_t i=0;i<16384;++i)
         {
             input[i] = noise.init()*10.f;
         }
@@ -476,7 +476,7 @@ int main(int argc,char** argv)
 
     for(auto& output : outputs)
     {
-        for(size_t i=0;i<4;++i)
+        for(size_t i=0;i<64;++i)
         {
             output[i] = noise.init()*10.f;
         }
@@ -499,7 +499,7 @@ int main(int argc,char** argv)
         
             end = std::chrono::system_clock::now();
 
-            // std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+            std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
         }
     }
 
@@ -509,9 +509,9 @@ int main(int argc,char** argv)
 
     for(size_t i=0;i<dataset_size;++i)
     {
-        snn::SIMDVectorLite<4> output;
+        snn::SIMDVectorLite<64> output;
 
-        snn::SIMDVectorLite<4> y = outputs[i];
+        snn::SIMDVectorLite<64> y = outputs[i];
 
         start = std::chrono::system_clock::now();
 
@@ -519,23 +519,23 @@ int main(int argc,char** argv)
 
         end = std::chrono::system_clock::now();
 
-        // std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+        std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
 
         error += abs( (y - output).reduce() );
     }
 
     std::cout<<"Error: "<<error/dataset_size<<std::endl;
 
-    file.open("network.neur",std::ios::out|std::ios::binary);
+    // file.open("network.neur",std::ios::out|std::ios::binary);
 
-    kan.save(file);
+    // kan.save(file);
 
-    if( !file.good() )
-    {
-        std::cerr<<"Cannot save network splines!"<<std::endl;
-    }
+    // if( !file.good() )
+    // {
+    //     std::cerr<<"Cannot save network splines!"<<std::endl;
+    // }
 
-    file.close();
+    // file.close();
 
     // char c;
 
