@@ -32,6 +32,10 @@ namespace snn
 
         void printInfo( std::ostream& out = std::cout );
 
+        void save(std::ostream& out) const;
+
+        void load(std::istream& in);
+
         ~EvoKan();
 
     };
@@ -174,6 +178,24 @@ namespace snn
             out<<"Spline id: "<<i<<std::endl;
             this->splines[i].printInfo(out);
             out<<std::endl;
+        }
+    }
+
+    template<size_t inputSize>
+    void EvoKan<inputSize>::save(std::ostream& out) const
+    {
+        for(size_t i=0;i<inputSize;++i)
+        {
+            this->splines[i].save(out);
+        }
+    }
+
+    template<size_t inputSize>
+    void EvoKan<inputSize>::load(std::istream& in)
+    {
+        for(size_t i=0;i<inputSize;++i)
+        {
+            this->splines[i].load(in);
         }
     }
 

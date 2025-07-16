@@ -10,6 +10,7 @@
 
 namespace snn
 {
+    #define EVO_KAN_LAYER_HEADER "EKL100"
 
     template< size_t inputSize, size_t outputSize >
     class EvoKanLayer
@@ -32,6 +33,10 @@ namespace snn
         SIMDVectorLite<outputSize> fire(const SIMDVectorLite<inputSize>& input);
 
         void fit(const SIMDVectorLite<inputSize>& input,const SIMDVectorLite<outputSize>& target);
+
+        void save(std::ostream& out) const;
+
+        void load(std::istream& in);
 
         ~EvoKanLayer();
 
@@ -146,6 +151,39 @@ namespace snn
             }
         }
         
+    }
+
+    template< size_t inputSize, size_t outputSize >
+    void EvoKanLayer<inputSize,outputSize>::save(std::ostream& out) const
+    {
+        // save layer header
+        out.write(EVO_KAN_LAYER_HEADER,strlen(EVO_KAN_LAYER_HEADER));
+
+        for( size_t i=0; i<outputSize; ++i )
+        {
+            this->blocks[i].save(out);
+        }
+
+    }
+
+    template< size_t inputSize, size_t outputSize >
+    void EvoKanLayer<inputSize,outputSize>::load(std::istream& in)
+    {
+        char header[strlen(EVO_KAN_LAYER_HEADER)];
+
+        in.read(header,strlen(EVO_KAN_LAYER_HEADER));
+
+        // check for header
+        if( strncmp(header,EVO_KAN_LAYER_HEADER,strlen(EVO_KAN_LAYER_HEADER)) != 0)
+        {   
+            throw std::runtime_error("Header mismatch in byte stream!!!");
+        }
+
+        for( size_t i=0; i<outputSize; ++i )
+        {
+            this->blocks[i].load(in);
+        }
+
     }
 
     template< size_t inputSize, size_t outputSize >

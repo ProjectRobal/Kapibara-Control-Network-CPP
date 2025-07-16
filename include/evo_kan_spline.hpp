@@ -21,13 +21,15 @@ namespace snn
         number y;
         size_t index;
 
+        SplineNode(){}
+
         SplineNode(number x,number y)
         {
             this->x = x;
             this->y = y;
         }
 
-        constexpr size_t size_for_serialization() const
+        static constexpr size_t size_for_serialization()
         {
             return 2*SERIALIZED_NUMBER_SIZE;
         }
@@ -90,6 +92,10 @@ namespace snn
         number fire(number x);
 
         void printInfo(std::ostream& out);
+
+        void save(std::ostream& out) const;
+
+        void load(std::istream& out);
 
         ~Spline();
 
@@ -460,6 +466,56 @@ namespace snn
     void Spline::printInfo(std::ostream& out)
     {
         out<<"Node count: "<<this->nodes.size()<<std::endl;
+    }
+
+    void Spline::save(std::ostream& out) const
+    {
+        uint32_t len = this->nodes.size();
+
+        char len_buffer[4];
+
+        memmove(len_buffer,(char*)&len,4);
+
+        // save amount of nodes stored in spline
+        out.write(len_buffer,4);
+
+        constexpr size_t buffor_size = SplineNode::size_for_serialization();
+
+        char buffer[buffor_size];
+
+        for( SplineNode* node : this->nodes )
+        {
+            node->serialize(buffer);
+
+            out.write(buffer,buffor_size);
+        }
+    }
+
+    void Spline::load(std::istream& in)
+    {
+        char len_buffer[4];
+
+        in.read(len_buffer,4);
+
+        uint32_t nodes_to_read;        
+
+        memmove((char*)&nodes_to_read,len_buffer,4);
+
+        constexpr size_t buffor_size = SplineNode::size_for_serialization();
+
+        char buffer[buffor_size];
+
+        for(uint32_t i=0;i<nodes_to_read;++i)
+        {
+            in.read(buffer,buffor_size);
+
+            SplineNode* node = new SplineNode();
+
+            node->deserialize(buffer);
+
+            this->nodes.push_back(node);
+        }
+
     }
 
     Spline::~Spline()

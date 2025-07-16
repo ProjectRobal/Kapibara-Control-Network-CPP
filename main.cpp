@@ -430,6 +430,25 @@ int main(int argc,char** argv)
 
     // return 0;
 
+    snn::EvoKanLayer<64,4> kan;
+
+    std::fstream file;
+
+    file.open("network.neur",std::ios::in|std::ios::binary);
+
+    kan.load(file);
+
+    if( !file.good() )
+    {
+        std::cerr<<"Cannot load network splines!"<<std::endl;
+    }
+    else
+    {
+        std::cout<<"Network loaded!!!"<<std::endl;
+    }
+
+    file.close();
+
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
@@ -469,7 +488,6 @@ int main(int argc,char** argv)
 
     end = std::chrono::system_clock::now();
 
-    snn::EvoKanLayer<64,4> kan;
 
     std::cout<<"Dataset:"<<std::endl;
     for(size_t e=0;e<1;++e)
@@ -481,7 +499,7 @@ int main(int argc,char** argv)
         
             end = std::chrono::system_clock::now();
 
-            std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+            // std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
         }
     }
 
@@ -508,6 +526,16 @@ int main(int argc,char** argv)
 
     std::cout<<"Error: "<<error/dataset_size<<std::endl;
 
+    file.open("network.neur",std::ios::out|std::ios::binary);
+
+    kan.save(file);
+
+    if( !file.good() )
+    {
+        std::cerr<<"Cannot save network splines!"<<std::endl;
+    }
+
+    file.close();
 
     // char c;
 
