@@ -11,20 +11,20 @@
 namespace snn
 {
     #define EVO_KAN_LAYER_HEADER "EKL100"
-
-    template< size_t inputSize, size_t outputSize >
+    
+    template< size_t inputSize, size_t outputSize,class SplineClass = Spline >
     class EvoKanLayer
     {
         protected:
 
-        EvoKan<inputSize> *blocks;
+        EvoKan<inputSize,SplineClass> *blocks;
 
         SIMDVectorLite<outputSize> output;
 
 
-        static void fire_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,SIMDVectorLite<outputSize>& output,size_t& current_id,std::mutex& mux);
+        static void fire_thread(EvoKan<inputSize,SplineClass> *blocks,const SIMDVectorLite<inputSize>&input,SIMDVectorLite<outputSize>& output,size_t& current_id,std::mutex& mux);
 
-        static void fit_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,const SIMDVectorLite<outputSize>& output,const SIMDVectorLite<outputSize>& target,size_t& current_id,std::mutex& mux);
+        static void fit_thread(EvoKan<inputSize,SplineClass> *blocks,const SIMDVectorLite<inputSize>&input,const SIMDVectorLite<outputSize>& output,const SIMDVectorLite<outputSize>& target,size_t& current_id,std::mutex& mux);
 
         public:
 
@@ -43,8 +43,8 @@ namespace snn
     }; 
 
 
-    template< size_t inputSize, size_t outputSize >
-    void EvoKanLayer<inputSize,outputSize>::fire_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,SIMDVectorLite<outputSize>& output,size_t& current_id,std::mutex& mux)
+    template< size_t inputSize, size_t outputSize,class SplineClass >
+    void EvoKanLayer<inputSize,outputSize,SplineClass>::fire_thread(EvoKan<inputSize,SplineClass> *blocks,const SIMDVectorLite<inputSize>&input,SIMDVectorLite<outputSize>& output,size_t& current_id,std::mutex& mux)
     {
         size_t id = 0;
 
@@ -67,8 +67,8 @@ namespace snn
         }
     }
 
-    template< size_t inputSize, size_t outputSize >
-    void EvoKanLayer<inputSize,outputSize>::fit_thread(EvoKan<inputSize> *blocks,const SIMDVectorLite<inputSize>&input,const SIMDVectorLite<outputSize>& output,const SIMDVectorLite<outputSize>& target,size_t& current_id,std::mutex& mux)
+    template< size_t inputSize, size_t outputSize,class SplineClass >
+    void EvoKanLayer<inputSize,outputSize,SplineClass>::fit_thread(EvoKan<inputSize,SplineClass> *blocks,const SIMDVectorLite<inputSize>&input,const SIMDVectorLite<outputSize>& output,const SIMDVectorLite<outputSize>& target,size_t& current_id,std::mutex& mux)
     {
         size_t id = 0;
 
@@ -97,14 +97,14 @@ namespace snn
         }
     }
 
-    template< size_t inputSize, size_t outputSize >
-    EvoKanLayer<inputSize,outputSize>::EvoKanLayer( size_t initial_spline_size)
+    template< size_t inputSize, size_t outputSize,class SplineClass >
+    EvoKanLayer<inputSize,outputSize,SplineClass>::EvoKanLayer( size_t initial_spline_size)
     {
-        this->blocks = new EvoKan<inputSize>[outputSize](initial_spline_size);
+        this->blocks = new EvoKan<inputSize,SplineClass>[outputSize](initial_spline_size);
     }
 
-    template< size_t inputSize, size_t outputSize >
-    SIMDVectorLite<outputSize> EvoKanLayer<inputSize,outputSize>::fire(const SIMDVectorLite<inputSize>& input)
+    template< size_t inputSize, size_t outputSize,class SplineClass >
+    SIMDVectorLite<outputSize> EvoKanLayer<inputSize,outputSize,SplineClass>::fire(const SIMDVectorLite<inputSize>& input)
     {
         size_t current_id = 0;
 
@@ -129,8 +129,8 @@ namespace snn
 
     }
 
-    template< size_t inputSize, size_t outputSize >
-    void EvoKanLayer<inputSize,outputSize>::fit(const SIMDVectorLite<inputSize>& input,const SIMDVectorLite<outputSize>& target)
+    template< size_t inputSize, size_t outputSize,class SplineClass >
+    void EvoKanLayer<inputSize,outputSize,SplineClass>::fit(const SIMDVectorLite<inputSize>& input,const SIMDVectorLite<outputSize>& target)
     {
         size_t current_id = 0;
 
@@ -153,8 +153,8 @@ namespace snn
         
     }
 
-    template< size_t inputSize, size_t outputSize >
-    void EvoKanLayer<inputSize,outputSize>::save(std::ostream& out) const
+    template< size_t inputSize, size_t outputSize,class SplineClass >
+    void EvoKanLayer<inputSize,outputSize,SplineClass>::save(std::ostream& out) const
     {
         // save layer header
         out.write(EVO_KAN_LAYER_HEADER,strlen(EVO_KAN_LAYER_HEADER));
@@ -166,8 +166,8 @@ namespace snn
 
     }
 
-    template< size_t inputSize, size_t outputSize >
-    void EvoKanLayer<inputSize,outputSize>::load(std::istream& in)
+    template< size_t inputSize, size_t outputSize,class SplineClass >
+    void EvoKanLayer<inputSize,outputSize,SplineClass>::load(std::istream& in)
     {
         char header[strlen(EVO_KAN_LAYER_HEADER)];
 
@@ -186,8 +186,8 @@ namespace snn
 
     }
 
-    template< size_t inputSize, size_t outputSize >
-    EvoKanLayer<inputSize,outputSize>::~EvoKanLayer()
+    template< size_t inputSize, size_t outputSize,class SplineClass >
+    EvoKanLayer<inputSize,outputSize,SplineClass>::~EvoKanLayer()
     {
         delete [] this->blocks;
     }

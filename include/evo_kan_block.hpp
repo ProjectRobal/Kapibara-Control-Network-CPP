@@ -11,12 +11,12 @@
 namespace snn
 {
     
-    template<size_t inputSize>
+    template<size_t inputSize,class SplineClass = Spline>
     class EvoKan
     {
         protected:
 
-        Spline* splines;
+        SplineClass* splines;
 
         SIMDVectorLite<inputSize> w;
 
@@ -41,10 +41,10 @@ namespace snn
     };
 
 
-    template<size_t inputSize>
-    EvoKan<inputSize>::EvoKan( size_t initial_size )
+    template<size_t inputSize,class SplineClass>
+    EvoKan<inputSize,SplineClass>::EvoKan( size_t initial_size )
     {
-        this->splines = new Spline[inputSize](initial_size);
+        this->splines = new SplineClass[inputSize](initial_size);
     }
 
     /*!
@@ -53,8 +53,8 @@ namespace snn
 
         It also check whether the fit is even neccesary by comparing target with last output.
     */
-    template<size_t inputSize>
-    void EvoKan<inputSize>::fit(const SIMDVectorLite<inputSize>& input,number output,number target)
+    template<size_t inputSize,class SplineClass>
+    void EvoKan<inputSize,SplineClass>::fit(const SIMDVectorLite<inputSize>& input,number output,number target)
     {
 
         if( abs(target - output) < ERROR_THRESHOLD_FOR_FIT )
@@ -74,8 +74,8 @@ namespace snn
     /*!
         Use splines to return activation for input. It use SIMD parralization to speed up a process.
     */
-    template<size_t inputSize>
-    number EvoKan<inputSize>::fire(const SIMDVectorLite<inputSize>& input)
+    template<size_t inputSize,class SplineClass>
+    number EvoKan<inputSize,SplineClass>::fire(const SIMDVectorLite<inputSize>& input)
     {
 
         SIMDVectorLite<inputSize> x_left;
@@ -159,8 +159,8 @@ namespace snn
         return w.reduce();
     }
 
-    template<size_t inputSize>
-    void EvoKan<inputSize>::simplify()
+    template<size_t inputSize,class SplineClass>
+    void EvoKan<inputSize,SplineClass>::simplify()
     {
         for(size_t i=0;i<inputSize;++i)
         {
@@ -168,8 +168,8 @@ namespace snn
         }
     }
 
-    template<size_t inputSize>
-    void EvoKan<inputSize>::printInfo( std::ostream& out )
+    template<size_t inputSize,class SplineClass>
+    void EvoKan<inputSize,SplineClass>::printInfo( std::ostream& out )
     {
         out<<"EvoKan stats:"<<std::endl;
 
@@ -181,8 +181,8 @@ namespace snn
         }
     }
 
-    template<size_t inputSize>
-    void EvoKan<inputSize>::save(std::ostream& out) const
+    template<size_t inputSize,class SplineClass>
+    void EvoKan<inputSize,SplineClass>::save(std::ostream& out) const
     {
         for(size_t i=0;i<inputSize;++i)
         {
@@ -190,8 +190,8 @@ namespace snn
         }
     }
 
-    template<size_t inputSize>
-    void EvoKan<inputSize>::load(std::istream& in)
+    template<size_t inputSize,class SplineClass>
+    void EvoKan<inputSize,SplineClass>::load(std::istream& in)
     {
         for(size_t i=0;i<inputSize;++i)
         {
@@ -199,8 +199,8 @@ namespace snn
         }
     }
 
-    template<size_t inputSize>
-    EvoKan<inputSize>::~EvoKan()
+    template<size_t inputSize,class SplineClass>
+    EvoKan<inputSize,SplineClass>::~EvoKan()
     {
         delete [] this->splines;
     }

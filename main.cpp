@@ -51,6 +51,8 @@
 
 #include "evo_kan_layer.hpp"
 
+#include "static_kan_spline.hpp"
+
 
 size_t get_action_id(const snn::SIMDVector& actions)
 {
@@ -430,13 +432,17 @@ int main(int argc,char** argv)
 
     // return 0;
     // We simulate image of 128x128 monochromatic
-    snn::EvoKanLayer<16384,64> kan;
+    snn::EvoKanLayer<4096,64,snn::SplineStatic<32>> kan;
 
-    // char q;
-    // std::cin>>q;
+    // snn::EvoKanLayer<256,64,snn::SplineStatic<32>> kan2;
+
 
     // return 0;
-    // std::fstream file;
+    std::fstream file;
+
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+
+    start = std::chrono::system_clock::now();    
 
     // file.open("network.neur",std::ios::in|std::ios::binary);
 
@@ -453,8 +459,10 @@ int main(int argc,char** argv)
 
     // file.close();
 
+    end = std::chrono::system_clock::now();
 
-    std::chrono::time_point<std::chrono::system_clock> start, end;
+    std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+
 
     const size_t samples_count = 32;
 
@@ -465,13 +473,13 @@ int main(int argc,char** argv)
 
     const size_t dataset_size = 32;
 
-    snn::SIMDVectorLite<16384> dataset[dataset_size];
+    snn::SIMDVectorLite<4096> dataset[dataset_size];
 
     snn::SIMDVectorLite<64> outputs[dataset_size];
 
     for(auto& input : dataset)
     {
-        for(size_t i=0;i<16384;++i)
+        for(size_t i=0;i<4096;++i)
         {
             input[i] = noise.init()*10.f;
         }
@@ -494,16 +502,25 @@ int main(int argc,char** argv)
 
 
     std::cout<<"Dataset:"<<std::endl;
-    for(size_t e=0;e<1;++e)
+    for(size_t e=0;e<100;++e)
     {
         for(size_t i=0;i<dataset_size;++i)
         {
+            // snn::SIMDVectorLite<256> mid_output;
+
+            // for(size_t o=0;o<256;++o)
+            // {
+            //     mid_output[o] = noise.init()*10.f;
+            // }
+
             start = std::chrono::system_clock::now();
             kan.fit(dataset[i],outputs[i]);
+
+            // kan2.fit(mid_output,outputs[i]);
         
             end = std::chrono::system_clock::now();
 
-            std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
+            // std::cout<<"Time: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
         }
     }
 
@@ -518,6 +535,8 @@ int main(int argc,char** argv)
         snn::SIMDVectorLite<64> y = outputs[i];
 
         start = std::chrono::system_clock::now();
+
+        // auto mid_output = kan.fire(dataset[i]);
 
         output = kan.fire(dataset[i]);
 

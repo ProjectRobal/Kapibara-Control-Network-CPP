@@ -14,19 +14,18 @@ namespace snn
     /*!
         A class that represents spline curve used by EVO KAN as activations function.
     */
-    class Spline
+    template<size_t Size>
+    class SplineStatic
     {
         protected:
 
-        std::vector<SplineNode*> nodes;
+        std::array<SplineNode*,Size> nodes;
 
         void sort_nodes();
 
-        void add_node(SplineNode* node);
-
         public:
 
-        Spline( size_t initial_size = 8 );
+        SplineStatic( size_t initial_size = 8 );
         
         void fit(number x,number y);
 
@@ -48,7 +47,7 @@ namespace snn
 
         void load(std::istream& out);
 
-        ~Spline();
+        ~SplineStatic();
 
     };
 
@@ -56,7 +55,8 @@ namespace snn
     /*!
             In order for function to work, nodes has to be sorted in asceding order.
     */
-    void Spline::sort_nodes()
+    template<size_t Size>
+    void SplineStatic<Size>::sort_nodes()
     {
         std::sort(this->nodes.begin(),this->nodes.end(),[](SplineNode* a, SplineNode* b)
                 {
@@ -64,37 +64,18 @@ namespace snn
                 });
     }
 
-    /*
-        Use insertion sort to keep nodes sorted during node insertion.
-    */
-    void Spline::add_node(SplineNode* node)
+    template<size_t Size>
+    SplineStatic<Size>::SplineStatic( size_t initial_size )
     {
-        auto loc = std::lower_bound(this->nodes.begin(),this->nodes.end(),node->x,
-        [](SplineNode* a,number x){
-
-            return a->x < x;
-        });
-
-        this->nodes.insert(loc,node);
-    }
-
-    Spline::Spline( size_t initial_size )
-    {
-
-        if( initial_size == 0 )
-        {
-            return;
-        }
-
-        this->nodes.reserve(initial_size);
-
 
         number min_x = DEF_X_LEFT;
         number max_x = DEF_X_RIGHT;
 
-        const number step = ( max_x - min_x )/initial_size;
+        const number step = ( max_x - min_x )/Size;
 
         DEF_Y_INIT init;
+
+        size_t i = 0;
         
         while( min_x <= max_x )
         {
@@ -102,7 +83,7 @@ namespace snn
 
             SplineNode *node = new SplineNode(min_x,y);
 
-            this->nodes.push_back(node);
+            this->nodes[i++] = node;
 
             min_x += step;
         }
@@ -111,12 +92,13 @@ namespace snn
     
     /*!
 
-        Update spline with new point.
+        Update SplineStatic with new point.
     
     */
-    void Spline::fit(number x,number y)
+    template<size_t Size>
+    void SplineStatic<Size>::fit(number x,number y)
     {
-        // Check if point exists aleardy in spline
+        // Check if point exists aleardy in SplineStatic
         std::pair<SplineNode*,SplineNode*> nodes = this->search(x);
 
         // Check if points swarming is possible
@@ -135,36 +117,32 @@ namespace snn
             dx*=dx;
 
             // if x is closer to left nudge left point
-            if(dx[0] < dx[1]  && dx[0] < ERROR_THRESHOLD_FOR_INSERTION)
+            if(dx[0] < dx[1])
             {
                 left->y -= 0.1f*( left->y - y );
                 
-                left->x -= 0.01f*( left->x - x );
+                left->x -= 0.1f*( left->x - x );
 
-                // if points are very close to each other remove one of them
-                if( abs( left->x - right->x ) < ERROR_THRESHOLD_FOR_POINT_REMOVAL)
-                {
-                    this->nodes.erase(this->nodes.begin()+left->index);
-                }
+                // number a = ( right->y - y ) / ( right->x - x );
 
-                // this->sort_nodes();
+                // number new_y = a*( left->x - x ) + y;
+
+                // left->y -= 0.1f*( left->y - new_y );
 
                 return;
             }
             // if x is closer to right nudge right point
-            else if(dx[1] < dx[0] && dx[1] < ERROR_THRESHOLD_FOR_INSERTION)
+            else if(dx[1] < dx[0])
             {
                 right->y -= 0.1f*( right->y - y );
 
-                right->x -= 0.01f*( right->x - x );
+                right->x -= 0.1f*( right->x - x );
 
-                // if points are very close to each other remove one of them
-                if( abs( left->x - right->x ) < ERROR_THRESHOLD_FOR_POINT_REMOVAL)
-                {
-                    this->nodes.erase(this->nodes.begin()+right->index);
-                }
-                
-                // this->sort_nodes();
+                // number a = ( left->y - y ) / ( left->x - x );
+
+                // number new_y = a*( right->x - x ) + y;
+
+                // right->y -= 0.1f*( right->y - new_y );
 
                 return;
             }
@@ -190,20 +168,13 @@ namespace snn
             return;
         }
 
-        // // if there is no such point present insert it into spline.
-        SplineNode* node = new SplineNode(x,y);
-
-        // this->nodes.push_back(node);
-
-        // this->sort_nodes();
-
-        this->add_node(node);
     }
 
     /*!
         It use binary search to find pair of points with x between them.
     */
-    std::pair<SplineNode*,SplineNode*> Spline::search(number x)
+    template<size_t Size>
+    std::pair<SplineNode*,SplineNode*> SplineStatic<Size>::search(number x)
     {
 
         if( this->nodes.size() == 0 )
@@ -271,108 +242,12 @@ namespace snn
 
     }
 
-    void Spline::remove_redudant_points()
-    {
-        auto iter = this->nodes.begin();
-        
-        while( (iter+1) != this->nodes.end() )
-        {
-            auto next_iter = iter + 1;
-
-            number dx = (*iter)->x-(*next_iter)->x;
-
-            number dy = (*iter)->y-(*next_iter)->y;
-
-            number distance = dx*dx + dy*dy;
-
-            if( distance <= 0.000001f )
-            {
-                SplineNode* node = (*next_iter);
-
-                delete node;
-
-                this->nodes.erase(next_iter);
-            }
-
-            iter++;
-        }
-    }
-
-    void Spline::smooth_the_spline(const size_t chunk_size)
-    {
-        auto iter = this->nodes.begin();
-
-        std::vector<SplineNode*> new_nodes;
-        
-        size_t i = 0;
-
-        number x = 0;
-        number y = 0;
-
-        while( iter!= this->nodes.end() )
-        {
-            SplineNode* node = (*iter);
-
-            x += node->x;
-            y += node->y;
-
-            i++;
-
-            iter++;
-
-            if( i == chunk_size )
-            {
-                SplineNode* mean_node = new SplineNode(x/chunk_size,y/chunk_size);
-
-                new_nodes.push_back(mean_node);
-
-                i = 0;
-
-                x = 0;
-                y = 0;
-
-            }
-
-        }
-
-        for(SplineNode* node : this->nodes)
-        {
-            delete node;
-        }
-
-        this->nodes.clear();
-
-        this->nodes = std::move(new_nodes);
-
-        this->sort_nodes();
-
-    }
-
-    void Spline::linearization()
-    {
-        auto iter = this->nodes.begin();
-        auto first_iter = this->nodes.begin();
-
-        std::vector<SplineNode*> new_nodes;
-
-
-    }
-
-    void Spline::simplify()
-    {
-        // remove close points
-        this->remove_redudant_points();
-
-        // it isn't ideal
-        // this->smooth_the_spline(4);
-
-        this->linearization();
-    }
 
     /*!
         Activation function.
     */
-    number Spline::fire(number x)
+    template<size_t Size>
+    number SplineStatic<Size>::fire(number x)
     {
         if( nodes.size() == 0 )
         {
@@ -415,12 +290,14 @@ namespace snn
     }
 
 
-    void Spline::printInfo(std::ostream& out)
+    template<size_t Size>
+    void SplineStatic<Size>::printInfo(std::ostream& out)
     {
         out<<"Node count: "<<this->nodes.size()<<std::endl;
     }
 
-    void Spline::save(std::ostream& out) const
+    template<size_t Size>
+    void SplineStatic<Size>::save(std::ostream& out) const
     {
         uint32_t len = this->nodes.size();
 
@@ -443,7 +320,8 @@ namespace snn
         }
     }
 
-    void Spline::load(std::istream& in)
+    template<size_t Size>
+    void SplineStatic<Size>::load(std::istream& in)
     {
         char len_buffer[4];
 
@@ -470,14 +348,14 @@ namespace snn
 
     }
 
-    Spline::~Spline()
+    template<size_t Size>
+    SplineStatic<Size>::~SplineStatic()
     {
         for( SplineNode* node : this->nodes )
         {
             delete node;
         }
 
-        this->nodes.clear();
     }
 
 }
