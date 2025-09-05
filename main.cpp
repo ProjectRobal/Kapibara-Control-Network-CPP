@@ -52,6 +52,10 @@
 
 #include "static_kan_block.hpp"
 
+#include <experimental/simd>
+
+#include <immintrin.h>
+
 /*
 
  To save on memory we can store weights on disk and then load it to ram as a buffer.
@@ -282,23 +286,88 @@ number variance(const snn::SIMDVectorLite<Size>& input)
 
 /*
 
-    Idea is simple we take image and then using convolution and KAN layer generate map of rewards in 2D space.
-    
-    To fit data we generate noise mask and makes convolution fit to it then that 
-    noise map we give to output layer.
+    My idea for QKAN is to aproximate spline using 256 elements look up table.
 
-    I don't have better idea for now, I should probably think about some defragmentation algorithm for it.
+    There fore we could therotically save on computation.
 
+    In normall CNN we use FFT for faster convolution but how to do it when 
+    kernal is made of KAN function? 
 
-    What can we do to speed it up?
-
-    We can have fixed number of nodes in activations, so we can avoid using std::vectors.
-
-    We can use uint16_t instead of floats for some speed ups, sounds like a good idea generally, but it doesn't give significant speed ups.
-
-    I get rid of smart pointers and it gave major speed ups.
+    Where too fit SIMD into it, well we could use it for faster addition with reduction.
 
 */
+
+template<size_t InputSize,size_t OutputSize=1,class Init=snn::UniformInit<-127.0,128.0>>
+class QKAN
+{
+    protected:
+
+    int8_t *table;
+    int16_t *decimal;
+
+    public:
+
+    QKAN()
+    {
+        this->table = new int8_t[256*InputSize*OutputSize];
+        this->decimal = new int16_t[256*InputSize*OutputSize];
+
+        Init init;
+
+        for(size_t i=0;i<256*InputSize*OutputSize;++i)
+        {
+            this->table[i] = init.init();
+        }
+    }
+
+
+    void fire(int8_t x[],int8_t y[])
+    {
+        for(size_t o=0;o<OutputSize;++o)
+        {
+            int32_t sum = 0;         
+            
+            for(size_t i=0;i<InputSize;++i)
+            {
+                uint8_t _x = x[i] + 127;
+
+                sum += this->table[o*256*InputSize + i*256 + _x];
+            }
+
+            y[o] = sum/InputSize;
+
+            for(size_t i=0;i<InputSize;++i)
+            {
+                uint8_t _x = x[i] + 127;
+
+                int8_t w = this->table[o*256*InputSize + i*256 + _x];
+
+                this->decimal[o*256*InputSize + i*256 + _x] += w*y[o]/10000;
+
+                if(this->decimal[o*256*InputSize + i*256 + _x] >= 1000)
+                {
+                    this->table[o*256*InputSize + i*256 + _x] ++;
+
+                    this->decimal[o*256*InputSize + i*256 + _x] = 0;
+                }
+                else if(this->decimal[o*256*InputSize + i*256 + _x] <= -1000)
+                {
+                    this->table[o*256*InputSize + i*256 + _x] --;
+
+                    this->decimal[o*256*InputSize + i*256 + _x] = 0;
+                }
+            }
+
+        }
+    }
+
+
+    ~QKAN()
+    {
+        delete[] this->table;
+    }
+
+};
 
 
 
@@ -324,29 +393,84 @@ int main(int argc,char** argv)
 
 
     last_target[30] = -4.f;
-    // output KAN layer, we can use small output and attach the information about current position in the reward map
 
-    snn::StaticKAN<64,4096*2> static_kan_block;
+    snn::UniformInit<(number)-127.f,(number)128.f> noise;
 
+    const size_t width = 224;
 
-    snn::UniformInit<(number)-0.5f,(number)0.5f> noise;
+    const size_t input_size = width*width;
 
-    snn::UniformInit<(number)0.f,(number)1.f> chooser;
+    int8_t data[input_size];
 
-    for(size_t i=0;i<64;i++)
+    for(size_t i=0;i<input_size;i++)
     {
-        last_target[i] = noise.init();
+        data[i] = noise.init();
     }
+
+    start = std::chrono::system_clock::now();
+
+    // ai = _mm512_loadu_epi8(data);
+
+    std::cout<<"Timestamp: "<<std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count()<<" ms"<<std::endl;
+
+    size_t x = 1,y = 1;
+
+    int8_t output_img[input_size];
+
+    // Lets test image like inference
+    QKAN<3*3,1> kan;
+
+    int8_t buffer[9];
+
+    // Take chunk of an image
+
+    clock_t _start = clock(); 
+
+    for(size_t y=1;y<width-1;++y)
+    {
+        for(size_t x=1;x<width-1;++x)
+        {
+    
+            int8_t output;
+
+            buffer[0] = data[(y-1)*width + (x-1)];
+            buffer[1] = data[(y-1)*width + x];
+            buffer[2] = data[(y-1)*width + x+1];
+
+            buffer[3] = data[y*width + (x-1)];
+            buffer[4] = data[y*width + x];
+            buffer[5] = data[y*width + x+1];
+
+            buffer[6] = data[(y+1)*width + (x-1)];
+            buffer[7] = data[(y+1)*width + x];
+            buffer[8] = data[(y+1)*width + x+1];
+
+            kan.fire(buffer,&output);
+
+            output_img[width*(y-1)+(x-1)] = output;
+
+        }
+
+    }
+
+
+    std::cout<<"Timestamp: "<<static_cast<double>(clock()-_start)/CLOCKS_PER_SEC * 1000<<" us"<<std::endl;
+
+    std::cout<<(int32_t)output_img[10*width + 10]<<std::endl;
+    
+    return 0;
+
+    
 
     const size_t dataset_size = 100;
 
-    snn::SIMDVectorLite<64> dataset[dataset_size];
+    snn::SIMDVectorLite<1024> dataset[dataset_size];
 
     number outputs[dataset_size];
 
     for(auto& input : dataset)
     {
-        for(size_t i=0;i<64;++i)
+        for(size_t i=0;i<1024;++i)
         {
             input[i] = noise.init();
         }
@@ -360,48 +484,6 @@ int main(int argc,char** argv)
     
     start = std::chrono::system_clock::now();
 
-    auto output_last = static_kan_block.fire(last_target);
-
-    end = std::chrono::system_clock::now();
-
-    std::cout<<"Elapsed: "<<std::chrono::duration<double>(end - start)<<" s"<<std::endl;
-
-    std::cout<<output_last<<std::endl;
-
-    for(size_t e=0;e<1000;++e)
-    {
-        for(size_t i=0;i<15;++i)
-        {
-            output_last = static_kan_block.fire(dataset[i]);
-            static_kan_block.fit(dataset[i],output_last,outputs[i]);
-
-            std::cout<<output_last<<" "<<outputs[i]<<std::endl;
-
-            // std::cout<<"Fitting: "<<i<<"/"<<dataset_size<<" error: "<<std::abs(output_last - outputs[i])<<std::endl;
-        }
-
-    }
-
-    std::cout<<"Fitting done"<<std::endl;
-
-    double total_error = 0.f;
-
-    for(size_t i=0;i<15;++i)
-    {
-        number out = static_kan_block.fire(dataset[i]);
-
-        number error = std::abs(out - outputs[i]);
-
-        total_error += error;
-    }
-
-    std::cout<<"Total error: "<<total_error/dataset_size<<std::endl;
-
-    
-    char c;
-
-    std::cout<<"Press any key to continue"<<std::endl;
-    std::cin>>c;
 
 
     return 0;
