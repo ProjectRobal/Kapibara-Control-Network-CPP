@@ -42,11 +42,20 @@ class QKAN
 
     int8_t *table;
     int16_t *decimal;
+    Init init;
+
 
     void hebb_learn(int8_t x[],size_t neuron_index,int8_t y)
     {
         for(size_t i=0;i<InputSize;++i)
-        {
+        {   
+            // Update only handful of weights
+            int8_t random = this->init.init();
+            if( random <= -25 && random >= 25)
+            {
+                continue;
+            }
+
             int8_t w = this->get_weight(neuron_index,i,x[i]);
 
             int16_t decimal = this->get_decimal(neuron_index,i,x[i]);
@@ -108,11 +117,10 @@ class QKAN
             this->decimal = new int16_t[256*InputSize*OutputSize](0);
         }
 
-        Init init;
 
         for(size_t i=0;i<256*InputSize*OutputSize;++i)
         {
-            this->table[i] = init.init();
+            this->table[i] = this->init.init();
         }
     }
 
@@ -139,11 +147,29 @@ class QKAN
         }
     }
 
-    void fit(int8_t x[],int8_t y[])
+    /*
+    
+    A simple fitting but really? We will update only handfull of weights but waht about situations
+    when weights are near the extreame?
+
+    */
+    void fit(int8_t x[],int8_t y[],int8_t target[])
     {
         for(size_t o=0;o<OutputSize;++o)
         {
+            int8_t error = y[o] - target[o];
 
+            int8_t to_update = std::min<int8_t>(4,InputSize);
+
+            int8_t dy = error/to_update;
+
+            for(size_t i=0;i<InputSize;++i)
+            {
+                int8_t& w = this->get_weight(o,i,x[i]);
+
+
+
+            }
 
         }
     }
@@ -194,12 +220,6 @@ int main(int argc,char** argv)
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
 
-
-    const size_t size = 32;
-
-    const size_t samples_count = 32;
-
-
     snn::UniformInit<(number)-127.f,(number)128.f> noise;
 
     const size_t width = 224;
@@ -232,7 +252,10 @@ int main(int argc,char** argv)
 
     std::cout<<"Timestamp: "<<static_cast<double>(clock()-_start)/CLOCKS_PER_SEC * 1000<<" us"<<std::endl;
 
-    std::cout<<(int32_t)output_img[0]<<std::endl;
+    for(size_t i=0;i<32;++i)
+    {
+        std::cout<<(int32_t)output_img[i]<<" ";
+    }
     
     return 0;
 
